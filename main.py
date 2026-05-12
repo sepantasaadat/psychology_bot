@@ -7,7 +7,7 @@ import logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 # ==========================================
-TOKEN = "8102832915:AAHDa7ahA8guyAtkp18Ig89We6FTLxnaEtE"
+TOKEN = "YOUR-TOKEN-HERE"
 THERAPIST_CHAT_ID = "56073956"  
 # ==========================================
 
