@@ -1,16 +1,12 @@
 import sqlite3
 
-# تابعی برای اتصال به دیتابیس
 def get_connection():
-    # اگر فایل clinic.db وجود نداشته باشد، آن را می‌سازد
     return sqlite3.connect("clinic.db")
 
-# تابعی برای ساخت جداول اولیه
 def setup_database():
     conn = get_connection()
     cursor = conn.cursor()
 
-    # ساخت جدول کاربران (مراجعین)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             user_id INTEGER PRIMARY KEY,
@@ -19,26 +15,25 @@ def setup_database():
         )
     ''')
 
-    # ساخت جدول نوبت‌ها
-    # وضعیت‌ها (status) می‌توانند این موارد باشند:
-    # pending: منتظر تایید تراپیست
-    # confirmed: تایید شده نهایی
+    # [آپدیت]: اضافه شدن دو ستون session_type (نوع جلسه) و full_name (نام کامل)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS appointments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
-            date TEXT,          -- مثال: 1405/01/15
-            time TEXT,          -- مثال: 17:00
-            status TEXT,        -- pending یا confirmed
-            receipt_file_id TEXT, -- آیدی عکس رسید در تلگرام
+            date TEXT,          
+            time TEXT,          
+            session_type TEXT,  -- آنلاین یا حضوری
+            full_name TEXT,     -- نام و نام خانوادگی دریافت شده از کاربر
+            status TEXT,        
+            receipt_file_id TEXT, 
             FOREIGN KEY (user_id) REFERENCES users (user_id)
         )
     ''')
 
     conn.commit()
     conn.close()
-    print("Database tables created successfully!")
-# تابع برای ثبت کاربر در دیتابیس (اگر از قبل وجود نداشته باشد)
+    print("Database updated successfully with new columns!")
+
 def add_user(user_id, first_name, username):
     conn = get_connection()
     cursor = conn.cursor()
@@ -49,22 +44,20 @@ def add_user(user_id, first_name, username):
     conn.commit()
     conn.close()
 
-# تابع برای ثبت نوبت در انتظار تایید
-def add_pending_appointment(user_id, date, time, receipt_file_id):
+# [آپدیت]: دریافت نوع جلسه و نام کامل برای ثبت اولیه
+def add_pending_appointment(user_id, date, time, session_type, full_name, receipt_file_id):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute('''
-        INSERT INTO appointments (user_id, date, time, status, receipt_file_id)
-        VALUES (?, ?, ?, 'pending', ?)
-    ''', (user_id, date, time, receipt_file_id))
+        INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id)
+        VALUES (?, ?, ?, ?, ?, 'pending', ?)
+    ''', (user_id, date, time, session_type, full_name, receipt_file_id))
     
-    # گرفتن آیدی (ID) این نوبت که الان در دیتابیس ساخته شد
     appointment_id = cursor.lastrowid
     conn.commit()
     conn.close()
     return appointment_id
 
-# تغییر وضعیت نوبت (تایید یا رد)
 def update_appointment_status(appointment_id, status):
     conn = get_connection()
     cursor = conn.cursor()
@@ -72,39 +65,44 @@ def update_appointment_status(appointment_id, status):
     conn.commit()
     conn.close()
 
-# دریافت اطلاعات یک نوبت خاص
+# [آپدیت]: برگرداندن نام کامل و نوع جلسه برای پیام‌های ادمین
 def get_appointment(appointment_id):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT user_id, date, time FROM appointments WHERE id = ?', (appointment_id,))
+    cursor.execute('SELECT user_id, date, time, session_type, full_name, status FROM appointments WHERE id = ?', (appointment_id,))
     row = cursor.fetchone()
     conn.close()
     return row
 
-# پیدا کردن ساعت‌های پر شده در یک روز خاص
 def get_booked_times(date):
     conn = get_connection()
     cursor = conn.cursor()
-    # هم نوبت‌های تایید شده و هم در حال انتظار را پر فرض می‌کنیم تا تداخل نشود
     cursor.execute("SELECT time FROM appointments WHERE date = ? AND status IN ('pending', 'confirmed')", (date,))
     rows = cursor.fetchall()
     conn.close()
     return [row[0] for row in rows]
 
-# دریافت کل برنامه هفتگی تراپیست
-def get_weekly_schedule():
+# [آپدیت ۹]: دریافت لیست تمام نوبت‌های تایید شده برای پنل مدیریت ادمین اصلی
+def get_all_confirmed_appointments():
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute('''
-        SELECT appointments.date, appointments.time, users.first_name, users.username 
+        SELECT id, date, time, full_name, session_type 
         FROM appointments 
-        JOIN users ON appointments.user_id = users.user_id 
         WHERE status = 'confirmed' 
-        ORDER BY appointments.date, appointments.time
+        ORDER BY date, time
     ''')
     rows = cursor.fetchall()
     conn.close()
     return rows
-# اگر این فایل مستقیم اجرا شود، دیتابیس را می‌سازد
+
+# [آپدیت ۹]: تابع حذف کامل یک نوبت برای آزاد شدن ساعت آن
+def delete_appointment(appointment_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM appointments WHERE id = ?', (appointment_id,))
+    conn.commit()
+    conn.close()
+
 if __name__ == "__main__":
     setup_database()
