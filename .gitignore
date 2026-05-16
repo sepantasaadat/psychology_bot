@@ -1,0 +1,13 @@
+# Database
+clinic.db
+
+# Virtual Environment
+venv/
+env/
+
+# Python Cache
+__pycache__/
+*.pyc
+
+# Secret files (اگر فایلی برای توکن‌ها داری)
+.env

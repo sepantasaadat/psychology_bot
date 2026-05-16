@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block title %}صفحه اصلی - کلینیک دکتر شفایی{% endblock %}
+
+{% block content %}
+<div class="p-5 mb-4 bg-white rounded-3 shadow-sm text-center border">
+    <div class="container-fluid py-5">
+        <h1 class="display-5 fw-bold" style="color: #2c3e50;">به کلینیک روانشناسی دکتر شفایی خوش آمدید</h1>
+        <p class="col-md-8 mx-auto fs-5 mt-4 text-muted">
+            مرکز تخصصی مشاوره، روان‌درمانی و توسعه فردی. ما اینجا هستیم تا در مسیر آرامش و سلامت روان همراه شما باشیم.
+        </p>
+        <hr class="my-4">
+        <a href="/booking" class="btn btn-success btn-lg px-5 mt-3 shadow">
+            📅 رزرو آنلاین نوبت
+        </a>
+    </div>
+</div>
+
+<div class="row text-center mt-5">
+    <div class="col-md-4 mb-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h3 class="card-title">مشاوره حضوری</h3>
+                <p class="card-text text-muted">پذیرش مراجعین در محیطی آرام و استاندارد در کلینیک.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h3 class="card-title">مشاوره آنلاین</h3>
+                <p class="card-text text-muted">امکان برقراری جلسات تصویری و صوتی برای مراجعین راه دور.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h3 class="card-title">پشتیبانی منظم</h3>
+                <p class="card-text text-muted">پیگیری روند درمان و ارتباط موثر با مراجعین.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
