@@ -10,7 +10,7 @@ import requests
 import json
 
 # تنظیمات تلگرام برای ارسال عکس رسید
-BOT_TOKEN = "8102832915:AAHDa7ahA8guyAtkp18Ig89We6FTLxnaEtE"
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
 ADMIN_IDS = [56073956, 77236438]
 
 app = Flask(__name__)
