@@ -182,8 +182,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
             if action == "approve":
-            database.update_appointment_status(appointment_id, "confirmed")
-            await query.edit_message_caption(caption=f"{query.message.caption}\n\n✅ **توسط شما تایید شد**")
+                database.update_appointment_status(appointment_id, "confirmed")
+                await query.edit_message_caption(caption=f"{query.message.caption}\n\n✅ **توسط شما تایید شد**")
             
             # اگر client_id صفر بود، یعنی کاربر از سایت آمده است
             if client_id != 0:

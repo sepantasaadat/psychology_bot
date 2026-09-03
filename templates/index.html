@@ -3,41 +3,52 @@
 {% block title %}صفحه اصلی - کلینیک دکتر شفایی{% endblock %}
 
 {% block content %}
-<div class="p-5 mb-4 bg-white rounded-3 shadow-sm text-center border">
+<div class="p-5 mb-5 bg-white rounded-4 text-center" style="box-shadow: 0 10px 30px rgba(0,0,0,0.03); border: 1px solid var(--light-green);">
     <div class="container-fluid py-5">
-        <h1 class="display-5 fw-bold" style="color: #2c3e50;">به کلینیک روانشناسی دکتر شفایی خوش آمدید</h1>
-        <p class="col-md-8 mx-auto fs-5 mt-4 text-muted">
-            مرکز تخصصی مشاوره، روان‌درمانی و توسعه فردی. ما اینجا هستیم تا در مسیر آرامش و سلامت روان همراه شما باشیم.
+        <i class="bi bi-peace text-success opacity-50 display-1 mb-3 d-block" style="color: var(--primary-green) !important;"></i>
+        <h1 class="display-5 fw-bold mb-4" style="color: var(--primary-green);">همراه شما در مسیر آرامش</h1>
+        <p class="col-md-8 mx-auto fs-5 text-muted lh-lg">
+            مرکز تخصصی مشاوره، روان‌درمانی و توسعه فردی. ما اینجا هستیم تا در فضایی امن و بدون قضاوت، برای رسیدن به سلامت روان و تعادل در زندگی همراه شما باشیم.
         </p>
-        <hr class="my-4">
-        <a href="/booking" class="btn btn-success btn-lg px-5 mt-3 shadow">
-            📅 رزرو آنلاین نوبت
-        </a>
+        <div class="mt-5">
+            <a href="/booking" class="btn btn-primary btn-lg px-5 shadow-sm rounded-pill fw-bold">
+                <i class="bi bi-calendar2-check me-2"></i> رزرو آنلاین نوبت
+            </a>
+        </div>
     </div>
 </div>
 
-<div class="row text-center mt-5">
-    <div class="col-md-4 mb-3">
-        <div class="card shadow-sm h-100">
+<div class="row text-center mt-4">
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 p-3">
             <div class="card-body">
-                <h3 class="card-title">مشاوره حضوری</h3>
-                <p class="card-text text-muted">پذیرش مراجعین در محیطی آرام و استاندارد در کلینیک.</p>
+                <div class="mb-4 rounded-circle bg-light d-inline-flex p-4" style="background-color: var(--light-green) !important;">
+                    <i class="bi bi-people fs-2" style="color: var(--primary-green);"></i>
+                </div>
+                <h4 class="card-title fw-bold mb-3">مشاوره حضوری</h4>
+                <p class="card-text text-muted small lh-lg">پذیرش مراجعین در محیطی کاملاً آرام، استاندارد و متناسب با پروتکل‌های روان‌درمانی در کلینیک.</p>
             </div>
         </div>
     </div>
-    <div class="col-md-4 mb-3">
-        <div class="card shadow-sm h-100">
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 p-3">
             <div class="card-body">
-                <h3 class="card-title">مشاوره آنلاین</h3>
-                <p class="card-text text-muted">امکان برقراری جلسات تصویری و صوتی برای مراجعین راه دور.</p>
+                <div class="mb-4 rounded-circle bg-light d-inline-flex p-4" style="background-color: var(--light-green) !important;">
+                    <i class="bi bi-laptop fs-2" style="color: var(--primary-green);"></i>
+                </div>
+                <h4 class="card-title fw-bold mb-3">مشاوره آنلاین</h4>
+                <p class="card-text text-muted small lh-lg">امکان برقراری جلسات تصویری و صوتی امن برای مراجعین راه دور و ایرانیان خارج از کشور.</p>
             </div>
         </div>
     </div>
-    <div class="col-md-4 mb-3">
-        <div class="card shadow-sm h-100">
+    <div class="col-md-4 mb-4">
+        <div class="card h-100 p-3">
             <div class="card-body">
-                <h3 class="card-title">پشتیبانی منظم</h3>
-                <p class="card-text text-muted">پیگیری روند درمان و ارتباط موثر با مراجعین.</p>
+                <div class="mb-4 rounded-circle bg-light d-inline-flex p-4" style="background-color: var(--light-green) !important;">
+                    <i class="bi bi-heart-pulse fs-2" style="color: var(--primary-green);"></i>
+                </div>
+                <h4 class="card-title fw-bold mb-3">پشتیبانی منظم</h4>
+                <p class="card-text text-muted small lh-lg">پیگیری مستمر روند درمان، ارائه تمرین‌های فردی و ارتباط موثر با مراجعین در طول مسیر بهبود.</p>
             </div>
         </div>
     </div>

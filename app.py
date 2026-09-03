@@ -98,6 +98,11 @@ def send_receipt_to_telegram(app_id, name_with_phone, date, time, session_type, 
             print(f"Error sending to telegram admin: {e}")
 
 @app.route('/')
+
+@app.route('/about')
+def about():
+    return render_template('about.html')
+
 def home():
     return render_template('index.html')
 
