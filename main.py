@@ -1,3 +1,4 @@
+import os
 import jdatetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
@@ -7,11 +8,11 @@ import logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 # ==========================================
-TOKEN = "YOUR-BOT-TOKEN" # (همان توکنی که در سرور گذاشتید را اینجا قرار دهید)
+TOKEN = os.environ.get("BOT_TOKEN", "YOUR-BOT-TOKEN") # در سرور از متغیر محیطی خوانده می‌شود
 MAIN_ADMIN_ID = 56073956
 SECOND_ADMIN_ID = 77236438
 ADMIN_IDS = [MAIN_ADMIN_ID, SECOND_ADMIN_ID] # [آپدیت ۱]: لیست ادمین‌ها
-CLINIC_WEBSITE = "https://example.com" # [آپدیت ۵]: آدرس سایت کلینیک را اینجا جایگزین کنید
+CLINIC_WEBSITE = "https://drshafaeiclinic.ir/" # [آپدیت ۵]: آدرس سایت کلینیک را اینجا جایگزین کنید
 # ==========================================
 
 # دیکشنری برای تبدیل شماره روز به نام روز فارسی [آپدیت ۳]

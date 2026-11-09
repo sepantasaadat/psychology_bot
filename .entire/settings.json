@@ -1,0 +1,15 @@
+{
+  "enabled": true,
+  "strategy_options": {
+    "checkpoint_remote": {
+      "provider": "github",
+      "repo": "sepantasaadat/psychology_bot"
+    }
+  },
+  "absolute_git_hook_path": true,
+  "checkpoints": {
+    "primary": {
+      "type": "git-refs"
+    }
+  }
+}
