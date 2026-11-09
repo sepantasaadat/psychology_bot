@@ -203,11 +203,11 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_caption(caption=f"{query.message.caption}\n\n⚠️ این نوبت قبلاً توسط ادمین دیگری تعیین تکلیف شده است.")
             return
 
-            if action == "approve":
-                database.update_appointment_status(appointment_id, "confirmed")
-                await query.edit_message_caption(caption=f"{query.message.caption}\n\n✅ **توسط شما تایید شد**")
+        if action == "approve":
+            database.update_appointment_status(appointment_id, "confirmed")
+            await query.edit_message_caption(caption=f"{query.message.caption}\n\n✅ **توسط شما تایید شد**")
             
-            # اگر client_id صفر بود، یعنی کاربر از سایت آمده است
+            # اگر client_id غیر صفر بود، یعنی کاربر از ربات تلگرام آمده است
             if client_id != 0:
                 await context.bot.send_message(
                     chat_id=client_id, 
@@ -218,7 +218,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 # ارسال نوتیفیکیشن به ادمین برای تماس با مراجع سایت
                 await context.bot.send_message(
                     chat_id=query.message.chat_id,
-                    text=f"📞 این نوبت از طریق سایت ثبت شده است. لطفاً برای تایید نوبت با شماره درج شده تماس بگیرید یا پیامک دهید:\n{name}"
+                    text=f"📞 این نوبت از طریق سایت ثبت شده است. لطفاً برای هماهنگی نهایی با شماره درج شده تماس بگیرید یا پیامک دهید:\n{name}"
                 )
 
         elif action == "reject":
@@ -228,7 +228,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if client_id != 0:
                 await context.bot.send_message(
                     chat_id=client_id, 
-                    text=f"❌ متاسفانه فیش شما برای نوبت {date} تایید نشد. لطفاً در صورت نیاز مجدداً اقدام کنید.",
+                    text=f"❌ متاسفانه فیش شما برای نوبت {date} تایید نشد. لطفاً در صورت نیاز مجدداً از منو اقدام کنید.",
                     reply_markup=get_main_menu_keyboard(client_id)
                 )
             else:
@@ -236,15 +236,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     chat_id=query.message.chat_id,
                     text=f"📞 این نوبت از طریق سایت بود و رد شد. در صورت نیاز با شماره درج شده تماس بگیرید:\n{name}"
                 )
-
-
-            
-            # [آپدیت ۲]: پیام رد به کاربر + منوی اصلی
-            await context.bot.send_message(
-                chat_id=client_id, 
-                text=f"❌ متاسفانه فیش شما برای نوبت {date} تایید نشد. لطفاً در صورت نیاز مجدداً از منو اقدام کنید.",
-                reply_markup=get_main_menu_keyboard(client_id)
-            )
 
 # [آپدیت ۷]: هندلر جدید برای دریافت نام و نام خانوادگی به صورت متنی
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
