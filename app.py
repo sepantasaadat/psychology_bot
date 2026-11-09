@@ -11,7 +11,7 @@ import json
 
 # تنظیمات تلگرام برای ارسال عکس رسید
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
-ADMIN_IDS = [56073956, 77236438]
+ADMIN_IDS = [56073956, 8034655716, 95033750]
 
 app = Flask(__name__)
 app.secret_key = 'super_secret_psychology_key'

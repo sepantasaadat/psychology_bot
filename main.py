@@ -13,10 +13,11 @@ TOKEN = os.environ.get("BOT_TOKEN", "YOUR-BOT-TOKEN") # در سرور از مت�
 BOT_USERNAME = "Drshafaeiclinic_bot"
 BOT_NAME = "Drshafaei_clinic"
 MAIN_ADMIN_ID = 56073956
-SECOND_ADMIN_ID = 77236438
+SECOND_ADMIN_ID = 8034655716 # شناسه ادمین دوم کلینیک
 SEPANTA_ADMIN_ID = 95033750 # شناسه دکتر سپنتا
 ADMIN_IDS = [MAIN_ADMIN_ID, SECOND_ADMIN_ID, SEPANTA_ADMIN_ID] # لیست ادمین‌ها
-ADMIN_USERNAME = "sepanta_s79" # آیدی تلگرام ادمین برای ارتباط اضطراری
+ADMIN_USERNAME = "drshafaei_psychological_clinic" # آیدی تلگرام پشتیبانی کلینیک برای ارتباط اضطراری
+ADMIN_PHONE = "09213689461" # شماره همراه کلینیک
 CLINIC_WEBSITE = "https://drshafaeiclinic.ir/" # آدرس سایت کلینیک
 # ==========================================
 
@@ -87,14 +88,14 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ------------------ ارتباط اضطراری ------------------
     elif query.data == "emergency_contact":
         keyboard = [
-            [InlineKeyboardButton("💬 چت با ادمین در تلگرام", url=f"https://t.me/{ADMIN_USERNAME}")],
+            [InlineKeyboardButton("💬 چت با پشتیبانی کلینیک در تلگرام", url=f"https://t.me/{ADMIN_USERNAME}")],
             [InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data="main_menu")]
         ]
         await query.edit_message_text(
             "🚨 **راه‌های ارتباط اضطراری با کلینیک دکتر شفائی:**\n\n"
-            "📞 **شماره تماس:** 0921 368 9461\n"
+            f"📞 **شماره تماس:** {ADMIN_PHONE}\n"
             f"👤 **پشتیبانی تلگرام:** @{ADMIN_USERNAME}\n\n"
-            "در صورت بروز هرگونه مشکل یا نیاز فوری به راهنمایی، می‌توانید از طریق شماره فوق یا دکمه چت زیر با ادمین در ارتباط باشید.",
+            "در صورت بروز هرگونه مشکل یا نیاز فوری به راهنمایی، می‌توانید از طریق شماره فوق یا دکمه چت زیر با پشتیبانی کلینیک در ارتباط باشید.",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
 

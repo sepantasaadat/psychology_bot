@@ -1,7 +1,7 @@
 # Graph Report - psychology_bot  (2026-11-10)
 
 ## Corpus Check
-- 6 files · ~3,999 words
+- 6 files · ~4,013 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 3 file(s) not represented in the graph (top: (none) 3)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `ff46afb5`
+- Built from commit: `ab9e0752`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -26,14 +26,14 @@
 ## God Nodes (most connected - your core abstractions)
 1. `button_handler()` - 11 edges
 2. `get_connection()` - 10 edges
-3. `handle_receipt()` - 6 edges
-4. `main()` - 6 edges
-5. `booking()` - 6 edges
-6. `start()` - 5 edges
-7. `handle_text()` - 5 edges
-8. `get_db_connection()` - 5 edges
-9. `get_main_menu_keyboard()` - 4 edges
-10. `get_upcoming_week_appointments()` - 4 edges
+3. `booking()` - 6 edges
+4. `handle_receipt()` - 6 edges
+5. `main()` - 6 edges
+6. `get_db_connection()` - 5 edges
+7. `start()` - 5 edges
+8. `handle_text()` - 5 edges
+9. `send_receipt_to_telegram()` - 4 edges
+10. `get_main_menu_keyboard()` - 4 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `handle_receipt()` --calls--> `add_pending_appointment()`  [EXTRACTED]
