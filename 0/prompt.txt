@@ -1,0 +1,39 @@
+ok i did whatever you said and status of bot is active but when i start bot in telegram it doesnt show anything it chust seen but not responsible
+
+---
+
+root@ubuntu-London-0:~/psychology_bot# journalctl -u psychobot -n 30 --no-pager
+Nov 09 21:54:50 ubuntu-London-0 python[1470296]: 2026-11-09 21:54:50,959 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot9172503833:REDACTED/getUpdates "HTTP/1.1 200 OK"
+Nov 09 21:55:00 ubuntu-London-0 python[1470296]: 2026-11-09 21:55:00,980 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot9172503833:REDACTED/getUpdates "HTTP/1.1 200 OK"
+Nov 09 21:55:11 ubuntu-London-0 python[1470296]: 2026-11-09 21:55:11,010 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot9172503833:REDACTED/getUpdates "HTTP/1.1 200 OK"
+Nov 09 21:55:21 ubuntu-London-0 python[1470296]: 2026-11-09 21:55:21,032 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot9172503833:REDACTED/getUpdates "HTTP/1.1 200 OK"
+Nov 09 21:55:31 ubuntu-London-0 python[1470296]: 2026-11-09 21:55:31,054 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot9172503833:REDACTED/getUpdates "HTTP/1.1 200 OK"
+Nov 09 21:55:41 ubuntu-London-0 python[1470296]: 2026-11-09 21:55:41,076 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot9172503833:REDACTED/getUpdates "HTTP/1.1 200 OK"
+Nov 09 21:55:51 ubuntu-London-0 python[1470296]: 2026-11-09 21:55:51,097 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot9172503833:REDACTED/getUpdates "HTTP/1.1 200 OK"
+Nov 09 21:56:01 ubuntu-London-0 python[1470296]: 2026-11-09 21:56:01,127 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot9172503833:REDACTED/getUpdates "HTTP/1.1 200 OK"
+Nov 09 21:56:11 ubuntu-London-0 python[1470296]: 2026-11-09 21:56:11,156 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot9172503833:REDACTED/getUpdates "HTTP/1.1 200 OK"
+Nov 09 21:56:21 ubuntu-London-0 python[1470296]: 2026-11-09 21:56:21,173 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot9172503833:REDACTED/getUpdates "HTTP/1.1 200 OK"
+Nov 09 21:56:31 ubuntu-London-0 python[1470296]: 2026-11-09 21:56:31,200 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot9172503833:REDACTED/getUpdates "HTTP/1.1 200 OK"
+Nov 09 21:56:41 ubuntu-London-0 python[1470296]: 2026-11-09 21:56:41,217 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot9172503833:REDACTED/getUpdates "HTTP/1.1 200 OK"
+Nov 09 21:56:51 ubuntu-London-0 python[1470296]: 2026-11-09 21:56:51,237 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot9172503833:REDACTED/getUpdates "HTTP/1.1 200 OK"
+Nov 09 21:57:01 ubuntu-London-0 python[1470296]: 2026-11-09 21:57:01,265 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot9172503833:REDACTED/getUpdates "HTTP/1.1 200 OK"
+Nov 09 21:57:11 ubuntu-London-0 python[1470296]: 2026-11-09 21:57:11,295 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot9172503833:REDACTED/getUpdates "HTTP/1.1 200 OK"
+Nov 09 21:57:21 ubuntu-London-0 python[1470296]: 2026-11-09 21:57:21,316 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot9172503833:REDACTED/getUpdates "HTTP/1.1 200 OK"
+Nov 09 21:57:31 ubuntu-London-0 python[1470296]: 2026-11-09 21:57:31,345 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot9172503833:REDACTED/getUpdates "HTTP/1.1 200 OK"
+Nov 09 21:57:41 ubuntu-London-0 python[1470296]: 2026-11-09 21:57:41,364 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot9172503833:REDACTED/getUpdates "HTTP/1.1 200 OK"
+Nov 09 21:57:51 ubuntu-London-0 python[1470296]: 2026-11-09 21:57:51,384 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot9172503833:REDACTED/getUpdates "HTTP/1.1 200 OK"
+Nov 09 21:58:01 ubuntu-London-0 python[1470296]: 2026-11-09 21:58:01,406 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot9172503833:REDACTED/getUpdates "HTTP/1.1 200 OK"
+Nov 09 21:58:11 ubuntu-London-0 python[1470296]: 2026-11-09 21:58:11,423 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot9172503833:REDACTED/getUpdates "HTTP/1.1 200 OK"
+Nov 09 21:58:21 ubuntu-London-0 python[1470296]: 2026-11-09 21:58:21,452 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot9172503833:REDACTED/getUpdates "HTTP/1.1 200 OK"
+Nov 09 21:58:31 ubuntu-London-0 python[1470296]: 2026-11-09 21:58:31,474 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot9172503833:REDACTED/getUpdates "HTTP/1.1 200 OK"
+Nov 09 21:58:41 ubuntu-London-0 python[1470296]: 2026-11-09 21:58:41,499 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot9172503833:REDACTED/getUpdates "HTTP/1.1 200 OK"
+Nov 09 21:58:51 ubuntu-London-0 python[1470296]: 2026-11-09 21:58:51,534 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot9172503833:REDACTED/getUpdates "HTTP/1.1 200 OK"
+Nov 09 21:59:01 ubuntu-London-0 python[1470296]: 2026-11-09 21:59:01,554 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot9172503833:REDACTED/getUpdates "HTTP/1.1 200 OK"
+Nov 09 21:59:11 ubuntu-London-0 python[1470296]: 2026-11-09 21:59:11,580 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot9172503833:REDACTED/getUpdates "HTTP/1.1 200 OK"
+Nov 09 21:59:21 ubuntu-London-0 python[1470296]: 2026-11-09 21:59:21,606 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot9172503833:REDACTED/getUpdates "HTTP/1.1 200 OK"
+Nov 09 21:59:31 ubuntu-London-0 python[1470296]: 2026-11-09 21:59:31,625 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot9172503833:REDACTED/getUpdates "HTTP/1.1 200 OK"
+Nov 09 21:59:41 ubuntu-London-0 python[1470296]: 2026-11-09 21:59:41,654 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot9172503833:REDACTED/getUpdates "HTTP/1.1 200 OK"
+
+---
+
+https://t.me/Drshafaeiclinic_bot      and name of robot is :Drshafaei_clinic if it should be correct in project please do it and then push it to git hub and then tell me what should i do on my vps
