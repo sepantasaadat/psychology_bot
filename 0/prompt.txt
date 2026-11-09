@@ -1,0 +1,54 @@
+root@ubuntu-London-0:~/psychology_bot# journalctl -u psychobot -f
+Nov 09 22:13:04 ubuntu-London-0 python[1471559]:            ^^^^^^^^^^^^^^^^^^^^^^^
+Nov 09 22:13:04 ubuntu-London-0 python[1471559]:   File "/root/psychology_bot/venv/lib/python3.12/site-packages/telegram/_bot.py", line 741, in _do_post
+Nov 09 22:13:04 ubuntu-London-0 python[1471559]:     result = await request.post(
+Nov 09 22:13:04 ubuntu-London-0 python[1471559]:              ^^^^^^^^^^^^^^^^^^^
+Nov 09 22:13:04 ubuntu-London-0 python[1471559]:   File "/root/psychology_bot/venv/lib/python3.12/site-packages/telegram/request/_baserequest.py", line 198, in post
+Nov 09 22:13:04 ubuntu-London-0 python[1471559]:     result = await self._request_wrapper(
+Nov 09 22:13:04 ubuntu-London-0 python[1471559]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Nov 09 22:13:04 ubuntu-London-0 python[1471559]:   File "/root/psychology_bot/venv/lib/python3.12/site-packages/telegram/request/_baserequest.py", line 375, in _request_wrapper
+Nov 09 22:13:04 ubuntu-London-0 python[1471559]:     raise exception
+Nov 09 22:13:04 ubuntu-London-0 python[1471559]: telegram.error.BadRequest: Button_user_invalid
+Nov 09 22:13:14 ubuntu-London-0 python[1471559]: 2026-11-09 22:13:14,959 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot9172503833:REDACTED/getUpdates "HTTP/1.1 200 OK"
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]: 2026-11-09 22:13:20,489 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot9172503833:REDACTED/getUpdates "HTTP/1.1 200 OK"
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]: 2026-11-09 22:13:20,492 - __main__ - INFO - Command /start received from user 95033750 (@sepanta_s79)
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]: 2026-11-09 22:13:20,553 - httpx - INFO - HTTP Request: POST https://api.telegram.org/bot9172503833:REDACTED/sendMessage "HTTP/1.1 400 Bad Request"
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]: 2026-11-09 22:13:20,556 - __main__ - ERROR - Exception while handling an update:
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]: Traceback (most recent call last):
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:   File "/root/psychology_bot/venv/lib/python3.12/site-packages/telegram/ext/_application.py", line 1315, in process_update
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:     await coroutine
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:   File "/root/psychology_bot/venv/lib/python3.12/site-packages/telegram/ext/_handlers/basehandler.py", line 159, in handle_update
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:     return await self.callback(update, context)
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:   File "/root/psychology_bot/main.py", line 67, in start
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:     await update.message.reply_text(
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:   File "/root/psychology_bot/venv/lib/python3.12/site-packages/telegram/_message.py", line 2228, in reply_text
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:     return await self.get_bot().send_message(
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:   File "/root/psychology_bot/venv/lib/python3.12/site-packages/telegram/ext/_extbot.py", line 3150, in send_message
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:     return await super().send_message(
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:   File "/root/psychology_bot/venv/lib/python3.12/site-packages/telegram/_bot.py", line 1138, in send_message
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:     return await self._send_message(
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:            ^^^^^^^^^^^^^^^^^^^^^^^^^
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:   File "/root/psychology_bot/venv/lib/python3.12/site-packages/telegram/ext/_extbot.py", line 638, in _send_message
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:     result = await super()._send_message(
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:   File "/root/psychology_bot/venv/lib/python3.12/site-packages/telegram/_bot.py", line 828, in _send_message
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:     result = await self._post(
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:              ^^^^^^^^^^^^^^^^^
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:   File "/root/psychology_bot/venv/lib/python3.12/site-packages/telegram/_bot.py", line 712, in _post
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:     return await self._do_post(
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:            ^^^^^^^^^^^^^^^^^^^^
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:   File "/root/psychology_bot/venv/lib/python3.12/site-packages/telegram/ext/_extbot.py", line 378, in _do_post
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:     return await super()._do_post(
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:            ^^^^^^^^^^^^^^^^^^^^^^^
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:   File "/root/psychology_bot/venv/lib/python3.12/site-packages/telegram/_bot.py", line 741, in _do_post
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:     result = await request.post(
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:              ^^^^^^^^^^^^^^^^^^^
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:   File "/root/psychology_bot/venv/lib/python3.12/site-packages/telegram/request/_baserequest.py", line 198, in post
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:     result = await self._request_wrapper(
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:   File "/root/psychology_bot/venv/lib/python3.12/site-packages/telegram/request/_baserequest.py", line 375, in _request_wrapper
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]:     raise exception
+Nov 09 22:13:20 ubuntu-London-0 python[1471559]: telegram.error.BadRequest: Button_user_invalid
