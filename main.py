@@ -14,8 +14,10 @@ BOT_USERNAME = "Drshafaeiclinic_bot"
 BOT_NAME = "Drshafaei_clinic"
 MAIN_ADMIN_ID = 56073956
 SECOND_ADMIN_ID = 77236438
-ADMIN_IDS = [MAIN_ADMIN_ID, SECOND_ADMIN_ID] # [آپدیت ۱]: لیست ادمین‌ها
-CLINIC_WEBSITE = "https://drshafaeiclinic.ir/" # [آپدیت ۵]: آدرس سایت کلینیک را اینجا جایگزین کنید
+SEPANTA_ADMIN_ID = 95033750 # شناسه دکتر سپنتا
+ADMIN_IDS = [MAIN_ADMIN_ID, SECOND_ADMIN_ID, SEPANTA_ADMIN_ID] # لیست ادمین‌ها
+ADMIN_USERNAME = "sepanta_s79" # آیدی تلگرام ادمین برای ارتباط اضطراری
+CLINIC_WEBSITE = "https://drshafaeiclinic.ir/" # آدرس سایت کلینیک
 # ==========================================
 
 # دیکشنری برای تبدیل شماره روز به نام روز فارسی [آپدیت ۳]
@@ -45,14 +47,12 @@ def get_main_menu_keyboard(user_id):
     keyboard = [
         [InlineKeyboardButton("📅 رزرو نوبت جدید", callback_data="book_appointment")],
         [
-            # [آپدیت ۴]: لینک مستقیم به چت ادمین اول. (tg://user?id=...)
-            InlineKeyboardButton("🚨 ارتباط اضطراری با ادمین", url=f"tg://user?id={MAIN_ADMIN_ID}"),
-            # [آپدیت ۵]: لینک سایت کلینیک
+            InlineKeyboardButton("🚨 ارتباط اضطراری با ادمین", callback_data="emergency_contact"),
             InlineKeyboardButton("🌐 سایت کلینیک دکتر شفایی", url=CLINIC_WEBSITE)
         ]
     ]
-    # [آپدیت ۹]: اگر کاربر همان ادمین اصلی است، دکمه مدیریت را به او نشان بده
-    if user_id == MAIN_ADMIN_ID:
+    # اگر کاربر در لیست ادمین‌ها است، دکمه مدیریت را به او نشان بده
+    if user_id in ADMIN_IDS:
         keyboard.append([InlineKeyboardButton("⚙️ پنل مدیریت نوبت‌ها (مخصوص شما)", callback_data="admin_panel")])
         
     return InlineKeyboardMarkup(keyboard)
@@ -84,8 +84,22 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=get_main_menu_keyboard(user_id)
         )
 
+    # ------------------ ارتباط اضطراری ------------------
+    elif query.data == "emergency_contact":
+        keyboard = [
+            [InlineKeyboardButton("💬 چت با ادمین در تلگرام", url=f"https://t.me/{ADMIN_USERNAME}")],
+            [InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data="main_menu")]
+        ]
+        await query.edit_message_text(
+            "🚨 **راه‌های ارتباط اضطراری با کلینیک دکتر شفائی:**\n\n"
+            "📞 **شماره تماس:** 0921 368 9461\n"
+            f"👤 **پشتیبانی تلگرام:** @{ADMIN_USERNAME}\n\n"
+            "در صورت بروز هرگونه مشکل یا نیاز فوری به راهنمایی، می‌توانید از طریق شماره فوق یا دکمه چت زیر با ادمین در ارتباط باشید.",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
     # ------------------ پنل مدیریت ادمین [آپدیت ۹] ------------------
-    elif query.data == "admin_panel" and user_id == MAIN_ADMIN_ID:
+    elif query.data == "admin_panel" and user_id in ADMIN_IDS:
         appointments = database.get_all_confirmed_appointments()
         if not appointments:
             keyboard = [[InlineKeyboardButton("🔙 بازگشت", callback_data="main_menu")]]
@@ -102,7 +116,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard.append([InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data="main_menu")])
         await query.edit_message_text("لیست نوبت‌های تایید شده:\nبرای لغو و آزاد شدن ساعت، روی هر کدام کلیک کنید.", reply_markup=InlineKeyboardMarkup(keyboard))
 
-    elif query.data.startswith("del_") and user_id == MAIN_ADMIN_ID:
+    elif query.data.startswith("del_") and user_id in ADMIN_IDS:
         app_id = query.data.split("_")[1]
         database.delete_appointment(app_id)
         # بعد از حذف یک نوبت، پنل ادمین را دوباره لود می‌کنیم تا لیست جدید نشان داده شود
