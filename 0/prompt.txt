@@ -1,0 +1,141 @@
+## Project Overview: Psychology Clinic Telegram Bot (v2.0)
+
+This project is an automated Telegram appointment booking bot built for Dr. Shafaei's Psychology Clinic. It manages therapist availability, client information collection, payment receipt verification, multi-admin approvals, and schedule management, running 24/7 on a Linux VPS.
+
+## Technical Stack
+
+* **Programming Language:** Python 3
+* **Telegram Framework:** python-telegram-bot (v20+ using asynchronous `Application` and handlers)
+* **Persian Calendar:** jdatetime (configured for Persian year 1405, filtering working days from Saturday to Wednesday)
+* **Database:** SQLite3 stored locally in the **clinic.db** file without external database servers
+* **Runtime Environment:** Isolated Python virtual environment (venv) managed via a Linux systemd service (**psychobot.service**)
+
+## File Structure & Database Schema
+
+The codebase consists of two main modules located in /root/psychology_bot on the server:
+
+* **database.py:** Manages all SQLite3 connections, table creation, and CRUD operations for **clinic.db**.
+* **users table:** Stores user_id (INTEGER PRIMARY KEY), first_name (TEXT), and username (TEXT).
+* **appointments table:** Stores id (INTEGER PRIMARY KEY AUTOINCREMENT), user_id (INTEGER FOREIGN KEY), date (TEXT), time (TEXT), session_type (TEXT), full_name (TEXT), status (TEXT), and receipt_file_id (TEXT).
+
+
+* **main.py:** Contains the bot configuration, conversation state machine via `context.user_data`, inline keyboard generators, and callback/message handlers.
+
+## Core Logic & User Flow
+
+* **Main Menu:** Renders inline buttons for booking a new appointment, contacting the primary admin for emergencies via deep link, and visiting the clinic website.
+* **Date Selection:** Dynamically calculates the next 5 working days (Saturday to Wednesday in year 1405) and displays both the Persian weekday name and formatted date.
+* **Time Slot Filtering:** Displays 1-hour intervals from 17:00 to 22:00 and queries **clinic.db** to hide any slot marked as pending or confirmed for that date.
+* **Session Type Selection:** Prompts the user immediately after time selection to choose between Online (آنلاین) and In-Person (حضوری) sessions.
+* **Full Name Collection:** Sets `context.user_data['state'] = 'awaiting_name'` to capture the client's full name via text message before requesting payment.
+* **Receipt Upload:** Transitions the state to awaiting_receipt, captures the highest-resolution photo file_id, saves the booking as pending in **clinic.db**, and clears `context.user_data`.
+* **Menu Navigation:** Every sub-menu includes a Back or Cancel inline button allowing the user to return to the previous step or the main menu.
+
+## Admin & Super Admin Workflows
+
+* **Dual Admin Routing:** Sends newly submitted receipt photos, client full name, username, date, time, and session type with Approve/Reject buttons to two admins (Primary ID: 56073956, Secondary ID: 77236438).
+* **Concurrency Protection:** Verifies that an appointment's status is still pending before executing an approval or rejection, preventing the second admin from overwriting a completed action.
+* **Post-Decision Client Redirect:** Sends a confirmation or rejection message to the client upon admin action and attaches the main menu inline keyboard to return them to the start screen.
+* **Super Admin Panel:** Displays a dedicated management button on the main menu exclusively for the Primary Admin (56073956) to list all confirmed bookings and delete specific records from **clinic.db** to reopen those time slots.
+
+## Deployment Architecture & Update Workflow
+
+* **Repository Visibility:** The GitHub repository is set to Public so the Linux VPS can pull updates directly via HTTPS without SSH key or Personal Access Token 403 errors.
+* **Token Security:** The production bot token is never committed to GitHub (kept as a placeholder in **main.py**) and is manually inserted on the VPS after pulling updates.
+* **Systemd Configuration:** The service file at /etc/systemd/system/psychobot.service runs `/root/psychology_bot/venv/bin/python main.py` with automatic restart enabled.
+
+**Standard VPS Update Procedure:**
+
+1. Replace the real token with a placeholder in **main.py** locally, then commit and push the changes to GitHub.
+2. Connect to the VPS via SSH, navigate to /root/psychology_bot, and stop the bot using `systemctl stop psychobot`.
+3. Fetch and overwrite the server files with the latest GitHub commit using `git fetch --all` and `git reset --hard origin/main`.
+4. Open **main.py** using `nano main.py` to paste the real production token, and run `python database.py` inside the virtual environment if the database schema changed.
+5. Restart the background service using `systemctl start psychobot` and verify its state with `systemctl status psychobot`.                                 **Project Overview & Tech Stack**
+
+* **Project Name:** Dr. Shafaei Psychological Clinic Booking & Management System (Web Platform and Telegram Bot).
+* **Developer Profile:** Sepanta (MD, Clinical Researcher, and Python Developer); prefers step-by-step guidance and targeted code edits rather than full-script dumps.
+* **Production Environment:** Ubuntu Linux VPS (located at /root/psychology_bot) running Python 3.12 inside a virtual environment, managed via Systemd services and an Nginx reverse proxy.
+* **Tech Stack:** Python (Flask, python-telegram-bot, jdatetime, requests, smtplib), SQLite, Bootstrap 5 RTL, Vazirmatn font, and Bootstrap Icons.
+
+
+
+**System Architecture & Workflow**
+
+1. Patients visit the web booking page, enter their full name and phone number, select a session type (in-person or online), pick an available date and time, and upload a payment receipt image.
+2. The Flask backend saves the receipt image to the static uploads folder, inserts a pending appointment record into SQLite under user ID 0, and sends the photo with inline approval buttons to the clinic admins on Telegram.
+3. Admins click Approve or Reject directly in Telegram; the bot verifies that the appointment status is still pending so multiple admins do not overwrite each other's actions.
+4. Upon admin action, the bot updates the SQLite database status and either messages the patient directly on Telegram (for bot bookings) or prompts the admin to call or text the patient using the submitted phone number (for web bookings).
+
+
+
+**File Structure & Codebase State**
+
+* **app.py (Flask Web Application)**
+
+
+* Serves the homepage, about page, and booking routes while calculating 15 upcoming working days (Saturday through Wednesday) using the Persian calendar.
+* Reads the Telegram bot token securely via `os.environ.get("BOT_TOKEN")` and concatenates the patient's full name and phone number into the database name field to preserve the existing schema.
+
+
+* **main.py (Telegram Bot Application)**
+
+
+* Built with `Application.builder()` using polling to manage bot-initiated bookings, user state tracking for text and photo inputs, and receipt forwarding to all admins.
+* Features an exclusive admin panel for the primary admin to view and cancel confirmed appointments, immediately freeing up those time slots.
+
+
+* **database.py (SQLite Database Manager)**
+
+
+* Manages the clinic.db database containing the users table and the appointments table (storing appointment ID, user ID, date, time, session type, full name, status, and receipt file ID or path).
+* Provides helper functions to register users, insert pending appointments, update booking statuses, check booked hours, and delete canceled appointments.
+
+
+* **daily_report.py (Automated Email Reporter)**
+
+
+* Queries all confirmed appointments for the upcoming seven days and emails a formatted RTL HTML summary table via Gmail SMTP.
+
+
+* **Frontend Templates (templates directory)**
+
+
+* Redesigned with a minimalist psychological clinic aesthetic using a cream background, soft green accents, Vazirmatn typography, and Bootstrap Icons.
+* Consists of base.html (main layout and navigation), index.html (hero section and service cards), booking.html (appointment and receipt upload form), and about.html (clinic biography, Babol physical address, contact phone number, and Telegram channel link).
+
+
+
+**Linux VPS & Deployment Configuration**
+
+* **Systemd Background Services:** The Flask web application runs under clinic.service, and the Telegram bot runs continuously in the background under psychobot.service (alongside a separate project service named shajare_bot.service).
+* **Token Security:** Hardcoded bot tokens were removed from the codebase and injected into the Systemd service configuration files using `Environment="BOT_TOKEN=..."` directives.
+* **Nginx Upload Limit:** Added `client_max_body_size 20M;` inside the Nginx configuration file (/etc/nginx/nginx.conf) to prevent HTTP 413 Request Entity Too Large errors when patients upload high-resolution receipt photos.
+* **Git Deployment Flow:** Code updates pushed from Windows to GitHub are synced to the VPS using `git fetch --all` and `git reset --hard origin/main`, followed by restarting clinic and psychobot via `systemctl`.
+
+
+
+**Resolved Issues & Operational Guidelines for AI Assistant**
+
+* **Never Run the Bot Manually on the VPS:** Do not execute `python main.py` manually in the terminal while psychobot.service is active, as running two polling instances simultaneously triggers Telegram HTTP 409 Conflict errors.
+* **Protect Credentials & Formatting:** Keep all tokens and sensitive credentials inside environment variables rather than source files, and maintain strict 4-space Python indentation.
+* **Maintain UI & Deployment Standards:** Preserve the RTL Bootstrap 5 structure, Vazirmatn font, and minimalist green-and-cream palette on frontend edits, and guide all deployments step-by-step through GitHub and Systemd.
+
+---
+
+please install Graphify from https://github.com/Graphify-Labs/graphify and make it work for this project and every changes that will be happen in the future
+
+---
+
+ok every time when you wnat fix someyhing or part of mغ project use this project knowledge graph of this project to navigate easily
+
+---
+
+i want you to connect this project with  my entire.com account , i already have this page that connected via github but it doeasnt connected via my local clone https://entire.com/gh/sepantasaadat/psychology_bot
+
+---
+
+ok i want to deploy this telegram bot on my vps that's ip is 104.194.140.83 and tell me how should i pull my telegram bot files from github and then run it permanently on my vps nonstop , please tell me step by step and precisley
+
+---
+
+befor i clone it on my server push the latest edition to github
