@@ -6,9 +6,12 @@ import database
 
 import logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # ==========================================
 TOKEN = os.environ.get("BOT_TOKEN", "YOUR-BOT-TOKEN") # در سرور از متغیر محیطی خوانده می‌شود
+BOT_USERNAME = "Drshafaeiclinic_bot"
+BOT_NAME = "Drshafaei_clinic"
 MAIN_ADMIN_ID = 56073956
 SECOND_ADMIN_ID = 77236438
 ADMIN_IDS = [MAIN_ADMIN_ID, SECOND_ADMIN_ID] # [آپدیت ۱]: لیست ادمین‌ها
@@ -58,6 +61,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # پاک کردن حافظه موقت کاربر تا از صفر شروع کند
     context.user_data.clear()
     user_id = update.effective_user.id
+    username = update.effective_user.username or "None"
+    logger.info(f"Command /start received from user {user_id} (@{username})")
     
     await update.message.reply_text(
         "سلام! به سیستم نوبت‌دهی کلینیک دکتر شفایی خوش آمدید.\nلطفاً از منوی زیر انتخاب کنید:", 
@@ -67,6 +72,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     user_id = update.effective_user.id
+    username = update.effective_user.username or "None"
+    logger.info(f"Callback query '{query.data}' received from user {user_id} (@{username})")
     await query.answer()
     
     # ------------------ دکمه منوی اصلی ------------------
@@ -240,6 +247,14 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "💳 **مرحله آخر:** لطفاً همین الان عکس فیش پرداختی خود را ارسال کنید.",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
+    else:
+        user_id = update.effective_user.id
+        username = update.effective_user.username or "None"
+        logger.info(f"Text message received outside booking from user {user_id} (@{username}): {update.message.text}")
+        await update.message.reply_text(
+            "سلام! به سیستم نوبت‌دهی کلینیک روان‌شناسی دکتر شفائی خوش آمدید.\nلطفاً از منوی زیر انتخاب کنید:", 
+            reply_markup=get_main_menu_keyboard(user_id)
+        )
 
 # تابع دریافت عکس فیش
 async def handle_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -298,16 +313,21 @@ async def handle_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             print(f"خطا در ارسال برای ادمین {admin}: {e}")
 
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.error("Exception while handling an update:", exc_info=context.error)
+
 def main():
     app = Application.builder().token(TOKEN).build()
     
+    app.add_error_handler(error_handler)
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("help", start))
     app.add_handler(CallbackQueryHandler(button_handler))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text)) # اضافه شدن هندلر متن برای دریافت نام
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text)) # اضافه شدن هندلر متن برای دریافت نام و شروع
     app.add_handler(MessageHandler(filters.PHOTO, handle_receipt))
     
-    print("Bot version 2.0 is running on VPS...")
-    app.run_polling()
+    print(f"Bot {BOT_NAME} (@{BOT_USERNAME}) version 2.0 is running on VPS...")
+    app.run_polling(drop_pending_updates=True)
 
 if __name__ == '__main__':
     main()
