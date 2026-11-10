@@ -1,0 +1,5 @@
+ok its done correctly
+
+---
+
+Refine and formalize the bot's messages to suit a psychology clinic, and incorporate emojis appropriate for a clinical psychology setting now and future changes in this project . after doing it carefuly and preciseley then push it to git hub and tell me how to update that on my vps

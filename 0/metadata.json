@@ -1,0 +1,37 @@
+{
+  "cli_version": "0.13.1",
+  "checkpoint_id": "01M73VHHPNR4JRA4E0T7QX02H6",
+  "session_id": "bc33b0c6-57c3-4b45-897d-6a4a3b990b80",
+  "strategy": "manual-commit",
+  "created_at": "2026-11-10T23:09:00.3581597Z",
+  "branch": "main",
+  "checkpoints_count": 2,
+  "files_touched": [
+    "app.py",
+    "graphify-out/GRAPH_REPORT.md",
+    "graphify-out/graph.json",
+    "main.py"
+  ],
+  "agent": "Antigravity",
+  "model": "",
+  "turn_id": "f2a491890ad7",
+  "checkpoint_transcript_start": 438,
+  "transcript_lines_at_start": 438,
+  "redaction": {
+    "replacements": 168,
+    "layers": {
+      "betterleaks": 1,
+      "connection_string": 0,
+      "credential_key": 0,
+      "credential_value": 9,
+      "credentialed_uri": 0,
+      "entropy": 158,
+      "key_context": 0,
+      "provider_token": 0,
+      "shell_stdin": 0
+    }
+  },
+  "session_metrics": {
+    "turn_count": 9
+  }
+}
