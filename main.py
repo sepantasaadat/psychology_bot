@@ -9,6 +9,11 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 logger = logging.getLogger(__name__)
 
 # ==========================================
+# استانداردهای نگارش و لحن پیام‌های کلینیک روان‌شناسی دکتر شفائی:
+# ۱. لحن رسمی، محترمانه، آرامش‌بخش و مراجع‌محور (درود و احترام، مراجع ارجمند/گرامی).
+# ۲. استفاده از ایموجی‌های ملایم و متناسب با روان‌شناسی و سلامت روان (🌱, 🌿, 🌸, 🧠, 🕊️, 📅, ⏰, 💳, 🏢, 💻, 🩺, 📋).
+# ۳. پرهیز از ایموجی‌ها و واژه‌های اضطراب‌آور (مانند 🚨) در ارتباط با مراجعین.
+# ==========================================
 TOKEN = os.environ.get("BOT_TOKEN", "YOUR-BOT-TOKEN") # در سرور از متغیر محیطی خوانده می‌شود
 BOT_USERNAME = "Drshafaeiclinic_bot"
 BOT_NAME = "Drshafaei_clinic"
@@ -16,9 +21,9 @@ MAIN_ADMIN_ID = 56073956
 SECOND_ADMIN_ID = 8034655716 # شناسه ادمین دوم کلینیک
 SEPANTA_ADMIN_ID = 95033750 # شناسه دکتر سپنتا
 ADMIN_IDS = [MAIN_ADMIN_ID, SECOND_ADMIN_ID, SEPANTA_ADMIN_ID] # لیست ادمین‌ها
-ADMIN_USERNAME = "drshafaei_psychological_clinic" # آیدی تلگرام پشتیبانی کلینیک برای ارتباط اضطراری
-ADMIN_PHONE = "09213689461" # شماره همراه کلینیک
-CLINIC_WEBSITE = "https://drshafaeiclinic.ir/" # آدرس سایت کلینیک
+ADMIN_USERNAME = "drshafaei_psychological_clinic" # آیدی تلگرام پذیرش کلینیک جهت هماهنگی و پشتیبانی
+ADMIN_PHONE = "09213689461" # شماره تماس کلینیک
+CLINIC_WEBSITE = "https://drshafaeiclinic.ir/" # آدرس وب‌سایت کلینیک
 # ==========================================
 
 # دیکشنری برای تبدیل شماره روز به نام روز فارسی [آپدیت ۳]
@@ -46,27 +51,33 @@ def get_upcoming_days(days_count=5):
 # تابع کمکی برای ساخت دکمه‌های منوی اصلی (تا بتوانیم کاربر را دوباره به اینجا برگردانیم) [آپدیت ۲ و ۴ و ۵ و ۹]
 def get_main_menu_keyboard(user_id):
     keyboard = [
-        [InlineKeyboardButton("📅 رزرو نوبت جدید", callback_data="book_appointment")],
+        [InlineKeyboardButton("🌱 رزرو وقت مشاوره جدید", callback_data="book_appointment")],
         [
-            InlineKeyboardButton("🚨 ارتباط اضطراری با ادمین", callback_data="emergency_contact"),
-            InlineKeyboardButton("🌐 سایت کلینیک دکتر شفایی", url=CLINIC_WEBSITE)
+            InlineKeyboardButton("🤝 ارتباط با پذیرش و پشتیبانی", callback_data="emergency_contact"),
+            InlineKeyboardButton("🌐 وب‌سایت رسمی کلینیک", url=CLINIC_WEBSITE)
         ]
     ]
-    # اگر کاربر در لیست ادمین‌ها است، دکمه مدیریت را به او نشان بده
+    # نمایش پنل اختصاصی برای ادمین‌های مجاز
     if user_id in ADMIN_IDS:
-        keyboard.append([InlineKeyboardButton("⚙️ پنل مدیریت نوبت‌ها (مخصوص شما)", callback_data="admin_panel")])
+        keyboard.append([InlineKeyboardButton("⚙️ پنل مدیریت نوبت‌ها (ویژه مدیریت)", callback_data="admin_panel")])
         
     return InlineKeyboardMarkup(keyboard)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # پاک کردن حافظه موقت کاربر تا از صفر شروع کند
+    # پاک کردن حافظه موقت کاربر جهت شروع فرآیند تازه
     context.user_data.clear()
     user_id = update.effective_user.id
     username = update.effective_user.username or "None"
     logger.info(f"Command /start received from user {user_id} (@{username})")
     
+    welcome_text = (
+        "درود و احترام؛\n"
+        "به سامانه رسمی نوبت‌دهی کلینیک روان‌شناسی دکتر شفائی خوش آمدید. 🌱\n\n"
+        "ما متعهد به حفظ محرمانگی و همراهی شایسته شما در مسیر آرامش و سلامت روان هستیم.\n"
+        "لطفاً جهت آغاز فرآیند رزرو نوبت یا هماهنگی با پذیرش، از منوی زیر استفاده فرمایید:"
+    )
     await update.message.reply_text(
-        "سلام! به سیستم نوبت‌دهی کلینیک دکتر شفایی خوش آمدید.\nلطفاً از منوی زیر انتخاب کنید:", 
+        welcome_text, 
         reply_markup=get_main_menu_keyboard(user_id)
     )
 
@@ -81,60 +92,76 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query.data == "main_menu":
         context.user_data.clear()
         await query.edit_message_text(
-            "شما به منوی اصلی بازگشتید. لطفاً انتخاب کنید:", 
+            "به منوی اصلی بازگشتید. لطفاً گزینه مورد نظر خود را انتخاب فرمایید: 🌿", 
             reply_markup=get_main_menu_keyboard(user_id)
         )
 
-    # ------------------ ارتباط اضطراری ------------------
+    # ------------------ ارتباط با پذیرش و پشتیبانی ------------------
     elif query.data == "emergency_contact":
         keyboard = [
-            [InlineKeyboardButton("💬 چت با پشتیبانی کلینیک در تلگرام", url=f"https://t.me/{ADMIN_USERNAME}")],
+            [InlineKeyboardButton("💬 گفت‌وگو با پذیرش در تلگرام", url=f"https://t.me/{ADMIN_USERNAME}")],
             [InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data="main_menu")]
         ]
+        contact_text = (
+            "🤝 **ارتباط با پذیرش و پشتیبانی کلینیک روان‌شناسی دکتر شفائی:**\n\n"
+            "مراجع ارجمند، چنانچه پیش از رزرو نوبت نیاز به راهنمایی تخصصی، هماهنگی یا پاسخ به پرسش‌های خود دارید، از مسیرهای زیر پاسخگوی شما هستیم:\n\n"
+            f"📞 **تماس تلفنی با پذیرش:** `{ADMIN_PHONE}`\n"
+            f"💬 **پشتیبانی تلگرام:** @{ADMIN_USERNAME}\n\n"
+            "ساعات پاسخگویی: شنبه تا چهارشنبه، هماهنگ با تقویم کاری کلینیک 🌱"
+        )
         await query.edit_message_text(
-            "🚨 **راه‌های ارتباط اضطراری با کلینیک دکتر شفائی:**\n\n"
-            f"📞 **شماره تماس:** {ADMIN_PHONE}\n"
-            f"👤 **پشتیبانی تلگرام:** @{ADMIN_USERNAME}\n\n"
-            "در صورت بروز هرگونه مشکل یا نیاز فوری به راهنمایی، می‌توانید از طریق شماره فوق یا دکمه چت زیر با پشتیبانی کلینیک در ارتباط باشید.",
+            contact_text,
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
 
-    # ------------------ پنل مدیریت ادمین [آپدیت ۹] ------------------
+    # ------------------ پنل مدیریت نوبت‌ها (ویژه مدیریت) ------------------
     elif query.data == "admin_panel" and user_id in ADMIN_IDS:
         appointments = database.get_all_confirmed_appointments()
         if not appointments:
-            keyboard = [[InlineKeyboardButton("🔙 بازگشت", callback_data="main_menu")]]
-            await query.edit_message_text("هیچ نوبت تایید شده‌ای برای حذف وجود ندارد.", reply_markup=InlineKeyboardMarkup(keyboard))
+            keyboard = [[InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data="main_menu")]]
+            await query.edit_message_text(
+                "در حال حاضر هیچ نوبت قطعی و تایید‌شده‌ای در سامانه ثبت نشده است. 📋", 
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
             return
             
         keyboard = []
         for appt in appointments:
             # appt: (id, date, time, full_name, session_type)
             app_id, d, t, name, stype = appt
-            btn_text = f"❌ لغو: {d} {t} | {name} ({stype})"
+            btn_text = f"❌ لغو: {d} | ساعت {t} | {name} ({stype})"
             keyboard.append([InlineKeyboardButton(btn_text, callback_data=f"del_{app_id}")])
             
         keyboard.append([InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data="main_menu")])
-        await query.edit_message_text("لیست نوبت‌های تایید شده:\nبرای لغو و آزاد شدن ساعت، روی هر کدام کلیک کنید.", reply_markup=InlineKeyboardMarkup(keyboard))
+        await query.edit_message_text(
+            "📋 **فهرست نوبت‌های قطعی و تایید‌شده:**\n\n"
+            "جهت لغو نوبت و آزادسازی مجدد زمان مشاوره برای مراجعین، روی نوبت مورد نظر کلیک فرمایید:", 
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
 
     elif query.data.startswith("del_") and user_id in ADMIN_IDS:
         app_id = query.data.split("_")[1]
         database.delete_appointment(app_id)
-        # بعد از حذف یک نوبت، پنل ادمین را دوباره لود می‌کنیم تا لیست جدید نشان داده شود
         keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل مدیریت", callback_data="admin_panel")]]
-        await query.edit_message_text("✅ نوبت با موفقیت حذف شد و ساعت آن مجدداً آزاد گردید.", reply_markup=InlineKeyboardMarkup(keyboard))
+        await query.edit_message_text(
+            "✅ نوبت مشاوره با موفقیت لغو گردید و زمان آن مجدداً برای رزرو مراجعین آزاد شد. 🌱", 
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
 
-    # ------------------ پروسه رزرو نوبت ------------------
+    # ------------------ فرآیند رزرو وقت مشاوره ------------------
     elif query.data == "book_appointment":
         upcoming_days = get_upcoming_days(5)
         keyboard = []
-        for day_obj, day_name in upcoming_days: # [آپدیت ۳]: استفاده از نام روز
+        for day_obj, day_name in upcoming_days:
             date_str = day_obj.strftime("%Y/%m/%d")
-            keyboard.append([InlineKeyboardButton(f"🗓 {day_name} - {date_str}", callback_data=f"date_{date_str}")])
+            keyboard.append([InlineKeyboardButton(f"🗓 {day_name} ({date_str})", callback_data=f"date_{date_str}")])
         
-        # [آپدیت ۶]: دکمه برگشت به منوی قبلی
         keyboard.append([InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data="main_menu")])
-        await query.edit_message_text("لطفاً یکی از روزهای کاری را انتخاب کنید:", reply_markup=InlineKeyboardMarkup(keyboard))
+        date_prompt_text = (
+            "📅 **گام اول: انتخاب تاریخ مشاوره**\n\n"
+            "لطفاً یکی از روزهای کاری کلینیک (شنبه تا چهارشنبه) را برای حضور یا برگزاری جلسه انتخاب فرمایید:"
+        )
+        await query.edit_message_text(date_prompt_text, reply_markup=InlineKeyboardMarkup(keyboard))
         
     elif query.data.startswith("date_"):
         selected_date = query.data.split("_")[1]
@@ -145,15 +172,19 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for hour in hours:
             if hour not in booked_times:
                 end_hour = int(hour.split(":")[0]) + 1
-                button_text = f"⏰ {hour} تا {end_hour}:00"
+                button_text = f"⏰ ساعت {hour} الی {end_hour}:00"
                 keyboard.append([InlineKeyboardButton(button_text, callback_data=f"time_{selected_date}_{hour}")])
         
         if not keyboard:
-            keyboard.append([InlineKeyboardButton("❌ تمام وقت‌های این روز پر است", callback_data="none")])
+            keyboard.append([InlineKeyboardButton("⚠️ متأسفانه تمامی زمان‌های این روز تکمیل است", callback_data="none")])
             
-        # [آپدیت ۶]: دکمه برگشت به روزها
-        keyboard.append([InlineKeyboardButton("🔙 بازگشت به لیست روزها", callback_data="book_appointment")])
-        await query.edit_message_text(f"روز انتخاب شده: {selected_date}\nلطفاً ساعت را انتخاب کنید:", reply_markup=InlineKeyboardMarkup(keyboard))
+        keyboard.append([InlineKeyboardButton("🔙 بازگشت به انتخاب تاریخ", callback_data="book_appointment")])
+        time_prompt_text = (
+            f"🗓 **تاریخ انتخابی:** {selected_date}\n\n"
+            "⏰ **گام دوم: انتخاب ساعت جلسه مشاوره**\n"
+            "لطفاً زمان مورد نظر خود را از میان ساعت‌های خالی زیر انتخاب فرمایید:"
+        )
+        await query.edit_message_text(time_prompt_text, reply_markup=InlineKeyboardMarkup(keyboard))
         
     elif query.data.startswith("time_"):
         _, selected_date, selected_time = query.data.split("_")
@@ -161,32 +192,31 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['selected_date'] = selected_date
         context.user_data['selected_time'] = selected_time
         
-        # [آپدیت ۸]: پرسیدن نوع جلسه (حضوری/آنلاین)
         keyboard = [
-            [InlineKeyboardButton("🖥 آنلاین (غیرحضوری)", callback_data="type_آنلاین")],
-            [InlineKeyboardButton("🏢 حضوری (در کلینیک)", callback_data="type_حضوری")],
-            [InlineKeyboardButton("🔙 بازگشت به ساعت‌ها", callback_data=f"date_{selected_date}")]
+            [InlineKeyboardButton("💻 مشاوره آنلاین (صوتی / تصویری)", callback_data="type_آنلاین")],
+            [InlineKeyboardButton("🏢 مشاوره حضوری (در محل کلینیک)", callback_data="type_حضوری")],
+            [InlineKeyboardButton("🔙 بازگشت به انتخاب ساعت", callback_data=f"date_{selected_date}")]
         ]
-        await query.edit_message_text(
-            f"✅ تاریخ: {selected_date} | ساعت: {selected_time}\n\n"
-            "لطفاً نوع جلسه مورد نظر خود را انتخاب کنید:", 
-            reply_markup=InlineKeyboardMarkup(keyboard)
+        type_prompt_text = (
+            f"🗓 **تاریخ:** {selected_date}  |  ⏰ **ساعت:** {selected_time}\n\n"
+            "🌿 **گام سوم: شیوه برگزاری جلسه مشاوره**\n"
+            "لطفاً شیوه مورد نظر خود را جهت شرکت در جلسه تعیین فرمایید:"
         )
+        await query.edit_message_text(type_prompt_text, reply_markup=InlineKeyboardMarkup(keyboard))
 
     elif query.data.startswith("type_"):
         session_type = query.data.split("_")[1]
         context.user_data['session_type'] = session_type
         
-        # [آپدیت ۷]: درخواست نام و نام خانوادگی (تغییر State ربات)
         context.user_data['state'] = 'awaiting_name'
         
-        # در اینجا چون منتظر تایپ متن هستیم، دکمه شیشه‌ای برای لغو می‌گذاریم
-        keyboard = [[InlineKeyboardButton("❌ انصراف و بازگشت به منوی اصلی", callback_data="main_menu")]]
-        await query.edit_message_text(
-            f"نوع جلسه: {session_type}\n\n"
-            "👤 **لطفاً نام و نام خانوادگی خود را در یک پیام تایپ کرده و ارسال کنید:**",
-            reply_markup=InlineKeyboardMarkup(keyboard)
+        keyboard = [[InlineKeyboardButton("❌ انصراف از رزرو نوبت", callback_data="main_menu")]]
+        name_prompt_text = (
+            f"🌿 **شیوه جلسه:** {session_type}\n\n"
+            "👤 **گام چهارم: مشخصات مراجع ارجمند**\n\n"
+            "لطفاً **نام و نام خانوادگی کامل** خود را جهت ثبت پرونده و صدور نوبت، در قالب یک پیام ارسال فرمایید:"
         )
+        await query.edit_message_text(name_prompt_text, reply_markup=InlineKeyboardMarkup(keyboard))
 
     # ------------------ تایید / رد ادمین‌ها [آپدیت ۱ و ۲] ------------------
     elif query.data.startswith("approve_") or query.data.startswith("reject_"):
@@ -206,59 +236,84 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if action == "approve":
             database.update_appointment_status(appointment_id, "confirmed")
-            await query.edit_message_caption(caption=f"{query.message.caption}\n\n✅ **توسط شما تایید شد**")
+            await query.edit_message_caption(caption=f"{query.message.caption}\n\n✅ **توسط شما تایید قطعی شد.**")
             
-            # اگر client_id غیر صفر بود، یعنی کاربر از ربات تلگرام آمده است
+            # ارسال تاییدیه قطعی به مراجع
             if client_id != 0:
+                client_confirm_text = (
+                    f"🌸 **مراجع ارجمند، جناب/سرکار {name}؛**\n\n"
+                    "✅ رسید پرداخت شما بررسی و **نوبت مشاوره شما با موفقیت قطعی گردید.**\n\n"
+                    "📋 **مشخصات نوبت قطعی شما:**\n"
+                    f"📅 **تاریخ جلسه:** {date}\n"
+                    f"⏰ **ساعت جلسه:** {time}\n"
+                    f"🩺 **نوع جلسه:** {s_type}\n\n"
+                    "📍 *یادآوری مراجعین حضوری:* لطفاً ۱۰ دقیقه پیش از موعد در کلینیک حضور داشته باشید.\n"
+                    "💻 *یادآوری مراجعین آنلاین:* لینک ورود پیش از آغاز جلسه هماهنگ خواهد شد.\n\n"
+                    "با آرزوی آرامش و تندرستی روان برای شما 🌱"
+                )
                 await context.bot.send_message(
                     chat_id=client_id, 
-                    text=f"🎉 تبریک {name} عزیز! فیش شما تایید شد.\n\n📅 تاریخ: {date}\n⏰ ساعت: {time}\nنوع جلسه: {s_type}\nنوبت شما قطعی شد.",
+                    text=client_confirm_text,
                     reply_markup=get_main_menu_keyboard(client_id)
                 )
             else:
-                # ارسال نوتیفیکیشن به ادمین برای تماس با مراجع سایت
                 await context.bot.send_message(
                     chat_id=query.message.chat_id,
-                    text=f"📞 این نوبت از طریق سایت ثبت شده است. لطفاً برای هماهنگی نهایی با شماره درج شده تماس بگیرید یا پیامک دهید:\n{name}"
+                    text=f"📞 این نوبت از طریق وب‌سایت ثبت شده است. لطفاً جهت هماهنگی نهایی با مراجع گرامی تماس حاصل فرمایید:\n{name}"
                 )
 
         elif action == "reject":
             database.update_appointment_status(appointment_id, "rejected")
-            await query.edit_message_caption(caption=f"{query.message.caption}\n\n❌ **توسط شما رد شد**")
+            await query.edit_message_caption(caption=f"{query.message.caption}\n\n❌ **توسط شما رد شد.**")
             
             if client_id != 0:
+                client_reject_text = (
+                    f"مراجع ارجمند، جناب/سرکار {name}؛\n\n"
+                    f"⚠️ متأسفانه رسید واریزی ارسالی برای وقت مشاوره مورخ **{date} (ساعت {time})** مورد تایید قرار نگرفت (به‌دلیل عدم انطباق یا ناخوانا بودن رسید).\n\n"
+                    "در صورت تمایل به پیگیری، با پذیرش کلینیک تماس حاصل فرمایید یا از طریق منو مجدداً اقدام کنید. 🌿"
+                )
                 await context.bot.send_message(
                     chat_id=client_id, 
-                    text=f"❌ متاسفانه فیش شما برای نوبت {date} تایید نشد. لطفاً در صورت نیاز مجدداً از منو اقدام کنید.",
+                    text=client_reject_text,
                     reply_markup=get_main_menu_keyboard(client_id)
                 )
             else:
                 await context.bot.send_message(
                     chat_id=query.message.chat_id,
-                    text=f"📞 این نوبت از طریق سایت بود و رد شد. در صورت نیاز با شماره درج شده تماس بگیرید:\n{name}"
+                    text=f"📞 این نوبت از طریق وب‌سایت بود و رد شد. در صورت نیاز با شماره درج شده تماس بگیرید:\n{name}"
                 )
 
-# [آپدیت ۷]: هندلر جدید برای دریافت نام و نام خانوادگی به صورت متنی
+# هندلر دریافت پیام‌های متنی (نام مراجع و پاسخ عمومی)
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.user_data.get('state') == 'awaiting_name':
-        full_name = update.message.text
+        full_name = update.message.text.strip()
         context.user_data['full_name'] = full_name
         
-        # تغییر وضعیت ربات به انتظار برای عکس فیش
+        # تغییر وضعیت به انتظار برای دریافت فیش واریزی
         context.user_data['state'] = 'awaiting_receipt'
         
-        keyboard = [[InlineKeyboardButton("❌ انصراف از رزرو", callback_data="main_menu")]]
+        keyboard = [[InlineKeyboardButton("❌ انصراف از رزرو نوبت", callback_data="main_menu")]]
+        receipt_request_text = (
+            f"سپاسگزاریم، مراجع گرامی جناب/سرکار {full_name} 🌸\n\n"
+            "💳 **گام نهایی: بارگذاری رسید پرداخت حق‌المشاوره**\n\n"
+            "جهت نهایی‌سازی درخواست رزرو، لطفاً تصویر واضح فیش واریزی خود را در همین گفتگو ارسال فرمایید.\n\n"
+            "⏳ *نکته:* پس از ارسال تصویر، اطلاعات نوبت بلافاصله جهت بررسی و ثبت قطعی در اختیار پذیرش کلینیک قرار خواهد گرفت."
+        )
         await update.message.reply_text(
-            f"ممنون {full_name} عزیز.\n\n"
-            "💳 **مرحله آخر:** لطفاً همین الان عکس فیش پرداختی خود را ارسال کنید.",
+            receipt_request_text,
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
     else:
         user_id = update.effective_user.id
         username = update.effective_user.username or "None"
         logger.info(f"Text message received outside booking from user {user_id} (@{username}): {update.message.text}")
+        general_prompt_text = (
+            "درود و احترام؛ 🌱\n"
+            "به سامانه نوبت‌دهی کلینیک روان‌شناسی دکتر شفائی خوش آمدید.\n"
+            "لطفاً جهت رزرو وقت مشاوره، ارتباط با پذیرش یا مشاهده وب‌سایت کلینیک، از گزینه‌های زیر استفاده فرمایید:"
+        )
         await update.message.reply_text(
-            "سلام! به سیستم نوبت‌دهی کلینیک روان‌شناسی دکتر شفائی خوش آمدید.\nلطفاً از منوی زیر انتخاب کنید:", 
+            general_prompt_text, 
             reply_markup=get_main_menu_keyboard(user_id)
         )
 
@@ -283,28 +338,32 @@ async def handle_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # پایان پروسه برای این کاربر
     context.user_data.clear()
 
-    await update.message.reply_text(
-        "✅ فیش شما با موفقیت دریافت شد و برای ادمین‌ها ارسال گردید.\n"
-        "پس از بررسی، نتیجه همینجا به شما اعلام خواهد شد."
+    user_receipt_ack = (
+        "✅ **رسید پرداخت شما با موفقیت دریافت و ثبت اولیه گردید.** 🌱\n\n"
+        "درخواست رزرو نوبت شما در اختیار همکاران پذیرش کلینیک قرار گرفت.\n"
+        "به محض بررسی و تایید، تاییدیه قطعی نوبت در همین گفتگو به اطلاع شما خواهد رسید.\n\n"
+        "با سپاس از صبوری و همراهی ارزشمند شما 🌿"
     )
+    await update.message.reply_text(user_receipt_ack)
 
-    # [آپدیت ۱]: دکمه‌ها و کپشن برای ارسال به ادمین‌ها
+    # دکمه‌ها و مشخصات ارسالی برای ادمین‌های کلینیک
     keyboard = [
         [
-            InlineKeyboardButton("✅ تایید قطعی", callback_data=f"approve_{appointment_id}"),
-            InlineKeyboardButton("❌ رد فیش", callback_data=f"reject_{appointment_id}")
+            InlineKeyboardButton("✅ تایید نهایی نوبت", callback_data=f"approve_{appointment_id}"),
+            InlineKeyboardButton("❌ عدم تایید رسید", callback_data=f"reject_{appointment_id}")
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
+    user_handle = f"@{user.username}" if user.username else "ندارد"
     caption = (
-        f"🆕 درخواست نوبت جدید:\n\n"
-        f"👤 نام ثبت شده: {full_name}\n"
-        f"🔗 آیدی تلگرام: @{user.username}\n"
-        f"📅 تاریخ: {date}\n"
-        f"⏰ ساعت: {time}\n"
-        f"🩺 نوع جلسه: {session_type}\n"
-        f"🆔 شناسه: {appointment_id}"
+        "📋 **درخواست جدید رزرو وقت مشاوره:**\n\n"
+        f"👤 **نام مراجع:** {full_name}\n"
+        f"🔗 **شناسه تلگرام:** {user_handle}\n"
+        f"📅 **تاریخ جلسه:** {date}\n"
+        f"⏰ **ساعت جلسه:** {time}\n"
+        f"🩺 **نوع جلسه:** {session_type}\n"
+        f"🆔 **کد پیگیری:** #{appointment_id}"
     )
     
     # [آپدیت ۱]: ارسال پیام تایید به صورت حلقه‌ای برای تمام ادمین‌های لیست شده

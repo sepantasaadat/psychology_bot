@@ -63,22 +63,22 @@ def get_available_hours(selected_date):
     conn.close()
     return [h for h in all_hours if h not in booked_times]
 
-# ارسال درخواست و دکمه شیشه‌ای به تلگرام
+# ارسال درخواست و دکمه شیشه‌ای به تلگرام با فرمت استاندارد کلینیک روان‌شناسی
 def send_receipt_to_telegram(app_id, name_with_phone, date, time, session_type, filepath):
     caption = (
-        f"🌐 درخواست نوبت جدید از **سایت**:\n\n"
-        f"👤 نام و موبایل: {name_with_phone}\n"
-        f"📅 تاریخ: {date}\n"
-        f"⏰ ساعت: {time}\n"
-        f"🩺 نوع جلسه: {session_type}\n"
-        f"🆔 شناسه: {app_id}"
+        "🌐 **درخواست جدید وقت مشاوره از وب‌سایت:**\n\n"
+        f"👤 **نام و تماس مراجع:** {name_with_phone}\n"
+        f"📅 **تاریخ جلسه:** {date}\n"
+        f"⏰ **ساعت جلسه:** {time}\n"
+        f"🩺 **نوع جلسه:** {session_type}\n"
+        f"🆔 **کد پیگیری:** #{app_id}"
     )
     
     reply_markup = {
         "inline_keyboard": [
             [
-                {"text": "✅ تایید قطعی", "callback_data": f"approve_{app_id}"},
-                {"text": "❌ رد فیش", "callback_data": f"reject_{app_id}"}
+                {"text": "✅ تایید نهایی نوبت", "callback_data": f"approve_{app_id}"},
+                {"text": "❌ عدم تایید رسید", "callback_data": f"reject_{app_id}"}
             ]
         ]
     }
