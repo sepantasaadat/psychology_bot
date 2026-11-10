@@ -52,14 +52,12 @@ def get_upcoming_days(days_count=5):
 def get_main_menu_keyboard(user_id):
     keyboard = [
         [InlineKeyboardButton("🌱 رزرو وقت مشاوره جدید", callback_data="book_appointment")],
-        [
-            InlineKeyboardButton("🤝 ارتباط با پذیرش و پشتیبانی", callback_data="emergency_contact"),
-            InlineKeyboardButton("🌐 وب‌سایت رسمی کلینیک", url=CLINIC_WEBSITE)
-        ]
+        [InlineKeyboardButton("🤝 ارتباط با پذیرش و پشتیبانی", callback_data="emergency_contact")],
+        [InlineKeyboardButton("🌐 وب‌سایت رسمی کلینیک", url=CLINIC_WEBSITE)],
     ]
     # نمایش پنل اختصاصی برای ادمین‌های مجاز
     if user_id in ADMIN_IDS:
-        keyboard.append([InlineKeyboardButton("⚙️ پنل مدیریت نوبت‌ها (ویژه مدیریت)", callback_data="admin_panel")])
+        keyboard.append([InlineKeyboardButton("⚙️ پنل مدیریت نوبت‌ها", callback_data="admin_panel")])
         
     return InlineKeyboardMarkup(keyboard)
 
@@ -103,10 +101,10 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data="main_menu")]
         ]
         contact_text = (
-            "🤝 **ارتباط با پذیرش و پشتیبانی کلینیک روان‌شناسی دکتر شفائی:**\n\n"
+            "🤝 ارتباط با پذیرش و پشتیبانی کلینیک روان‌شناسی دکتر شفائی:\n\n"
             "مراجع ارجمند، چنانچه پیش از رزرو نوبت نیاز به راهنمایی تخصصی، هماهنگی یا پاسخ به پرسش‌های خود دارید، از مسیرهای زیر پاسخگوی شما هستیم:\n\n"
-            f"📞 **تماس تلفنی با پذیرش:** `{ADMIN_PHONE}`\n"
-            f"💬 **پشتیبانی تلگرام:** @{ADMIN_USERNAME}\n\n"
+            f"📞 تماس تلفنی با پذیرش: {ADMIN_PHONE}\n"
+            f"💬 پشتیبانی تلگرام: @{ADMIN_USERNAME}\n\n"
             "ساعات پاسخگویی: شنبه تا چهارشنبه، هماهنگ با تقویم کاری کلینیک 🌱"
         )
         await query.edit_message_text(
@@ -129,12 +127,12 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for appt in appointments:
             # appt: (id, date, time, full_name, session_type)
             app_id, d, t, name, stype = appt
-            btn_text = f"❌ لغو: {d} | ساعت {t} | {name} ({stype})"
+            btn_text = f"❌ لغو: {d} | ساعت {t} | {name}"
             keyboard.append([InlineKeyboardButton(btn_text, callback_data=f"del_{app_id}")])
             
         keyboard.append([InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data="main_menu")])
         await query.edit_message_text(
-            "📋 **فهرست نوبت‌های قطعی و تایید‌شده:**\n\n"
+            "📋 فهرست نوبت‌های قطعی و تایید‌شده:\n\n"
             "جهت لغو نوبت و آزادسازی مجدد زمان مشاوره برای مراجعین، روی نوبت مورد نظر کلیک فرمایید:", 
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
@@ -158,7 +156,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         keyboard.append([InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data="main_menu")])
         date_prompt_text = (
-            "📅 **گام اول: انتخاب تاریخ مشاوره**\n\n"
+            "📅 گام اول: انتخاب تاریخ مشاوره\n\n"
             "لطفاً یکی از روزهای کاری کلینیک (شنبه تا چهارشنبه) را برای حضور یا برگزاری جلسه انتخاب فرمایید:"
         )
         await query.edit_message_text(date_prompt_text, reply_markup=InlineKeyboardMarkup(keyboard))
@@ -176,12 +174,12 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 keyboard.append([InlineKeyboardButton(button_text, callback_data=f"time_{selected_date}_{hour}")])
         
         if not keyboard:
-            keyboard.append([InlineKeyboardButton("⚠️ متأسفانه تمامی زمان‌های این روز تکمیل است", callback_data="none")])
+            keyboard.append([InlineKeyboardButton("⚠️ تمامی ساعت‌های این روز تکمیل است", callback_data="none")])
             
         keyboard.append([InlineKeyboardButton("🔙 بازگشت به انتخاب تاریخ", callback_data="book_appointment")])
         time_prompt_text = (
-            f"🗓 **تاریخ انتخابی:** {selected_date}\n\n"
-            "⏰ **گام دوم: انتخاب ساعت جلسه مشاوره**\n"
+            f"🗓 تاریخ انتخابی: {selected_date}\n\n"
+            "⏰ گام دوم: انتخاب ساعت جلسه مشاوره\n"
             "لطفاً زمان مورد نظر خود را از میان ساعت‌های خالی زیر انتخاب فرمایید:"
         )
         await query.edit_message_text(time_prompt_text, reply_markup=InlineKeyboardMarkup(keyboard))
@@ -193,14 +191,14 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['selected_time'] = selected_time
         
         keyboard = [
-            [InlineKeyboardButton("💻 مشاوره آنلاین (صوتی / تصویری)", callback_data="type_آنلاین")],
-            [InlineKeyboardButton("🏢 مشاوره حضوری (در محل کلینیک)", callback_data="type_حضوری")],
+            [InlineKeyboardButton("💻 مشاوره آنلاین", callback_data="type_آنلاین")],
+            [InlineKeyboardButton("🏢 مشاوره حضوری", callback_data="type_حضوری")],
             [InlineKeyboardButton("🔙 بازگشت به انتخاب ساعت", callback_data=f"date_{selected_date}")]
         ]
         type_prompt_text = (
-            f"🗓 **تاریخ:** {selected_date}  |  ⏰ **ساعت:** {selected_time}\n\n"
-            "🌿 **گام سوم: شیوه برگزاری جلسه مشاوره**\n"
-            "لطفاً شیوه مورد نظر خود را جهت شرکت در جلسه تعیین فرمایید:"
+            f"🗓 تاریخ: {selected_date} | ⏰ ساعت: {selected_time}\n\n"
+            "🌿 گام سوم: شیوه برگزاری جلسه مشاوره\n"
+            "لطفاً شیوه مورد نظر خود را تعیین فرمایید:"
         )
         await query.edit_message_text(type_prompt_text, reply_markup=InlineKeyboardMarkup(keyboard))
 
@@ -210,11 +208,11 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         context.user_data['state'] = 'awaiting_name'
         
-        keyboard = [[InlineKeyboardButton("❌ انصراف از رزرو نوبت", callback_data="main_menu")]]
+        keyboard = [[InlineKeyboardButton("❌ انصراف و بازگشت", callback_data="main_menu")]]
         name_prompt_text = (
-            f"🌿 **شیوه جلسه:** {session_type}\n\n"
-            "👤 **گام چهارم: مشخصات مراجع ارجمند**\n\n"
-            "لطفاً **نام و نام خانوادگی کامل** خود را جهت ثبت پرونده و صدور نوبت، در قالب یک پیام ارسال فرمایید:"
+            f"🌿 شیوه جلسه: {session_type}\n\n"
+            "👤 گام چهارم: مشخصات مراجع ارجمند\n\n"
+            "لطفاً نام و نام خانوادگی کامل خود را جهت ثبت پرونده و صدور نوبت ارسال فرمایید:"
         )
         await query.edit_message_text(name_prompt_text, reply_markup=InlineKeyboardMarkup(keyboard))
 
@@ -236,19 +234,19 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if action == "approve":
             database.update_appointment_status(appointment_id, "confirmed")
-            await query.edit_message_caption(caption=f"{query.message.caption}\n\n✅ **توسط شما تایید قطعی شد.**")
+            await query.edit_message_caption(caption=f"{query.message.caption}\n\n✅ توسط شما تایید قطعی شد.")
             
             # ارسال تاییدیه قطعی به مراجع
             if client_id != 0:
                 client_confirm_text = (
-                    f"🌸 **مراجع ارجمند، جناب/سرکار {name}؛**\n\n"
-                    "✅ رسید پرداخت شما بررسی و **نوبت مشاوره شما با موفقیت قطعی گردید.**\n\n"
-                    "📋 **مشخصات نوبت قطعی شما:**\n"
-                    f"📅 **تاریخ جلسه:** {date}\n"
-                    f"⏰ **ساعت جلسه:** {time}\n"
-                    f"🩺 **نوع جلسه:** {s_type}\n\n"
-                    "📍 *یادآوری مراجعین حضوری:* لطفاً ۱۰ دقیقه پیش از موعد در کلینیک حضور داشته باشید.\n"
-                    "💻 *یادآوری مراجعین آنلاین:* لینک ورود پیش از آغاز جلسه هماهنگ خواهد شد.\n\n"
+                    f"🌸 مراجع ارجمند، جناب/سرکار {name}؛\n\n"
+                    "✅ رسید پرداخت شما بررسی و نوبت مشاوره شما با موفقیت قطعی گردید.\n\n"
+                    "📋 مشخصات نوبت قطعی شما:\n"
+                    f"📅 تاریخ جلسه: {date}\n"
+                    f"⏰ ساعت جلسه: {time}\n"
+                    f"🩺 نوع جلسه: {s_type}\n\n"
+                    "📍 یادآوری مراجعین حضوری: لطفاً ۱۰ دقیقه پیش از موعد در کلینیک حضور داشته باشید.\n"
+                    "💻 یادآوری مراجعین آنلاین: لینک ورود پیش از آغاز جلسه هماهنگ خواهد شد.\n\n"
                     "با آرزوی آرامش و تندرستی روان برای شما 🌱"
                 )
                 await context.bot.send_message(
@@ -264,12 +262,12 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         elif action == "reject":
             database.update_appointment_status(appointment_id, "rejected")
-            await query.edit_message_caption(caption=f"{query.message.caption}\n\n❌ **توسط شما رد شد.**")
+            await query.edit_message_caption(caption=f"{query.message.caption}\n\n❌ توسط شما رد شد.")
             
             if client_id != 0:
                 client_reject_text = (
                     f"مراجع ارجمند، جناب/سرکار {name}؛\n\n"
-                    f"⚠️ متأسفانه رسید واریزی ارسالی برای وقت مشاوره مورخ **{date} (ساعت {time})** مورد تایید قرار نگرفت (به‌دلیل عدم انطباق یا ناخوانا بودن رسید).\n\n"
+                    f"⚠️ متأسفانه رسید واریزی ارسالی برای وقت مشاوره مورخ {date} (ساعت {time}) مورد تایید قرار نگرفت (به‌دلیل عدم انطباق یا ناخوانا بودن رسید).\n\n"
                     "در صورت تمایل به پیگیری، با پذیرش کلینیک تماس حاصل فرمایید یا از طریق منو مجدداً اقدام کنید. 🌿"
                 )
                 await context.bot.send_message(
@@ -292,12 +290,12 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # تغییر وضعیت به انتظار برای دریافت فیش واریزی
         context.user_data['state'] = 'awaiting_receipt'
         
-        keyboard = [[InlineKeyboardButton("❌ انصراف از رزرو نوبت", callback_data="main_menu")]]
+        keyboard = [[InlineKeyboardButton("❌ انصراف و بازگشت", callback_data="main_menu")]]
         receipt_request_text = (
             f"سپاسگزاریم، مراجع گرامی جناب/سرکار {full_name} 🌸\n\n"
-            "💳 **گام نهایی: بارگذاری رسید پرداخت حق‌المشاوره**\n\n"
+            "💳 گام نهایی: بارگذاری رسید پرداخت حق‌المشاوره\n\n"
             "جهت نهایی‌سازی درخواست رزرو، لطفاً تصویر واضح فیش واریزی خود را در همین گفتگو ارسال فرمایید.\n\n"
-            "⏳ *نکته:* پس از ارسال تصویر، اطلاعات نوبت بلافاصله جهت بررسی و ثبت قطعی در اختیار پذیرش کلینیک قرار خواهد گرفت."
+            "⏳ پس از ارسال تصویر، اطلاعات نوبت جهت بررسی و ثبت قطعی در اختیار پذیرش کلینیک قرار خواهد گرفت."
         )
         await update.message.reply_text(
             receipt_request_text,
@@ -339,31 +337,31 @@ async def handle_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
 
     user_receipt_ack = (
-        "✅ **رسید پرداخت شما با موفقیت دریافت و ثبت اولیه گردید.** 🌱\n\n"
+        "✅ رسید پرداخت شما با موفقیت دریافت و ثبت اولیه گردید. 🌱\n\n"
         "درخواست رزرو نوبت شما در اختیار همکاران پذیرش کلینیک قرار گرفت.\n"
         "به محض بررسی و تایید، تاییدیه قطعی نوبت در همین گفتگو به اطلاع شما خواهد رسید.\n\n"
         "با سپاس از صبوری و همراهی ارزشمند شما 🌿"
     )
     await update.message.reply_text(user_receipt_ack)
 
-    # دکمه‌ها و مشخصات ارسالی برای ادمین‌های کلینیک
+    # دکمه‌ها و مشخصات ارسالی برای ادمین‌های کلینیک (اندازه متناسب با صفحه نمایش)
     keyboard = [
         [
-            InlineKeyboardButton("✅ تایید نهایی نوبت", callback_data=f"approve_{appointment_id}"),
-            InlineKeyboardButton("❌ عدم تایید رسید", callback_data=f"reject_{appointment_id}")
+            InlineKeyboardButton("✅ تایید نوبت", callback_data=f"approve_{appointment_id}"),
+            InlineKeyboardButton("❌ رد رسید", callback_data=f"reject_{appointment_id}")
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     user_handle = f"@{user.username}" if user.username else "ندارد"
     caption = (
-        "📋 **درخواست جدید رزرو وقت مشاوره:**\n\n"
-        f"👤 **نام مراجع:** {full_name}\n"
-        f"🔗 **شناسه تلگرام:** {user_handle}\n"
-        f"📅 **تاریخ جلسه:** {date}\n"
-        f"⏰ **ساعت جلسه:** {time}\n"
-        f"🩺 **نوع جلسه:** {session_type}\n"
-        f"🆔 **کد پیگیری:** #{appointment_id}"
+        "📋 درخواست جدید رزرو وقت مشاوره:\n\n"
+        f"👤 نام مراجع: {full_name}\n"
+        f"🔗 شناسه تلگرام: {user_handle}\n"
+        f"📅 تاریخ جلسه: {date}\n"
+        f"⏰ ساعت جلسه: {time}\n"
+        f"🩺 نوع جلسه: {session_type}\n"
+        f"🆔 کد پیگیری: #{appointment_id}"
     )
     
     # [آپدیت ۱]: ارسال پیام تایید به صورت حلقه‌ای برای تمام ادمین‌های لیست شده
