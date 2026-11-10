@@ -1,0 +1,1 @@
+its ok , but we should fix some problems , first there is some **   ** all over the bot's messages why they are look like that fix them completley and carefuly , 2nd thing is i want the buttoms and words in them fit together some buttoms are smaller than words in it. fix these problems precisely and then push it to git hub
