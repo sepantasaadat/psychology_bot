@@ -419,15 +419,20 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         app_info = database.get_appointment(appointment_id)
         if not app_info:
-            await query.edit_message_caption(caption="⚠️ این نوبت در دیتابیس یافت نشد!")
+            await query.edit_message_caption(
+                caption="⚠️ این نوبت در دیتابیس یافت نشد!",
+                reply_markup=None
+            )
+            await complete_admin_review_session(query, context, user_id)
             return
             
         client_id, date, time, s_type, name, current_status = app_info
 
         # جلوگیری از تداخل دو ادمین: اگر قبلاً تایید/رد شده، دیگر کاری نکن
         if current_status != "pending":
+            base_caption = query.message.caption or ""
             await query.edit_message_caption(
-                caption=f"{query.message.caption}\n\n⚠️ این نوبت قبلاً توسط ادمین دیگری تعیین تکلیف شده است.",
+                caption=f"{base_caption}\n\n⚠️ این نوبت قبلاً توسط ادمین دیگری تعیین تکلیف شده است.",
                 reply_markup=None
             )
             await complete_admin_review_session(query, context, user_id)

@@ -171,5 +171,42 @@ class TestAdminWorkflow(unittest.IsolatedAsyncioTestCase):
         self.assertIn("منوی اصلی", admin_menu_call[1]["text"])
         self.assertIsNotNone(admin_menu_call[1]["reply_markup"])
 
+    async def test_missing_appointment_triggers_schedule_and_menu(self):
+        # Mock Update and Context for a non-existent appointment ID
+        update = MagicMock()
+        query = MagicMock()
+        query.data = "approve_999999"
+        query.answer = AsyncMock()
+        query.edit_message_caption = AsyncMock()
+        query.message.caption = "رسید ارسالی"
+        query.message.chat_id = main.MAIN_ADMIN_ID
+        query.from_user.id = main.MAIN_ADMIN_ID
+        update.callback_query = query
+        update.effective_user.id = main.MAIN_ADMIN_ID
+        update.effective_user.username = "clinic_admin"
+
+        context = MagicMock()
+        context.user_data = {"temp": "data"}
+        context.bot.send_message = AsyncMock()
+
+        # Call button_handler
+        await main.button_handler(update, context)
+
+        # Verify caption edited and buttons stripped
+        query.edit_message_caption.assert_called_once()
+        self.assertIn("یافت نشد", query.edit_message_caption.call_args[1]["caption"])
+        self.assertIn("reply_markup", query.edit_message_caption.call_args[1])
+        self.assertIsNone(query.edit_message_caption.call_args[1]["reply_markup"])
+
+        # Verify session cleared
+        self.assertEqual(context.user_data, {})
+
+        # Verify schedule and main menu sent
+        self.assertEqual(context.bot.send_message.call_count, 2)
+        schedule_call = context.bot.send_message.call_args_list[0]
+        self.assertIn("برنامه کاری ۷ روز آینده", schedule_call[1]["text"])
+        menu_call = context.bot.send_message.call_args_list[1]
+        self.assertIn("منوی اصلی", menu_call[1]["text"])
+
 if __name__ == '__main__':
     unittest.main()
