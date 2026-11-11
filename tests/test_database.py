@@ -92,5 +92,46 @@ class TestDatabaseWeeklyAppointments(unittest.TestCase):
         self.assertEqual(app_info[4], 'دکتر سپنتا')
         self.assertEqual(app_info[5], 'confirmed')
 
+    def test_get_user_confirmed_appointments_for_week(self):
+        conn = database.get_connection()
+        cursor = conn.cursor()
+        # User 201: 2 confirmed inside week, 1 pending inside week, 1 confirmed outside week
+        cursor.execute('''
+            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id)
+            VALUES (201, '1405/01/02', '17:00', 'حضوری', 'کاربر اول', 'confirmed', 'r1')
+        ''')
+        cursor.execute('''
+            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id)
+            VALUES (201, '1405/01/05', '18:00', 'آنلاین', 'کاربر اول', 'confirmed', 'r2')
+        ''')
+        cursor.execute('''
+            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id)
+            VALUES (201, '1405/01/03', '19:00', 'حضوری', 'کاربر اول', 'pending', 'r3')
+        ''')
+        cursor.execute('''
+            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id)
+            VALUES (201, '1405/01/15', '20:00', 'حضوری', 'کاربر اول', 'confirmed', 'r4')
+        ''')
+        # User 202: confirmed inside week
+        cursor.execute('''
+            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id)
+            VALUES (202, '1405/01/04', '18:00', 'حضوری', 'کاربر دوم', 'confirmed', 'r5')
+        ''')
+        conn.commit()
+        conn.close()
+
+        # Query for user 201
+        res_201 = database.get_user_confirmed_appointments_for_week(201, '1405/01/01', '1405/01/07')
+        self.assertEqual(len(res_201), 2)
+        self.assertEqual(res_201[0][1], '1405/01/02')
+        self.assertEqual(res_201[0][2], '17:00')
+        self.assertEqual(res_201[1][1], '1405/01/05')
+        self.assertEqual(res_201[1][2], '18:00')
+
+        # Query for user 202
+        res_202 = database.get_user_confirmed_appointments_for_week(202, '1405/01/01', '1405/01/07')
+        self.assertEqual(len(res_202), 1)
+        self.assertEqual(res_202[0][1], '1405/01/04')
+
 if __name__ == '__main__':
     unittest.main()

@@ -126,6 +126,23 @@ def get_upcoming_week_confirmed_appointments(start_date_str, end_date_str):
     conn.close()
     return rows
 
+# دریافت نوبت‌های تایید شده یک کاربر خاص در بازه زمانی مشخص (جهت لغو نوبت توسط مراجع)
+def get_user_confirmed_appointments_for_week(user_id, start_date_str, end_date_str):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT id, date, time, full_name, session_type 
+        FROM appointments 
+        WHERE user_id = ? 
+          AND status = 'confirmed' 
+          AND date >= ? 
+          AND date <= ?
+        ORDER BY date, time
+    ''', (user_id, start_date_str, end_date_str))
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
 # [آپدیت ۹]: تابع حذف کامل یک نوبت برای آزاد شدن ساعت آن
 def delete_appointment(appointment_id):
     conn = get_connection()
