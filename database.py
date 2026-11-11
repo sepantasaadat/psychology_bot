@@ -96,6 +96,22 @@ def get_all_confirmed_appointments():
     conn.close()
     return rows
 
+# دریافت نوبت‌های تایید شده برای بازه زمانی مشخص (مانند ۷ روز آینده)
+def get_upcoming_week_confirmed_appointments(start_date_str, end_date_str):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT id, date, time, full_name, session_type 
+        FROM appointments 
+        WHERE status = 'confirmed' 
+          AND date >= ? 
+          AND date <= ?
+        ORDER BY date, time
+    ''', (start_date_str, end_date_str))
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
 # [آپدیت ۹]: تابع حذف کامل یک نوبت برای آزاد شدن ساعت آن
 def delete_appointment(appointment_id):
     conn = get_connection()
