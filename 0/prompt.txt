@@ -1,0 +1,11 @@
+@[plugin:superpowers] Add time-restriction rules and automatic button expiration to the appointment cancellation feature for regular users (non-admins):
+48-Hour Cancellation Policy:
+Regular users are only permitted to cancel their booking up to 48 hours prior to the scheduled appointment date and time.
+If a user clicks the cancellation button less than 48 hours before the appointment time: Do NOT process the cancellation; instead, send an apology message stating that the appointment cannot be canceled due to the cancellation policy.
+Automatic Removal of Expired Buttons:
+Once the scheduled date and time of an appointment have passed, automatically remove its corresponding cancellation button from the user's menu interface.
+and then push it to github
+
+---
+
+@[plugin:superpowers] that's ok do it
