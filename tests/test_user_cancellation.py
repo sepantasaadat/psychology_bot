@@ -55,7 +55,7 @@ class TestUserCancellation(unittest.IsolatedAsyncioTestCase):
         today_date = jdatetime.date.today()
         if today_date.year < 1405:
             today_date = jdatetime.date(1405, 1, 1)
-        d1 = today_date.strftime("%Y/%m/%d")
+        d1 = (today_date + jdatetime.timedelta(days=1)).strftime("%Y/%m/%d")
         d2 = (today_date + jdatetime.timedelta(days=2)).strftime("%Y/%m/%d")
 
         app1 = database.add_confirmed_appointment(user_id, d1, '17:00', 'حضوری', 'کاربر تستی', 'rec1')
