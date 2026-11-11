@@ -1,0 +1,13 @@
+@[plugin:superpowers] Update the admin workflow when an appointment has already been handled by another admin:
+Trigger Condition:
+When an appointment has already been confirmed/processed by another admin, and an admin receives the following notification message:
+"⚠️ این نوبت قبلاً توسط ادمین دیگری تعیین تکلیف شده است"
+Required Behavior:
+Immediately after displaying this message to that admin:
+Send that admin a complete list of all booked appointments for the upcoming week (next 7 days).
+Automatically reset/restart the bot session for that admin so they are redirected back to the main menu.
+and push it to github
+
+---
+
+@[plugin:superpowers] that's ok do it
