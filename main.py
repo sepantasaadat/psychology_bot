@@ -48,6 +48,31 @@ def get_upcoming_days(days_count=5):
         current_date = current_date + jdatetime.timedelta(days=1)
     return days
 
+# تابع گزارش نوبت‌های تایید شده ۷ روز آینده کلینیک
+def format_upcoming_week_appointments(reference_date=None):
+    if reference_date is not None:
+        start_date = reference_date
+    else:
+        start_date = jdatetime.date.today()
+        if start_date.year < 1405:
+            start_date = jdatetime.date(1405, 1, 1)
+
+    end_date = start_date + jdatetime.timedelta(days=6)
+    start_str = start_date.strftime("%Y/%m/%d")
+    end_str = end_date.strftime("%Y/%m/%d")
+
+    appointments = database.get_upcoming_week_confirmed_appointments(start_str, end_str)
+    if not appointments:
+        return f"📋 برنامه کاری ۷ روز آینده (از {start_str} تا {end_str}):\nدر ۷ روز آینده هیچ نوبت قطعی ثبت نشده است. 🌱"
+
+    lines = [f"📋 فهرست نوبت‌های تایید‌شده ۷ روز آینده (از {start_str} تا {end_str}):"]
+    for appt in appointments:
+        # appt: (id, date, time, full_name, session_type)
+        _, d, t, name, stype = appt
+        lines.append(f"• {d} | ساعت {t} | {name} ({stype})")
+
+    return "\n".join(lines)
+
 # تابع کمکی برای ساخت دکمه‌های منوی اصلی (تا بتوانیم کاربر را دوباره به اینجا برگردانیم) [آپدیت ۲ و ۴ و ۵ و ۹]
 def get_main_menu_keyboard(user_id):
     keyboard = [
@@ -234,7 +259,10 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if action == "approve":
             database.update_appointment_status(appointment_id, "confirmed")
-            await query.edit_message_caption(caption=f"{query.message.caption}\n\n✅ توسط شما تایید قطعی شد.")
+            await query.edit_message_caption(
+                caption=f"{query.message.caption}\n\n✅ توسط شما تایید قطعی شد.",
+                reply_markup=None
+            )
             
             # ارسال تاییدیه قطعی به مراجع
             if client_id != 0:
@@ -262,7 +290,10 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         elif action == "reject":
             database.update_appointment_status(appointment_id, "rejected")
-            await query.edit_message_caption(caption=f"{query.message.caption}\n\n❌ توسط شما رد شد.")
+            await query.edit_message_caption(
+                caption=f"{query.message.caption}\n\n❌ توسط شما رد شد.",
+                reply_markup=None
+            )
             
             if client_id != 0:
                 client_reject_text = (
@@ -280,6 +311,16 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     chat_id=query.message.chat_id,
                     text=f"📞 این نوبت از طریق وب‌سایت بود و رد شد. در صورت نیاز با شماره درج شده تماس بگیرید:\n{name}"
                 )
+
+        # ریست خودکار نشست ادمین، ارسال برنامه هفتگی نوبت‌ها و بازگشت به منوی اصلی
+        context.user_data.clear()
+        weekly_schedule = format_upcoming_week_appointments()
+        await context.bot.send_message(chat_id=query.message.chat_id, text=weekly_schedule)
+        await context.bot.send_message(
+            chat_id=query.message.chat_id,
+            text="منوی اصلی پذیرش و مدیریت کلینیک: 🌿",
+            reply_markup=get_main_menu_keyboard(user_id)
+        )
 
 # هندلر دریافت پیام‌های متنی (نام مراجع و پاسخ عمومی)
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
