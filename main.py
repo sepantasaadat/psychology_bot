@@ -296,7 +296,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ------------------ فرآیند رزرو وقت مشاوره ------------------
     elif query.data == "book_appointment":
-        upcoming_days = get_upcoming_days(5)
+        is_admin = user_id in ADMIN_IDS
+        upcoming_days = get_upcoming_days(5, is_admin=is_admin)
         keyboard = []
         for day_obj, day_name in upcoming_days:
             date_str = day_obj.strftime("%Y/%m/%d")
@@ -311,6 +312,26 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
     elif query.data.startswith("date_"):
         selected_date = query.data.split("_")[1]
+        
+        # بررسی دسترسی نقش: مراجعین عادی مجاز به انتخاب امروز یا فردا نیستند
+        if user_id not in ADMIN_IDS:
+            today_date = jdatetime.date.today()
+            if today_date.year < 1405:
+                today_date = jdatetime.date(1405, 1, 1)
+            tomorrow_date = today_date + jdatetime.timedelta(days=1)
+            today_str = today_date.strftime("%Y/%m/%d")
+            tomorrow_str = tomorrow_date.strftime("%Y/%m/%d")
+            
+            if selected_date in (today_str, tomorrow_str):
+                keyboard = [[InlineKeyboardButton("🔙 بازگشت به انتخاب تاریخ", callback_data="book_appointment")]]
+                await query.edit_message_text(
+                    "⚠️ مراجع گرامی؛\n"
+                    "رزرو نوبت برای امروز و فردا منحصراً از طریق تماس تلفنی با پذیرش کلینیک امکان‌پذیر می‌باشد.\n"
+                    "لطفاً نوبت مورد نظر خود را از میان روزهای بعد انتخاب فرمایید. 🌱",
+                    reply_markup=InlineKeyboardMarkup(keyboard)
+                )
+                return
+
         booked_times = database.get_booked_times(selected_date)
         
         hours = ["17:00", "18:00", "19:00", "20:00", "21:00"]
