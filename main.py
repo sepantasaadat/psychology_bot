@@ -326,6 +326,47 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.user_data.get('state') == 'awaiting_name':
         full_name = update.message.text.strip()
+        user = update.effective_user
+        user_id = user.id
+
+        # در صورتی که رزروکننده یکی از ادمین‌های کلینیک باشد، مرحله ارسال فیش و تایید ادمین بایپس شده و نوبت مستقیماً ثبت قطعی می‌گردد
+        if user_id in ADMIN_IDS:
+            date = context.user_data.get('selected_date')
+            time = context.user_data.get('selected_time')
+            session_type = context.user_data.get('session_type')
+
+            database.add_user(user.id, user.first_name, user.username)
+            appointment_id = database.add_confirmed_appointment(
+                user_id=user.id,
+                date=date,
+                time=time,
+                session_type=session_type,
+                full_name=full_name,
+                receipt_file_id="admin_direct"
+            )
+
+            context.user_data.clear()
+
+            confirm_msg = (
+                "✅ وقت مشاوره با موفقیت به‌صورت مستقیم ثبت قطعی شد. 🌱\n\n"
+                "📋 مشخصات نوبت ثبت‌شده:\n"
+                f"👤 نام مراجع: {full_name}\n"
+                f"📅 تاریخ جلسه: {date}\n"
+                f"⏰ ساعت جلسه: {time}\n"
+                f"🩺 نوع جلسه: {session_type}\n"
+                f"🆔 کد پیگیری: #{appointment_id}"
+            )
+            await update.message.reply_text(confirm_msg)
+
+            # ارسال برنامه هفتگی نوبت‌ها و بازگشت به منوی اصلی
+            weekly_schedule = format_upcoming_week_appointments()
+            await update.message.reply_text(weekly_schedule)
+            await update.message.reply_text(
+                "منوی اصلی پذیرش و مدیریت کلینیک: 🌿",
+                reply_markup=get_main_menu_keyboard(user_id)
+            )
+            return
+
         context.user_data['full_name'] = full_name
         
         # تغییر وضعیت به انتظار برای دریافت فیش واریزی
