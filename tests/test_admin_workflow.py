@@ -115,5 +115,61 @@ class TestAdminWorkflow(unittest.IsolatedAsyncioTestCase):
         self.assertIn("منوی اصلی", admin_menu_call[1]["text"])
         self.assertIsNotNone(admin_menu_call[1]["reply_markup"])
 
+    async def test_already_handled_appointment_triggers_schedule_and_menu(self):
+        # Insert an already confirmed appointment
+        conn = database.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id)
+            VALUES (999, '1405/01/03', '17:00', 'حضوری', 'تست مراجع', 'confirmed', 'p_test')
+        ''')
+        app_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
+        # Mock Update and Context
+        update = MagicMock()
+        query = MagicMock()
+        query.data = f"approve_{app_id}"
+        query.answer = AsyncMock()
+        query.edit_message_caption = AsyncMock()
+        query.message.caption = "درخواست نوبت جدید"
+        query.message.chat_id = main.SECOND_ADMIN_ID
+        query.from_user.id = main.SECOND_ADMIN_ID
+        update.callback_query = query
+        update.effective_user.id = main.SECOND_ADMIN_ID
+        update.effective_user.username = "second_admin"
+
+        context = MagicMock()
+        context.user_data = {"pending_state": "some_value"}
+        context.bot.send_message = AsyncMock()
+
+        # Call button_handler
+        await main.button_handler(update, context)
+
+        # Database appointment status must remain unchanged
+        app_info = database.get_appointment(app_id)
+        self.assertEqual(app_info[5], "confirmed")
+
+        # Verify edit_message_caption was called with already handled message and reply_markup=None
+        query.edit_message_caption.assert_called_once()
+        self.assertIn("تعیین تکلیف شده است", query.edit_message_caption.call_args[1]["caption"])
+        self.assertIsNone(query.edit_message_caption.call_args[1].get("reply_markup"))
+
+        # Verify admin user_data was cleared
+        self.assertEqual(context.user_data, {})
+
+        # Verify messages sent to admin: 1 schedule + 1 main menu = 2 calls
+        self.assertEqual(context.bot.send_message.call_count, 2)
+
+        admin_schedule_call = context.bot.send_message.call_args_list[0]
+        self.assertEqual(admin_schedule_call[1]["chat_id"], main.SECOND_ADMIN_ID)
+        self.assertIn("برنامه کاری ۷ روز آینده", admin_schedule_call[1]["text"])
+
+        admin_menu_call = context.bot.send_message.call_args_list[1]
+        self.assertEqual(admin_menu_call[1]["chat_id"], main.SECOND_ADMIN_ID)
+        self.assertIn("منوی اصلی", admin_menu_call[1]["text"])
+        self.assertIsNotNone(admin_menu_call[1]["reply_markup"])
+
 if __name__ == '__main__':
     unittest.main()

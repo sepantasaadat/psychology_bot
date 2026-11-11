@@ -160,6 +160,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=get_main_menu_keyboard(user_id)
     )
 
+# تابع کمکی اتمام فرآیند بررسی ادمین: ریست نشست، ارسال برنامه هفتگی نوبت‌ها و بازگشت به منوی اصلی
+async def complete_admin_review_session(query, context, user_id):
+    context.user_data.clear()
+    weekly_schedule = format_upcoming_week_appointments()
+    await context.bot.send_message(chat_id=query.message.chat_id, text=weekly_schedule)
+    await context.bot.send_message(
+        chat_id=query.message.chat_id,
+        text="منوی اصلی پذیرش و مدیریت کلینیک: 🌿",
+        reply_markup=get_main_menu_keyboard(user_id)
+    )
+
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     user_id = update.effective_user.id
@@ -415,7 +426,11 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # جلوگیری از تداخل دو ادمین: اگر قبلاً تایید/رد شده، دیگر کاری نکن
         if current_status != "pending":
-            await query.edit_message_caption(caption=f"{query.message.caption}\n\n⚠️ این نوبت قبلاً توسط ادمین دیگری تعیین تکلیف شده است.")
+            await query.edit_message_caption(
+                caption=f"{query.message.caption}\n\n⚠️ این نوبت قبلاً توسط ادمین دیگری تعیین تکلیف شده است.",
+                reply_markup=None
+            )
+            await complete_admin_review_session(query, context, user_id)
             return
 
         if action == "approve":
@@ -474,14 +489,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
 
         # ریست خودکار نشست ادمین، ارسال برنامه هفتگی نوبت‌ها و بازگشت به منوی اصلی
-        context.user_data.clear()
-        weekly_schedule = format_upcoming_week_appointments()
-        await context.bot.send_message(chat_id=query.message.chat_id, text=weekly_schedule)
-        await context.bot.send_message(
-            chat_id=query.message.chat_id,
-            text="منوی اصلی پذیرش و مدیریت کلینیک: 🌿",
-            reply_markup=get_main_menu_keyboard(user_id)
-        )
+        await complete_admin_review_session(query, context, user_id)
 
 # هندلر دریافت پیام‌های متنی (نام مراجع و پاسخ عمومی)
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
