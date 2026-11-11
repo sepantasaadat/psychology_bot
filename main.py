@@ -73,6 +73,31 @@ def format_upcoming_week_appointments(reference_date=None):
 
     return "\n".join(lines)
 
+# توابع کمکی برای تحلیل زمان و اعمال قوانین لغو نوبت
+def parse_appointment_datetime(date_str, time_str):
+    y, m, d = map(int, date_str.split('/'))
+    h, mn = map(int, time_str.split(':'))
+    return jdatetime.datetime(y, m, d, h, mn)
+
+def get_current_jalali_datetime(now=None):
+    if now is not None:
+        return now
+    current = jdatetime.datetime.now()
+    if current.year < 1405:
+        current = current.replace(year=1405)
+    return current
+
+def can_cancel_appointment(date_str, time_str, now=None):
+    appt_dt = parse_appointment_datetime(date_str, time_str)
+    current_dt = get_current_jalali_datetime(now)
+    diff_seconds = (appt_dt - current_dt).total_seconds()
+    
+    if diff_seconds <= 0:
+        return False, "expired"
+    if diff_seconds < 48 * 3600:
+        return False, "within_48_hours"
+    return True, "ok"
+
 # تابع کمکی برای ساخت دکمه‌های منوی اصلی
 def get_main_menu_keyboard(user_id):
     keyboard = [
