@@ -114,10 +114,13 @@ def get_main_menu_keyboard(user_id):
         end_str = end_date.strftime("%Y/%m/%d")
 
         user_appts = database.get_user_confirmed_appointments_for_week(user_id, start_str, end_str)
+        current_dt = get_current_jalali_datetime()
         for appt in user_appts:
             # appt: (id, date, time, full_name, session_type)
             app_id, d, t, _, _ = appt
-            keyboard.append([InlineKeyboardButton(f"❌ لغو نوبت: {d} ساعت {t}", callback_data=f"user_cancel_{app_id}")])
+            # حذف خودکار دکمه نوبت‌هایی که تاریخ و ساعت آن‌ها سپری شده است
+            if parse_appointment_datetime(d, t) > current_dt:
+                keyboard.append([InlineKeyboardButton(f"❌ لغو نوبت: {d} ساعت {t}", callback_data=f"user_cancel_{app_id}")])
 
     keyboard.extend([
         [InlineKeyboardButton("🤝 ارتباط با پذیرش و پشتیبانی", callback_data="emergency_contact")],
@@ -228,7 +231,28 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         client_id, date, time, s_type, name, _ = app_info
 
-        # حذف مستقیم رکورد نوبت از پایگاه داده
+        # بررسی ضوابط زمانی لغو نوبت (قانون ۴۸ ساعت و عدم انقضا)
+        eligible, reason = can_cancel_appointment(date, time)
+        if not eligible:
+            if reason == "expired":
+                await query.edit_message_text(
+                    "⚠️ زمان این نوبت مشاوره سپری شده است و امکان لغو آن وجود ندارد. 🌱",
+                    reply_markup=get_main_menu_keyboard(user_id)
+                )
+            elif reason == "within_48_hours":
+                apology_policy_text = (
+                    "⚠️ مراجع گرامی؛\n"
+                    "طبق ضوابط کلینیک، لغو نوبت مشاوره حداکثر تا ۴۸ ساعت پیش از موعد جلسه امکان‌پذیر می‌باشد.\n\n"
+                    "با توجه به اینکه کمتر از ۴۸ ساعت تا زمان جلسه شما باقی مانده است، امکان لغو خودکار از طریق سامانه وجود ندارد.\n"
+                    "در صورت نیاز اضطراری به هماهنگی، لطفاً مستقیماً با پذیرش کلینیک تماس حاصل فرمایید. 🌱"
+                )
+                await query.edit_message_text(
+                    apology_policy_text,
+                    reply_markup=get_main_menu_keyboard(user_id)
+                )
+            return
+
+        # حذف مستقیم رکورد نوبت از پایگاه داده در صورت احراز شرایط لغو
         database.delete_appointment(app_id)
 
         # پیام تایید لغو به مراجع و بازسازی منوی اصلی مراجع بدون دکمه لغو شده
