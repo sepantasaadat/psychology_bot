@@ -1,0 +1,12 @@
+@[plugin:superpowers] Implement booking date restrictions based on user roles:
+Restrictions for Regular Users (Non-Admins):
+Restrict regular users from booking appointment slots for the current day (today) and the following day (tomorrow).
+Ensure that slots for today and tomorrow are unavailable, hidden, or non-selectable for regular users during the booking process.
+Exclusive Admin Access:
+Booking or assigning appointments for the current day (today) and the following day (tomorrow) must be strictly reserved for admin IDs.
+Admins retain full access to select and book slots for both today and tomorrow.
+and then push it to git hub
+
+---
+
+@[plugin:superpowers] yes that is ok do it
