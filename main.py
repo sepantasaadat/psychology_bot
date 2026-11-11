@@ -313,16 +313,15 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data.startswith("date_"):
         selected_date = query.data.split("_")[1]
         
-        # بررسی دسترسی نقش: مراجعین عادی مجاز به انتخاب امروز یا فردا نیستند
+        # بررسی دسترسی نقش: مراجعین عادی مجاز به انتخاب تاریخ‌های گذشته، امروز یا فردا نیستند
         if user_id not in ADMIN_IDS:
             today_date = jdatetime.date.today()
             if today_date.year < 1405:
                 today_date = jdatetime.date(1405, 1, 1)
-            tomorrow_date = today_date + jdatetime.timedelta(days=1)
-            today_str = today_date.strftime("%Y/%m/%d")
-            tomorrow_str = tomorrow_date.strftime("%Y/%m/%d")
+            min_allowed_date = today_date + jdatetime.timedelta(days=2)
+            min_allowed_str = min_allowed_date.strftime("%Y/%m/%d")
             
-            if selected_date in (today_str, tomorrow_str):
+            if selected_date < min_allowed_str:
                 keyboard = [[InlineKeyboardButton("🔙 بازگشت به انتخاب تاریخ", callback_data="book_appointment")]]
                 await query.edit_message_text(
                     "⚠️ مراجع گرامی؛\n"
@@ -356,6 +355,24 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif query.data.startswith("time_"):
         _, selected_date, selected_time = query.data.split("_")
         
+        # بررسی دسترسی نقش: مراجعین عادی مجاز به ثبت زمان برای تاریخ‌های گذشته، امروز یا فردا نیستند
+        if user_id not in ADMIN_IDS:
+            today_date = jdatetime.date.today()
+            if today_date.year < 1405:
+                today_date = jdatetime.date(1405, 1, 1)
+            min_allowed_date = today_date + jdatetime.timedelta(days=2)
+            min_allowed_str = min_allowed_date.strftime("%Y/%m/%d")
+            
+            if selected_date < min_allowed_str:
+                keyboard = [[InlineKeyboardButton("🔙 بازگشت به انتخاب تاریخ", callback_data="book_appointment")]]
+                await query.edit_message_text(
+                    "⚠️ مراجع گرامی؛\n"
+                    "رزرو نوبت برای امروز و فردا منحصراً از طریق تماس تلفنی با پذیرش کلینیک امکان‌پذیر می‌باشد.\n"
+                    "لطفاً نوبت مورد نظر خود را از میان روزهای بعد انتخاب فرمایید. 🌱",
+                    reply_markup=InlineKeyboardMarkup(keyboard)
+                )
+                return
+
         context.user_data['selected_date'] = selected_date
         context.user_data['selected_time'] = selected_time
         

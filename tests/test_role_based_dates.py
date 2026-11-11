@@ -148,6 +148,52 @@ class TestRoleBasedDatesIntegration(unittest.IsolatedAsyncioTestCase):
         text = query.edit_message_text.call_args[0][0]
         self.assertIn("تماس تلفنی با پذیرش کلینیک", text)
 
+    async def test_user_selecting_past_date_blocked(self):
+        today_date = jdatetime.date.today()
+        if today_date.year < 1405:
+            today_date = jdatetime.date(1405, 1, 1)
+        yesterday_date = today_date - jdatetime.timedelta(days=1)
+        yesterday_str = yesterday_date.strftime("%Y/%m/%d")
+
+        update = MagicMock()
+        query = MagicMock()
+        query.data = f"date_{yesterday_str}"
+        query.answer = AsyncMock()
+        query.edit_message_text = AsyncMock()
+        update.callback_query = query
+        update.effective_user.id = 999
+        context = MagicMock()
+        context.user_data = {}
+
+        await main.button_handler(update, context)
+
+        query.edit_message_text.assert_called_once()
+        text = query.edit_message_text.call_args[0][0]
+        self.assertIn("تماس تلفنی با پذیرش کلینیک", text)
+
+    async def test_user_tampering_time_callback_blocked(self):
+        today_date = jdatetime.date.today()
+        if today_date.year < 1405:
+            today_date = jdatetime.date(1405, 1, 1)
+        today_str = today_date.strftime("%Y/%m/%d")
+
+        update = MagicMock()
+        query = MagicMock()
+        query.data = f"time_{today_str}_17:00"
+        query.answer = AsyncMock()
+        query.edit_message_text = AsyncMock()
+        update.callback_query = query
+        update.effective_user.id = 999
+        context = MagicMock()
+        context.user_data = {}
+
+        await main.button_handler(update, context)
+
+        query.edit_message_text.assert_called_once()
+        text = query.edit_message_text.call_args[0][0]
+        self.assertIn("تماس تلفنی با پذیرش کلینیک", text)
+        self.assertNotIn("selected_date", context.user_data)
+
     async def test_admin_selecting_today_allowed(self):
         today_date = jdatetime.date.today()
         if today_date.year < 1405:
