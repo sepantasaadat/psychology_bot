@@ -32,11 +32,20 @@ PERSIAN_WEEKDAYS = {
     3: "سه‌شنبه", 4: "چهارشنبه"
 }
 
-def get_upcoming_days(days_count=5):
+def get_upcoming_days(days_count=5, is_admin=False, reference_date=None):
     days = []
-    current_date = jdatetime.date.today()
-    if current_date.year < 1405:
-        current_date = jdatetime.date(1405, 1, 1)
+    if reference_date is not None:
+        start_date = reference_date
+    else:
+        start_date = jdatetime.date.today()
+        if start_date.year < 1405:
+            start_date = jdatetime.date(1405, 1, 1)
+
+    # مراجعین عادی امکان رزرو برای امروز و فردا را ندارند
+    if not is_admin:
+        current_date = start_date + jdatetime.timedelta(days=2)
+    else:
+        current_date = start_date
 
     added = 0
     while added < days_count:
