@@ -1,0 +1,17 @@
+@[plugin:superpowers] Implement an appointment cancellation feature for confirmed bookings:
+Target Audience & Role Exclusion:
+This feature is exclusively for regular users with confirmed appointments.
+Do NOT generate or display these buttons for admin IDs, as admins manage bookings directly through the admin panel.
+Dynamic Cancellation Buttons:
+Dynamically generate one distinct cancellation button for each confirmed booking the user has for the current week (e.g., if a user has 2 confirmed appointments, generate 2 separate buttons).
+Each button label must clearly display the full date and time slot of that specific reservation and function as a cancel action.
+Cancellation Logic & Data Handling:
+When a user clicks a button to cancel an appointment:
+Immediately remove/delete that appointment record from the database.
+Send a cancellation notification message to the admin(s).
+After the cancellation notification is delivered, automatically return the admin's session to the main menu.
+and after that push it to git hub
+
+---
+
+@[plugin:superpowers] yes that's it , do it
