@@ -73,13 +73,32 @@ def format_upcoming_week_appointments(reference_date=None):
 
     return "\n".join(lines)
 
-# تابع کمکی برای ساخت دکمه‌های منوی اصلی (تا بتوانیم کاربر را دوباره به اینجا برگردانیم) [آپدیت ۲ و ۴ و ۵ و ۹]
+# تابع کمکی برای ساخت دکمه‌های منوی اصلی
 def get_main_menu_keyboard(user_id):
     keyboard = [
         [InlineKeyboardButton("🌱 رزرو وقت مشاوره جدید", callback_data="book_appointment")],
+    ]
+
+    # تولید داینامیک دکمه‌های لغو نوبت‌های تایید شده همین هفته (منحصراً برای مراجعین عادی و نه ادمین‌ها)
+    if user_id not in ADMIN_IDS:
+        start_date = jdatetime.date.today()
+        if start_date.year < 1405:
+            start_date = jdatetime.date(1405, 1, 1)
+        end_date = start_date + jdatetime.timedelta(days=6)
+        start_str = start_date.strftime("%Y/%m/%d")
+        end_str = end_date.strftime("%Y/%m/%d")
+
+        user_appts = database.get_user_confirmed_appointments_for_week(user_id, start_str, end_str)
+        for appt in user_appts:
+            # appt: (id, date, time, full_name, session_type)
+            app_id, d, t, _, _ = appt
+            keyboard.append([InlineKeyboardButton(f"❌ لغو نوبت: {d} ساعت {t}", callback_data=f"user_cancel_{app_id}")])
+
+    keyboard.extend([
         [InlineKeyboardButton("🤝 ارتباط با پذیرش و پشتیبانی", callback_data="emergency_contact")],
         [InlineKeyboardButton("🌐 وب‌سایت رسمی کلینیک", url=CLINIC_WEBSITE)],
-    ]
+    ])
+
     # نمایش پنل اختصاصی برای ادمین‌های مجاز
     if user_id in ADMIN_IDS:
         keyboard.append([InlineKeyboardButton("⚙️ پنل مدیریت نوبت‌ها", callback_data="admin_panel")])
@@ -170,6 +189,52 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "✅ نوبت مشاوره با موفقیت لغو گردید و زمان آن مجدداً برای رزرو مراجعین آزاد شد. 🌱", 
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
+
+    # ------------------ لغو نوبت توسط مراجعین عادی ------------------
+    elif query.data.startswith("user_cancel_"):
+        app_id = query.data.split("_")[2]
+        app_info = database.get_appointment(app_id)
+        if not app_info:
+            await query.edit_message_text(
+                "⚠️ این نوبت قبلاً لغو شده یا یافت نشد.",
+                reply_markup=get_main_menu_keyboard(user_id)
+            )
+            return
+
+        client_id, date, time, s_type, name, _ = app_info
+
+        # حذف مستقیم رکورد نوبت از پایگاه داده
+        database.delete_appointment(app_id)
+
+        # پیام تایید لغو به مراجع و بازسازی منوی اصلی مراجع بدون دکمه لغو شده
+        cancel_ack_text = (
+            f"✅ نوبت مشاوره شما مورخ {date} (ساعت {time}) با موفقیت لغو گردید. 🌱\n\n"
+            "جهت رزرو نوبت جدید یا هماهنگی با پذیرش می‌توانید از منوی زیر استفاده فرمایید:"
+        )
+        await query.edit_message_text(
+            cancel_ack_text,
+            reply_markup=get_main_menu_keyboard(user_id)
+        )
+
+        # ارسال پیام اطلاع‌رسانی لغو نوبت به تمام ادمین‌ها و بازگرداندن نشست ادمین به منوی اصلی
+        admin_alert_text = (
+            "⚠️ گزارش لغو نوبت توسط مراجع:\n\n"
+            f"👤 نام مراجع: {name}\n"
+            f"📅 تاریخ جلسه: {date}\n"
+            f"⏰ ساعت جلسه: {time}\n"
+            f"🩺 نوع جلسه: {s_type}\n"
+            f"🆔 شناسه نوبت: #{app_id}"
+        )
+        for admin in ADMIN_IDS:
+            try:
+                await context.bot.send_message(chat_id=admin, text=admin_alert_text)
+                await context.bot.send_message(
+                    chat_id=admin,
+                    text="منوی اصلی پذیرش و مدیریت کلینیک: 🌿",
+                    reply_markup=get_main_menu_keyboard(admin)
+                )
+            except Exception as e:
+                logger.error(f"Error sending cancellation alert to admin {admin}: {e}")
 
     # ------------------ فرآیند رزرو وقت مشاوره ------------------
     elif query.data == "book_appointment":
