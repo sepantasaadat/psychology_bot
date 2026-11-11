@@ -72,5 +72,25 @@ class TestDatabaseWeeklyAppointments(unittest.TestCase):
         self.assertEqual(results[1][3], 'سارا احمدی')
         self.assertEqual(results[1][4], 'آنلاین')
 
+    def test_add_confirmed_appointment(self):
+        app_id = database.add_confirmed_appointment(
+            user_id=56073956,
+            date='1405/01/05',
+            time='19:00',
+            session_type='حضوری',
+            full_name='دکتر سپنتا',
+            receipt_file_id='admin_direct'
+        )
+        self.assertIsInstance(app_id, int)
+
+        app_info = database.get_appointment(app_id)
+        # app_info: user_id, date, time, session_type, full_name, status
+        self.assertEqual(app_info[0], 56073956)
+        self.assertEqual(app_info[1], '1405/01/05')
+        self.assertEqual(app_info[2], '19:00')
+        self.assertEqual(app_info[3], 'حضوری')
+        self.assertEqual(app_info[4], 'دکتر سپنتا')
+        self.assertEqual(app_info[5], 'confirmed')
+
 if __name__ == '__main__':
     unittest.main()

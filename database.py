@@ -58,6 +58,20 @@ def add_pending_appointment(user_id, date, time, session_type, full_name, receip
     conn.close()
     return appointment_id
 
+# ثبت مستقیم و قطعی نوبت (ویژه رزرو توسط ادمین‌های کلینیک بدون نیاز به فیش)
+def add_confirmed_appointment(user_id, date, time, session_type, full_name, receipt_file_id="admin_direct"):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id)
+        VALUES (?, ?, ?, ?, ?, 'confirmed', ?)
+    ''', (user_id, date, time, session_type, full_name, receipt_file_id))
+    
+    appointment_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return appointment_id
+
 def update_appointment_status(appointment_id, status):
     conn = get_connection()
     cursor = conn.cursor()
