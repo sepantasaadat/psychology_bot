@@ -1,0 +1,20 @@
+@[plugin:superpowers]  Update the bot's workflow for the admin role:
+Current Issue:
+After the admin approves or rejects a payment receipt, the bot does not reset or restart.
+Required Behavior:
+Immediately after the admin confirms the approval or rejection of a receipt:
+Send the admin a complete list of all booked appointments for the upcoming week (next 7 days).
+Automatically reset/restart the bot session for the admin so they are redirected back to the main menu.
+after that push to github
+
+---
+
+yes thats it
+
+---
+
+@[plugin:superpowers] yes thats it
+
+---
+
+@[plugin:superpowers] the native
