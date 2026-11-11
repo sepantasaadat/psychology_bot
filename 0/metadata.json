@@ -1,0 +1,35 @@
+{
+  "cli_version": "0.13.1",
+  "checkpoint_id": "01M75512E02GMZFHCSSYZT83K1",
+  "session_id": "bc33b0c6-57c3-4b45-897d-6a4a3b990b80",
+  "strategy": "manual-commit",
+  "created_at": "2026-11-11T11:14:00.1032113Z",
+  "branch": "main",
+  "checkpoints_count": 2,
+  "files_touched": [
+    "main.py",
+    "tests/test_cancellation_policy.py"
+  ],
+  "agent": "Antigravity",
+  "model": "",
+  "turn_id": "2d07f3280a38",
+  "checkpoint_transcript_start": 819,
+  "transcript_lines_at_start": 819,
+  "redaction": {
+    "replacements": 168,
+    "layers": {
+      "betterleaks": 1,
+      "connection_string": 0,
+      "credential_key": 0,
+      "credential_value": 9,
+      "credentialed_uri": 0,
+      "entropy": 158,
+      "key_context": 0,
+      "provider_token": 0,
+      "shell_stdin": 0
+    }
+  },
+  "session_metrics": {
+    "turn_count": 19
+  }
+}
