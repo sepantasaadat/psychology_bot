@@ -87,7 +87,8 @@ class TestUserCancellation(unittest.IsolatedAsyncioTestCase):
         today_date = jdatetime.date.today()
         if today_date.year < 1405:
             today_date = jdatetime.date(1405, 1, 1)
-        d_str = today_date.strftime("%Y/%m/%d")
+        # Schedule 3 days ahead (72h) to satisfy the 48-hour cancellation policy
+        d_str = (today_date + jdatetime.timedelta(days=3)).strftime("%Y/%m/%d")
 
         app_id = database.add_confirmed_appointment(
             user_id=user_id,
