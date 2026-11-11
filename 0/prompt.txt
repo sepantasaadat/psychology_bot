@@ -1,0 +1,11 @@
+@[plugin:superpowers] Implement a specialized booking flow for admin IDs:
+Requirement:
+When a user with an admin ID initiates booking an appointment:
+Retain the standard flow for selecting the time slot and entering the full name.
+Completely bypass both the receipt image upload step and the admin verification/approval step.
+Automatically and directly save the appointment to the database immediately after the full name is submitted.
+and at last push it to git hub
+
+---
+
+@[plugin:superpowers] yes that's it , do it
