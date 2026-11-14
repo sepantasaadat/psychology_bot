@@ -3,7 +3,7 @@
   "checkpoint_id": "01M7DRTTADQF532NRZTW9XEQ77",
   "strategy": "manual-commit",
   "branch": "main",
-  "checkpoints_count": 1,
+  "checkpoints_count": 2,
   "files_touched": [
     "database.py",
     "graphify-out/GRAPH_REPORT.md",
@@ -17,15 +17,21 @@
       "transcript": "/0/full.jsonl",
       "content_hash": "/0/content_hash.txt",
       "prompt": "/0/prompt.txt"
+    },
+    {
+      "metadata": "/1/metadata.json",
+      "transcript": "/1/full.jsonl",
+      "content_hash": "/1/content_hash.txt",
+      "prompt": ""
     }
   ],
   "redaction": {
-    "replacements": 176,
+    "replacements": 177,
     "layers": {
       "betterleaks": 2,
       "connection_string": 0,
       "credential_key": 0,
-      "credential_value": 16,
+      "credential_value": 17,
       "credentialed_uri": 0,
       "entropy": 158,
       "key_context": 0,
