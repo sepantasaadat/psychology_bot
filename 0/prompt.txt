@@ -1,0 +1,8 @@
+@[plugin:superpowers] it didnt change  check it again it's just like before check it again and fix the problem that i mentioned before : @[plugin:superpowers] Update the workflow for other admins when an appointment is approved by an admin:
+Trigger Condition:
+When an appointment is approved/confirmed by one admin:
+Required Actions for the Other Admin:
+Delete the message containing the payment receipt and booking approval request for the other admin.
+Send only the updated list of booked appointments for the upcoming week (next 7 days) to the other admin.
+Display the initial start/main menu again for the other admin.
+and then push it to github
