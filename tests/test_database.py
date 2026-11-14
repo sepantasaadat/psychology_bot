@@ -259,5 +259,84 @@ class TestDatabaseWeeklyAppointments(unittest.TestCase):
         )
         self.assertIsNotNone(app_id_3)
 
+    def test_compatibility_signatures_and_aliases(self):
+        # 1. Test init_db alias
+        database.init_db()
+
+        # 2. Test add_pending_appointment with signature (user_id, user_name, phone, date, time, receipt_file, source)
+        app_id = database.add_pending_appointment(
+            101, "امیررضا علوی", "09121234567", "1405/03/10", "16:00", "receipt_sig_b.jpg", "bot"
+        )
+        self.assertIsInstance(app_id, int)
+
+        # 3. Test create_appointment alias
+        app_id2 = database.create_appointment(
+            102, "مریم حسینی", "09129876543", "1405/03/11", "17:00", "receipt_alias.jpg", "web"
+        )
+        self.assertIsInstance(app_id2, int)
+
+        # 4. Test get_available_times
+        avail = database.get_available_times("1405/03/10")
+        self.assertNotIn("16:00", avail)
+        self.assertIn("17:00", avail)
+
+        # 5. Test get_user_appointments
+        user_apps = database.get_user_appointments(101)
+        self.assertTrue(any(a[0] == app_id for a in user_apps))
+
+    def test_soft_delete_preserves_audit_trail(self):
+        app_id = database.add_pending_appointment(
+            user_id=101,
+            date="1405/03/15",
+            time="18:00",
+            session_type="حضوری",
+            full_name="تست لغو نرم",
+            receipt_file_id="rec_soft.jpg"
+        )
+        # Verify active
+        self.assertIsNotNone(database.get_appointment(app_id))
+
+        # Soft delete
+        result = database.delete_appointment(app_id)
+        self.assertTrue(result)
+
+        # get_appointment without include_cancelled returns None
+        self.assertIsNone(database.get_appointment(app_id))
+
+        # get_appointment_by_id preserves record and status = 'cancelled'
+        appt_dict = database.get_appointment_by_id(app_id)
+        self.assertIsNotNone(appt_dict)
+        self.assertEqual(appt_dict["status"], "cancelled")
+        self.assertIsNotNone(appt_dict["updated_at"])
+
+        # Slot is freed for re-booking
+        app_id_new = database.add_pending_appointment(
+            user_id=102,
+            date="1405/03/15",
+            time="18:00",
+            session_type="آنلاین",
+            full_name="کاربر جدید",
+            receipt_file_id="rec_new.jpg"
+        )
+        self.assertIsNotNone(app_id_new)
+
+    def test_get_appointment_by_id_and_weekly_appointments(self):
+        app_id = database.add_confirmed_appointment(
+            user_id=103,
+            date="1405/03/20",
+            time="19:00",
+            session_type="حضوری",
+            full_name="رضا نوری"
+        )
+        appt = database.get_appointment_by_id(app_id)
+        self.assertEqual(appt["user_id"], 103)
+        self.assertEqual(appt["date"], "1405/03/20")
+        self.assertEqual(appt["time"], "19:00")
+        self.assertEqual(appt["status"], "confirmed")
+
+        weekly = database.get_weekly_appointments("1405/03/19", "1405/03/25")
+        self.assertTrue(any(row[0] == app_id for row in weekly))
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -17,9 +17,12 @@ try:
     SMTP_PORT = int(os.environ.get("SMTP_PORT", str(config.SMTP_PORT)))
 except ValueError:
     SMTP_PORT = 587
-SENDER_EMAIL = os.environ.get("SENDER_EMAIL", config.SENDER_EMAIL)
-SENDER_PASSWORD = os.environ.get("SENDER_PASSWORD", config.SENDER_PASSWORD)
-RECEIVER_EMAIL = os.environ.get("RECEIVER_EMAIL", config.RECEIVER_EMAIL)
+SENDER_EMAIL = os.environ.get("SMTP_EMAIL", os.environ.get("SENDER_EMAIL", getattr(config, "SMTP_EMAIL", config.SENDER_EMAIL)))
+SENDER_PASSWORD = os.environ.get("SMTP_PASSWORD", os.environ.get("SENDER_PASSWORD", getattr(config, "SMTP_PASSWORD", config.SENDER_PASSWORD)))
+RECEIVER_EMAIL = os.environ.get("REPORT_RECIPIENT_EMAIL", os.environ.get("RECEIVER_EMAIL", getattr(config, "REPORT_RECIPIENT_EMAIL", config.RECEIVER_EMAIL)))
+SMTP_EMAIL = SENDER_EMAIL
+SMTP_PASSWORD = SENDER_PASSWORD
+REPORT_RECIPIENT_EMAIL = RECEIVER_EMAIL
 BOT_TOKEN = os.environ.get("BOT_TOKEN", config.BOT_TOKEN)
 ADMIN_IDS = config.ADMIN_IDS
 DATABASE = database.DB_PATH

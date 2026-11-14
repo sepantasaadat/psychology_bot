@@ -20,7 +20,7 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN", config.BOT_TOKEN)
 ADMIN_IDS = config.ADMIN_IDS
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('FLASK_SECRET_KEY', config.FLASK_SECRET_KEY)
+app.secret_key = os.environ.get('FLASK_SECRET_KEY') or getattr(config, 'FLASK_SECRET_KEY', None) or os.urandom(32).hex()
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB upload limit
 app.config.setdefault('WTF_CSRF_ENABLED', True)
 csrf = CSRFProtect(app)
@@ -106,8 +106,19 @@ def home():
 def about():
     return render_template('about.html')
 
-@app.route('/booking', methods=['GET', 'POST'])
-@app.route('/reserve', methods=['GET', 'POST'])
+@app.route('/articles')
+def articles():
+    return render_template('index.html')
+
+@app.route('/get_times/<path:date>')
+@app.route('/api/available-times/<path:date>')
+def get_available_times_api(date):
+    norm_date = config.normalize_digits(date).strip()
+    available = database.get_available_times(norm_date)
+    return {"available_times": available, "date": norm_date}
+
+@app.route('/booking', methods=['GET', 'POST'], endpoint='booking')
+@app.route('/reserve', methods=['GET', 'POST'], endpoint='reserve')
 def booking():
     if request.method == 'GET':
         days = get_1405_working_days()
@@ -188,4 +199,5 @@ def booking():
         return redirect(url_for('booking'))
 
 if __name__ == '__main__':
-    app.run(debug=False, port=5000)
+    debug_mode = os.environ.get("FLASK_DEBUG", "0") == "1"
+    app.run(debug=debug_mode, port=5000)

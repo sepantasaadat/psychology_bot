@@ -91,6 +91,36 @@ class TestWebRoutes(unittest.TestCase):
             rendered_template, _ = templates[0]
             self.assertEqual(rendered_template.name, 'booking.html')
 
+    def test_articles_route(self):
+        """GET /articles returns HTTP 200."""
+        response = self.client.get('/articles')
+        self.assertEqual(response.status_code, 200)
+
+    def test_available_times_api_endpoints(self):
+        """GET /get_times/<date> and /api/available-times/<date> return available times list."""
+        valid_date = "1405/01/15"
+        res1 = self.client.get(f'/get_times/{valid_date}')
+        self.assertEqual(res1.status_code, 200)
+        data1 = res1.get_json()
+        self.assertIn("available_times", data1)
+        self.assertIsInstance(data1["available_times"], list)
+
+        res2 = self.client.get(f'/api/available-times/{valid_date}')
+        self.assertEqual(res2.status_code, 200)
+        data2 = res2.get_json()
+        self.assertIn("available_times", data2)
+        self.assertEqual(data1["available_times"], data2["available_times"])
+
+    def test_url_for_all_endpoints(self):
+        """Verify url_for resolves home, about, articles, reserve, and booking without BuildError."""
+        with flask_app.app.test_request_context():
+            from flask import url_for
+            self.assertEqual(url_for('home'), '/')
+            self.assertEqual(url_for('about'), '/about')
+            self.assertEqual(url_for('articles'), '/articles')
+            self.assertIn(url_for('booking'), ['/booking', '/reserve'])
+            self.assertIn(url_for('reserve'), ['/reserve', '/booking'])
+
 
 if __name__ == '__main__':
     unittest.main()

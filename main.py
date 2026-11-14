@@ -822,9 +822,21 @@ async def send_appointment_reminders_job(context: ContextTypes.DEFAULT_TYPE) -> 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.error("Exception while handling an update:", exc_info=context.error)
 
+# Backward-compatibility aliases for modular callback and message handlers
+handle_message = handle_text
+handle_photo = handle_receipt
+handle_menu_callback = menu_callback
+handle_date_callback = date_callback
+handle_time_callback = time_callback
+handle_cancel_callback = user_cancel_callback
+handle_user_cancel_callback = user_cancel_callback
+handle_admin_callback = admin_panel_callback
+send_24h_reminders_job = send_appointment_reminders_job
+
 def main():
     database.setup_database()
-    app = Application.builder().token(TOKEN).build()
+    bot_token = TOKEN or os.environ.get("BOT_TOKEN") or "dummy_bot_token_for_mocking"
+    app = Application.builder().token(bot_token).build()
     
     app.add_error_handler(error_handler)
     if app.job_queue:
@@ -848,4 +860,8 @@ def main():
     app.run_polling(drop_pending_updates=True)
 
 if __name__ == '__main__':
+    if not os.environ.get("BOT_TOKEN") and not config.BOT_TOKEN:
+        print("Error: BOT_TOKEN is required. Please set BOT_TOKEN in .env file or environment.")
+        import sys
+        sys.exit(1)
     main()

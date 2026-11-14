@@ -1,5 +1,8 @@
 # Database
 clinic.db*
+*.db
+*.db-wal
+*.db-shm
 
 # Virtual Environment
 venv/

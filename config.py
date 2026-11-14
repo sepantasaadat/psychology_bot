@@ -50,11 +50,15 @@ SEPANTA_ADMIN_ID = ADMIN_IDS[2] if len(ADMIN_IDS) > 2 else 95033750
 # Clinic Reception Contact Details
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "drshafaei_psychological_clinic")
 ADMIN_PHONE = os.environ.get("ADMIN_PHONE", "09213689461")
+CLINIC_PHONE = os.environ.get("CLINIC_PHONE", ADMIN_PHONE)
 CLINIC_WEBSITE = os.environ.get("CLINIC_WEBSITE", "https://drshafaeiclinic.ir/")
+CARD_NUMBER = os.environ.get("CARD_NUMBER", "6037997512345678")
 
 # Bot & Web Application Credentials
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 FLASK_SECRET_KEY = os.environ.get("FLASK_SECRET_KEY", "dev-insecure-secret-key-change-in-production")
+DB_PATH = os.environ.get("DB_PATH", str(BASE_DIR / "clinic.db"))
+UPLOAD_FOLDER = str(PRIVATE_UPLOADS_DIR)
 
 # SMTP / Email Notification Configuration
 SMTP_SERVER = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
@@ -62,9 +66,20 @@ try:
     SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
 except ValueError:
     SMTP_PORT = 587
-SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "")
-SENDER_PASSWORD = os.environ.get("SENDER_PASSWORD", "")
-RECEIVER_EMAIL = os.environ.get("RECEIVER_EMAIL", "")
+SENDER_EMAIL = os.environ.get("SENDER_EMAIL", os.environ.get("SMTP_EMAIL", ""))
+SMTP_EMAIL = SENDER_EMAIL
+SENDER_PASSWORD = os.environ.get("SENDER_PASSWORD", os.environ.get("SMTP_PASSWORD", ""))
+SMTP_PASSWORD = SENDER_PASSWORD
+RECEIVER_EMAIL = os.environ.get("RECEIVER_EMAIL", os.environ.get("REPORT_RECIPIENT_EMAIL", ""))
+REPORT_RECIPIENT_EMAIL = RECEIVER_EMAIL
+
+def now_tehran() -> datetime.datetime:
+    """Returns the current timezone-aware datetime in Asia/Tehran."""
+    return datetime.datetime.now(TEHRAN_TZ)
+
+def now_jalali() -> jdatetime.datetime:
+    """Returns the current timezone-aware Jalali datetime in Asia/Tehran."""
+    return jdatetime.datetime.now(TEHRAN_TZ)
 
 # Numeral normalization mapping
 _PERSIAN_DIGITS = "۰۱۲۳۴۵۶۷۸۹"
@@ -202,3 +217,32 @@ def get_upcoming_working_days(days_count=5, is_admin=False, reference_date=None)
         current_date = current_date + jdatetime.timedelta(days=1)
 
     return days
+
+def get_1405_working_days(days_count=15, is_admin=False):
+    """
+    Deprecated backward-compatibility wrapper for get_upcoming_working_days.
+    Seamlessly supports multi-year rolling windows across Nowruz without hardcoded years.
+    """
+    return get_upcoming_working_days(days_count=days_count, is_admin=is_admin)
+
+def validate_booking_input(
+    date_str: str,
+    time_str: str,
+    phone_str: str = "",
+    full_name: str = "مراجع گرامی",
+    is_admin: bool = False,
+    now=None
+) -> tuple[bool, str]:
+    """
+    Unified booking validation function for Web and Bot.
+    Normalizes Persian/Arabic digits, validates Iranian phone numbers,
+    enforces clinic working days, working hours, and the 'no today or tomorrow' rule.
+    """
+    return validate_booking_request(
+        date_str=date_str,
+        time_str=time_str,
+        full_name=full_name or "مراجع گرامی",
+        phone=phone_str,
+        is_admin=is_admin,
+        now=now
+    )

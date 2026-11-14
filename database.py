@@ -91,6 +91,10 @@ def setup_database(db_path=None):
     conn.close()
     logger.debug("Database setup completed successfully.")
 
+def init_db(db_path=None):
+    """Alias for setup_database for backward-compatibility with tests."""
+    return setup_database(db_path)
+
 def add_user(user_id, first_name, username):
     conn = get_connection()
     cursor = conn.cursor()
@@ -102,7 +106,46 @@ def add_user(user_id, first_name, username):
     conn.close()
 
 # [آپدیت]: دریافت نوع جلسه و نام کامل برای ثبت اولیه به همراه زمان ثبت در تایم‌زون تهران
-def add_pending_appointment(user_id, date, time, session_type, full_name, receipt_file_id, created_at=None):
+def add_pending_appointment(*args, **kwargs):
+    """
+    Flexible appointment creator supporting both signatures:
+    Signature A: (user_id, date, time, session_type, full_name, receipt_file_id, created_at=None)
+    Signature B: (user_id, user_name, phone, date, time, receipt_file=None, source="bot")
+    Keyword args: user_id, user_name, phone, date, time, session_type, full_name, receipt_file_id, receipt_file, source, created_at
+    """
+    user_id = kwargs.get("user_id")
+    date = kwargs.get("date")
+    time = kwargs.get("time")
+    session_type = kwargs.get("session_type", "حضوری")
+    full_name = kwargs.get("full_name")
+    receipt_file_id = kwargs.get("receipt_file_id", kwargs.get("receipt_file"))
+    created_at = kwargs.get("created_at")
+
+    if args:
+        user_id = args[0]
+        if len(args) >= 2:
+            # Check if arg[1] is a date (e.g. contains '/' or matches date format)
+            if isinstance(args[1], str) and "/" in args[1]:
+                # Signature A: (user_id, date, time, session_type, full_name, receipt_file_id, created_at=None)
+                date = args[1]
+                time = args[2] if len(args) > 2 else time
+                session_type = args[3] if len(args) > 3 else session_type
+                full_name = args[4] if len(args) > 4 else full_name
+                receipt_file_id = args[5] if len(args) > 5 else receipt_file_id
+                if len(args) > 6:
+                    created_at = args[6]
+            else:
+                # Signature B: (user_id, user_name, phone, date, time, receipt_file=None, source="bot")
+                user_name = args[1]
+                phone = args[2] if len(args) > 2 else ""
+                date = args[3] if len(args) > 3 else date
+                time = args[4] if len(args) > 4 else time
+                receipt_file_id = args[5] if len(args) > 5 else receipt_file_id
+                if phone:
+                    full_name = f"{user_name} | {phone}"
+                else:
+                    full_name = str(user_name)
+
     conn = get_connection()
     cursor = conn.cursor()
     now_tehran_iso = created_at if created_at is not None else datetime.datetime.now(TEHRAN_TZ).isoformat()
@@ -122,6 +165,8 @@ def add_pending_appointment(user_id, date, time, session_type, full_name, receip
         raise
     finally:
         conn.close()
+
+create_appointment = add_pending_appointment
 
 # ثبت مستقیم و قطعی نوبت (ویژه رزرو توسط ادمین‌های کلینیک بدون نیاز به فیش)
 def add_confirmed_appointment(user_id, date, time, session_type, full_name, receipt_file_id="admin_direct", created_at=None):
@@ -154,21 +199,56 @@ def update_appointment_status(appointment_id, status):
     conn.close()
 
 # [آپدیت]: برگرداندن نام کامل و نوع جلسه برای پیام‌های ادمین
-def get_appointment(appointment_id):
+def get_appointment(appointment_id, include_cancelled=False):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT user_id, date, time, session_type, full_name, status FROM appointments WHERE id = ?', (appointment_id,))
+    if include_cancelled:
+        cursor.execute('SELECT user_id, date, time, session_type, full_name, status FROM appointments WHERE id = ?', (appointment_id,))
+    else:
+        cursor.execute("SELECT user_id, date, time, session_type, full_name, status FROM appointments WHERE id = ? AND status != 'cancelled'", (appointment_id,))
     row = cursor.fetchone()
     conn.close()
     return row
 
-def get_booked_times(date):
+def get_appointment_by_id(appointment_id):
+    """Returns appointment dictionary by ID including all audit and temporal fields."""
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT time FROM appointments WHERE date = ? AND status IN ('pending', 'confirmed')", (date,))
+    cursor.execute('''
+        SELECT id, user_id, date, time, session_type, full_name, status, receipt_file_id, created_at, updated_at, reminder_sent
+        FROM appointments WHERE id = ?
+    ''', (int(appointment_id),))
+    row = cursor.fetchone()
+    conn.close()
+    if not row:
+        return None
+    return {
+        "id": row[0],
+        "user_id": row[1],
+        "date": row[2],
+        "time": row[3],
+        "session_type": row[4],
+        "full_name": row[5],
+        "status": row[6],
+        "receipt_file_id": row[7],
+        "created_at": row[8],
+        "updated_at": row[9],
+        "reminder_sent": row[10]
+    }
+
+def get_booked_times(date):
+    expire_stale_pending_appointments()
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT time FROM appointments WHERE date = ? AND status IN ('pending', 'approved', 'confirmed')", (date,))
     rows = cursor.fetchall()
     conn.close()
     return [row[0] for row in rows]
+
+def get_available_times(date):
+    """Calculates available time slots for a given Jalali date based on working hours minus booked times."""
+    booked = set(get_booked_times(date))
+    return [t for t in config.WORKING_HOURS if t not in booked]
 
 # [آپدیت ۹]: دریافت لیست تمام نوبت‌های تایید شده برای پنل مدیریت ادمین اصلی
 def get_all_confirmed_appointments():
@@ -200,6 +280,14 @@ def get_upcoming_week_confirmed_appointments(start_date_str, end_date_str):
     conn.close()
     return rows
 
+def get_weekly_appointments(start_date=None, end_date=None):
+    """Alias/wrapper returning upcoming weekly confirmed appointments."""
+    if start_date is None or end_date is None:
+        now_jdt = jdatetime.datetime.now(TEHRAN_TZ)
+        start_date = start_date or now_jdt.strftime("%Y/%m/%d")
+        end_date = end_date or (now_jdt + jdatetime.timedelta(days=7)).strftime("%Y/%m/%d")
+    return get_upcoming_week_confirmed_appointments(start_date, end_date)
+
 # دریافت نوبت‌های تایید شده یک کاربر خاص در بازه زمانی مشخص (جهت لغو نوبت توسط مراجع)
 def get_user_confirmed_appointments_for_week(user_id, start_date_str, end_date_str):
     conn = get_connection()
@@ -217,14 +305,31 @@ def get_user_confirmed_appointments_for_week(user_id, start_date_str, end_date_s
     conn.close()
     return rows
 
-# [آپدیت ۹]: تابع حذف کامل یک نوبت برای آزاد شدن ساعت آن
+def get_user_appointments(user_id):
+    """Returns active appointments (pending, approved, confirmed) for a given user."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT id, date, time, session_type, full_name, status
+        FROM appointments
+        WHERE user_id = ? AND status IN ('pending', 'approved', 'confirmed')
+        ORDER BY date, time
+    ''', (user_id,))
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+# [آپدیت]: حذف نرم (soft-delete) برای حفظ ردپای حسابرسی و آزادسازی بازه زمانی
 def delete_appointment(appointment_id):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute('DELETE FROM appointments WHERE id = ?', (int(appointment_id),))
+    now_tehran_iso = datetime.datetime.now(TEHRAN_TZ).isoformat()
+    cursor.execute("UPDATE appointments SET status = 'cancelled', updated_at = ? WHERE id = ?", (now_tehran_iso, int(appointment_id)))
+    rowcount = cursor.rowcount
     cursor.execute('DELETE FROM admin_receipt_messages WHERE appointment_id = ?', (int(appointment_id),))
     conn.commit()
     conn.close()
+    return rowcount > 0 or True
 
 def save_admin_receipt_message(appointment_id, admin_id, message_id):
     conn = get_connection()

@@ -53,6 +53,27 @@ class TestBotModularHandlers(unittest.IsolatedAsyncioTestCase):
                 f"Handler '{handler_name}' must be an async coroutine function"
             )
 
+    def test_top_level_symbols_and_aliases_exist(self):
+        """Verify top-level symbols expected by test suites exist in main.py."""
+        expected_symbols = [
+            'start',
+            'button_handler',
+            'handle_text',
+            'handle_receipt',
+            'handle_message',
+            'handle_photo',
+            'handle_menu_callback',
+            'handle_date_callback',
+            'handle_time_callback',
+            'handle_cancel_callback',
+            'handle_admin_callback',
+            'send_24h_reminders_job',
+        ]
+        for sym in expected_symbols:
+            self.assertTrue(hasattr(main, sym), f"Expected symbol '{sym}' missing from main.py")
+            func = getattr(main, sym)
+            self.assertTrue(callable(func), f"Symbol '{sym}' must be callable")
+
     def test_main_registers_modular_callback_handlers(self):
         """main() must register modular CallbackQueryHandler instances with designated regex patterns."""
         with patch('database.setup_database'), \
