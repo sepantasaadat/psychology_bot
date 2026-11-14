@@ -469,6 +469,28 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     text=f"📞 این نوبت از طریق وب‌سایت ثبت شده است. لطفاً جهت هماهنگی نهایی با مراجع گرامی تماس حاصل فرمایید:\n{name}"
                 )
 
+            # حذف پیام رسید و دکمه‌ها برای سایر ادمین‌ها و ارسال برنامه به‌روزشده هفتگی + منوی اصلی
+            other_receipt_msgs = database.get_admin_receipt_messages(appointment_id)
+            weekly_schedule_text = format_upcoming_week_appointments()
+            for admin_id, msg_id in other_receipt_msgs:
+                if admin_id != user_id:
+                    try:
+                        await context.bot.delete_message(chat_id=admin_id, message_id=msg_id)
+                    except Exception as e:
+                        logger.error(f"Error deleting receipt message for admin {admin_id}: {e}")
+                    
+                    try:
+                        await context.bot.send_message(chat_id=admin_id, text=weekly_schedule_text)
+                        await context.bot.send_message(
+                            chat_id=admin_id,
+                            text="منوی اصلی پذیرش و مدیریت کلینیک: 🌿",
+                            reply_markup=get_main_menu_keyboard(admin_id)
+                        )
+                    except Exception as e:
+                        logger.error(f"Error sending schedule/menu to admin {admin_id}: {e}")
+            
+            database.delete_admin_receipt_messages(appointment_id)
+
         elif action == "reject":
             database.update_appointment_status(appointment_id, "rejected")
             await query.edit_message_caption(
@@ -623,14 +645,15 @@ async def handle_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # [آپدیت ۱]: ارسال پیام تایید به صورت حلقه‌ای برای تمام ادمین‌های لیست شده
     for admin in ADMIN_IDS:
         try:
-            await context.bot.send_photo(
+            sent_msg = await context.bot.send_photo(
                 chat_id=admin,
                 photo=photo_file_id,
                 caption=caption,
                 reply_markup=reply_markup
             )
+            database.save_admin_receipt_message(appointment_id, admin, sent_msg.message_id)
         except Exception as e:
-            print(f"خطا در ارسال برای ادمین {admin}: {e}")
+            logger.error(f"خطا در ارسال برای ادمین {admin}: {e}")
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.error("Exception while handling an update:", exc_info=context.error)

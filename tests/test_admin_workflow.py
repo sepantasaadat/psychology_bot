@@ -208,5 +208,103 @@ class TestAdminWorkflow(unittest.IsolatedAsyncioTestCase):
         menu_call = context.bot.send_message.call_args_list[1]
         self.assertIn("منوی اصلی", menu_call[1]["text"])
 
+    async def test_approval_deletes_receipt_and_notifies_other_admins(self):
+        # Insert a pending appointment
+        conn = database.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id)
+            VALUES (888, '1405/01/03', '17:00', 'حضوری', 'مراجع تست', 'pending', 'p_test')
+        ''')
+        app_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
+        # Save receipt messages for admin 1 (approver) and admin 2 (other admin)
+        database.save_admin_receipt_message(app_id, main.MAIN_ADMIN_ID, 1001)
+        database.save_admin_receipt_message(app_id, main.SECOND_ADMIN_ID, 1002)
+
+        # Mock Update and Context
+        update = MagicMock()
+        query = MagicMock()
+        query.data = f"approve_{app_id}"
+        query.answer = AsyncMock()
+        query.edit_message_caption = AsyncMock()
+        query.message.caption = "رسید ارسالی"
+        query.message.chat_id = main.MAIN_ADMIN_ID
+        query.from_user.id = main.MAIN_ADMIN_ID
+        update.callback_query = query
+        update.effective_user.id = main.MAIN_ADMIN_ID
+        update.effective_user.username = "clinic_admin"
+
+        context = MagicMock()
+        context.user_data = {}
+        context.bot.send_message = AsyncMock()
+        context.bot.delete_message = AsyncMock()
+
+        # Call button_handler
+        await main.button_handler(update, context)
+
+        # 1. Message deletion:
+        # Must delete message 1002 for SECOND_ADMIN_ID
+        context.bot.delete_message.assert_called_once_with(chat_id=main.SECOND_ADMIN_ID, message_id=1002)
+
+        # 2. Other admin messages:
+        # Check messages sent to SECOND_ADMIN_ID:
+        # Should receive 2 messages: 7-day schedule and main menu
+        second_admin_calls = [
+            call for call in context.bot.send_message.call_args_list
+            if call[1].get("chat_id") == main.SECOND_ADMIN_ID
+        ]
+        self.assertEqual(len(second_admin_calls), 2)
+        self.assertIn("برنامه کاری ۷ روز آینده", second_admin_calls[0][1]["text"])
+        self.assertIn("منوی اصلی", second_admin_calls[1][1]["text"])
+        self.assertIsNotNone(second_admin_calls[1][1]["reply_markup"])
+
+        # 3. Database tracking cleanup:
+        # All receipt messages for this appointment should be cleared
+        self.assertEqual(database.get_admin_receipt_messages(app_id), [])
+
+    async def test_handle_receipt_saves_admin_receipt_messages(self):
+        user_update = MagicMock()
+        user_update.effective_user.id = 777
+        user_update.effective_user.first_name = "تست"
+        user_update.effective_user.username = "test_user"
+        user_update.message.photo = [MagicMock(file_id="photo_123")]
+        user_update.message.reply_text = AsyncMock()
+
+        context = MagicMock()
+        context.user_data = {
+            'state': 'awaiting_receipt',
+            'selected_date': '1405/01/02',
+            'selected_time': '18:00',
+            'session_type': 'حضوری',
+            'full_name': 'نام کاربر'
+        }
+        
+        sent_mock = MagicMock()
+        sent_mock.message_id = 8888
+        context.bot.send_photo = AsyncMock(return_value=sent_mock)
+
+        await main.handle_receipt(user_update, context)
+
+        # Verify sent_photo was called for each admin
+        self.assertEqual(context.bot.send_photo.call_count, len(main.ADMIN_IDS))
+
+        # Retrieve pending appointment id from db
+        conn = database.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM appointments WHERE user_id = 777")
+        row = cursor.fetchone()
+        self.assertIsNotNone(row)
+        app_id = row[0]
+        conn.close()
+
+        # Verify admin_receipt_messages has entries for all admins
+        saved_msgs = database.get_admin_receipt_messages(app_id)
+        self.assertEqual(len(saved_msgs), len(main.ADMIN_IDS))
+        for admin_id in main.ADMIN_IDS:
+            self.assertIn((admin_id, 8888), saved_msgs)
+
 if __name__ == '__main__':
     unittest.main()
