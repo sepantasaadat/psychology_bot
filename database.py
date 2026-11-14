@@ -1,14 +1,24 @@
 import os
 import sqlite3
 
+class SlotAlreadyBookedError(Exception):
+    """Raised when attempting to book an active slot that is already booked."""
+    pass
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "clinic.db")
 
-def get_connection():
-    return sqlite3.connect(DB_PATH)
+def get_connection(db_path=None):
+    target_path = db_path if db_path is not None else DB_PATH
+    conn = sqlite3.connect(target_path)
+    conn.execute("PRAGMA journal_mode=WAL;")
+    conn.execute("PRAGMA busy_timeout=30000;")
+    conn.execute("PRAGMA synchronous=NORMAL;")
+    conn.execute("PRAGMA foreign_keys=ON;")
+    return conn
 
-def setup_database():
-    conn = get_connection()
+def setup_database(db_path=None):
+    conn = get_connection(db_path) if db_path else get_connection()
     cursor = conn.cursor()
 
     cursor.execute('''
@@ -32,6 +42,13 @@ def setup_database():
             receipt_file_id TEXT, 
             FOREIGN KEY (user_id) REFERENCES users (user_id)
         )
+    ''')
+
+    # ایندکس یکتا برای جلوگیری از ثبت تکراری نوبت در وضعیت‌های فعال (pending, approved, confirmed)
+    cursor.execute('''
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_appointments_active_slot
+        ON appointments(date, time)
+        WHERE status IN ('pending', 'approved', 'confirmed')
     ''')
 
     # جدول نگهداری شناسه پیام‌های فیش واریزی ارسال شده به ادمین‌ها
@@ -62,29 +79,39 @@ def add_user(user_id, first_name, username):
 def add_pending_appointment(user_id, date, time, session_type, full_name, receipt_file_id):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute('''
-        INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id)
-        VALUES (?, ?, ?, ?, ?, 'pending', ?)
-    ''', (user_id, date, time, session_type, full_name, receipt_file_id))
-    
-    appointment_id = cursor.lastrowid
-    conn.commit()
-    conn.close()
-    return appointment_id
+    try:
+        cursor.execute('''
+            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id)
+            VALUES (?, ?, ?, ?, ?, 'pending', ?)
+        ''', (user_id, date, time, session_type, full_name, receipt_file_id))
+        
+        appointment_id = cursor.lastrowid
+        conn.commit()
+        return appointment_id
+    except sqlite3.IntegrityError as e:
+        conn.rollback()
+        raise SlotAlreadyBookedError(f"Slot {date} {time} is already booked.") from e
+    finally:
+        conn.close()
 
 # ثبت مستقیم و قطعی نوبت (ویژه رزرو توسط ادمین‌های کلینیک بدون نیاز به فیش)
 def add_confirmed_appointment(user_id, date, time, session_type, full_name, receipt_file_id="admin_direct"):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute('''
-        INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id)
-        VALUES (?, ?, ?, ?, ?, 'confirmed', ?)
-    ''', (user_id, date, time, session_type, full_name, receipt_file_id))
-    
-    appointment_id = cursor.lastrowid
-    conn.commit()
-    conn.close()
-    return appointment_id
+    try:
+        cursor.execute('''
+            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id)
+            VALUES (?, ?, ?, ?, ?, 'confirmed', ?)
+        ''', (user_id, date, time, session_type, full_name, receipt_file_id))
+        
+        appointment_id = cursor.lastrowid
+        conn.commit()
+        return appointment_id
+    except sqlite3.IntegrityError as e:
+        conn.rollback()
+        raise SlotAlreadyBookedError(f"Slot {date} {time} is already booked.") from e
+    finally:
+        conn.close()
 
 def update_appointment_status(appointment_id, status):
     conn = get_connection()
