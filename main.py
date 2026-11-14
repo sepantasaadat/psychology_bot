@@ -1,4 +1,5 @@
 import os
+import datetime
 import jdatetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
@@ -152,10 +153,84 @@ def get_main_menu_keyboard(user_id):
         
     return InlineKeyboardMarkup(keyboard)
 
+def cancel_checkout_timeout_job(context: ContextTypes.DEFAULT_TYPE, user_id: int):
+    """Cancels any scheduled checkout timeout job for the given user."""
+    if context and hasattr(context, "job_queue") and context.job_queue:
+        current_jobs = context.job_queue.get_jobs_by_name(f"checkout_timeout_{user_id}")
+        for job in current_jobs:
+            if hasattr(job, "schedule_removal"):
+                job.schedule_removal()
+
+def schedule_checkout_timeout_job(context: ContextTypes.DEFAULT_TYPE, user_id: int, chat_id: int = None):
+    """Schedules a 1-hour checkout completion timeout job."""
+    if context and hasattr(context, "job_queue") and context.job_queue:
+        cancel_checkout_timeout_job(context, user_id)
+        timeout_seconds = getattr(config, "BOOKING_STEP_TIMEOUT_MINUTES", 60) * 60
+        context.job_queue.run_once(
+            checkout_timeout_job,
+            when=timeout_seconds,
+            data={"user_id": user_id, "chat_id": chat_id or user_id},
+            name=f"checkout_timeout_{user_id}"
+        )
+
+def is_booking_session_expired(user_data: dict) -> bool:
+    """Checks whether the booking session has exceeded BOOKING_STEP_TIMEOUT_MINUTES."""
+    if not user_data:
+        return False
+    started_at_str = user_data.get("booking_started_at")
+    if not started_at_str:
+        return False
+    try:
+        started_dt = datetime.datetime.fromisoformat(started_at_str)
+        if started_dt.tzinfo is None:
+            started_dt = started_dt.replace(tzinfo=config.TEHRAN_TZ)
+        now = config.now_tehran()
+        elapsed = (now - started_dt).total_seconds()
+        timeout_seconds = getattr(config, "BOOKING_STEP_TIMEOUT_MINUTES", 60) * 60
+        return elapsed > timeout_seconds
+    except Exception as e:
+        logger.warning(f"Error checking booking session expiration: {e}")
+        return False
+
+async def checkout_timeout_job(context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Proactive timeout job executed when user has not completed checkout within 1 hour."""
+    job_data = context.job.data if context.job and context.job.data else {}
+    user_id = job_data.get("user_id")
+    chat_id = job_data.get("chat_id", user_id)
+
+    user_data = None
+    if hasattr(context, "user_data") and context.user_data is not None:
+        user_data = context.user_data
+    elif hasattr(context, "application") and context.application and hasattr(context.application, "user_data"):
+        user_data = context.application.user_data.get(user_id)
+
+    if user_data is None:
+        return
+
+    current_state = user_data.get("state")
+    if current_state in ("awaiting_name", "awaiting_phone", "awaiting_receipt"):
+        user_data.clear()
+        timeout_msg = (
+            "⏳ مهلت ۱ ساعته شما برای تکمیل مراحل رزرو و ارسال فیش واریزی به پایان رسید و این زمان برای سایر مراجعین آزاد شد.\n\n"
+            "لطفاً در صورت تمایل مجدداً از منوی اصلی اقدام فرمایید:"
+        )
+        if chat_id:
+            try:
+                await context.bot.send_message(
+                    chat_id=chat_id,
+                    text=timeout_msg,
+                    reply_markup=get_main_menu_keyboard(user_id)
+                )
+            except Exception as e:
+                logger.warning(f"Could not send checkout timeout message to user_id={user_id}: {e}")
+
+checkout_timeout = checkout_timeout_job
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # پاک کردن حافظه موقت کاربر جهت شروع فرآیند تازه
     context.user_data.clear()
     user_id = update.effective_user.id
+    cancel_checkout_timeout_job(context, user_id)
     logger.info(f"Command /start received from user_id={user_id}")
     
     welcome_text = (
@@ -187,6 +262,7 @@ async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logger.info(f"Callback query '{query.data}' received in menu_callback from user_id={user_id}, message_id={message_id}")
     await query.answer()
     context.user_data.clear()
+    cancel_checkout_timeout_job(context, user_id)
     await query.edit_message_text(
         "به منوی اصلی بازگشتید. لطفاً گزینه مورد نظر خود را انتخاب فرمایید: 🌿", 
         reply_markup=get_main_menu_keyboard(user_id)
@@ -367,6 +443,9 @@ async def time_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     context.user_data['selected_date'] = selected_date
     context.user_data['selected_time'] = selected_time
+    context.user_data['booking_started_at'] = config.now_tehran().isoformat()
+    chat_id = update.effective_chat.id if update.effective_chat else user_id
+    schedule_checkout_timeout_job(context, user_id, chat_id)
     
     keyboard = [
         [InlineKeyboardButton("💻 مشاوره آنلاین", callback_data="type_آنلاین")],
@@ -396,7 +475,8 @@ async def type_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     name_prompt_text = (
         f"🌿 شیوه جلسه: {session_type}\n\n"
         "👤 گام چهارم: مشخصات مراجع ارجمند\n\n"
-        "لطفاً نام و نام خانوادگی کامل خود را جهت ثبت پرونده و صدور نوبت ارسال فرمایید:"
+        "لطفاً نام و نام خانوادگی کامل خود را جهت ثبت پرونده و صدور نوبت ارسال فرمایید:\n\n"
+        "⏳ توجه: شما ۱ ساعت فرصت دارید تا اطلاعات خود را وارد کرده و تصویر فیش واریزی را ارسال نمایید؛ در غیر این صورت نوبت به صورت خودکار آزاد خواهد شد."
     )
     await query.edit_message_text(name_prompt_text, reply_markup=InlineKeyboardMarkup(keyboard))
 
@@ -647,6 +727,20 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message_id = update.message.message_id
     state = context.user_data.get('state')
 
+    # گارد واکنشی انقضای نشست رزرو در صورت سپری شدن بیش از ۱ ساعت
+    if state in ('awaiting_name', 'awaiting_phone', 'awaiting_receipt'):
+        if is_booking_session_expired(context.user_data):
+            context.user_data.clear()
+            cancel_checkout_timeout_job(context, user_id)
+            expired_text = (
+                "⏳ مهلت ۱ ساعته شما برای تکمیل رزرو به پایان رسیده است. لطفاً از صفحه اول مجدداً نوبت خود را انتخاب کنید:"
+            )
+            await update.message.reply_text(
+                expired_text,
+                reply_markup=get_main_menu_keyboard(user_id)
+            )
+            return
+
     if state == 'awaiting_name':
         full_name = update.message.text.strip()
         logger.info(f"Text message received in state=awaiting_name from user_id={user_id}, message_id={message_id}")
@@ -668,6 +762,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
 
             context.user_data.clear()
+            cancel_checkout_timeout_job(context, user_id)
 
             confirm_msg = (
                 "✅ وقت مشاوره با موفقیت به‌صورت مستقیم ثبت قطعی شد. 🌱\n\n"
@@ -699,7 +794,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"سپاسگزاریم، مراجع گرامی جناب/سرکار {full_name} 🌸\n\n"
             "💳 گام نهایی: بارگذاری رسید پرداخت حق‌المشاوره\n\n"
             "جهت نهایی‌سازی درخواست رزرو، لطفاً تصویر واضح فیش واریزی خود را در همین گفتگو ارسال فرمایید.\n\n"
-            "⏳ پس از ارسال تصویر، اطلاعات نوبت جهت بررسی و ثبت قطعی در اختیار پذیرش کلینیک قرار خواهد گرفت."
+            "⏳ توجه: شما ۱ ساعت فرصت دارید تا اطلاعات خود را وارد کرده و تصویر فیش واریزی را ارسال نمایید؛ در غیر این صورت نوبت به صورت خودکار آزاد خواهد شد."
         )
         await update.message.reply_text(
             receipt_request_text,
@@ -723,9 +818,23 @@ async def handle_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # اگر کاربر در مرحله فیش نیست و عکسی فرستاد
         return
 
-    photo_file_id = update.message.photo[-1].file_id
     user = update.effective_user
     user_id = user.id
+
+    # گارد واکنشی انقضای نشست رزرو در صورت سپری شدن بیش از ۱ ساعت
+    if is_booking_session_expired(context.user_data):
+        context.user_data.clear()
+        cancel_checkout_timeout_job(context, user_id)
+        expired_text = (
+            "⏳ مهلت ۱ ساعته شما برای تکمیل رزرو به پایان رسیده است. لطفاً از صفحه اول مجدداً نوبت خود را انتخاب کنید:"
+        )
+        await update.message.reply_text(
+            expired_text,
+            reply_markup=get_main_menu_keyboard(user_id)
+        )
+        return
+
+    photo_file_id = update.message.photo[-1].file_id
     message_id = update.message.message_id
     logger.info(f"Receipt photo received from user_id={user_id}, message_id={message_id}")
     
@@ -739,7 +848,8 @@ async def handle_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE):
     appointment_id = database.add_pending_appointment(user.id, date, time, session_type, full_name, photo_file_id)
     logger.info(f"Pending appointment created: appointment_id={appointment_id}, user_id={user_id}")
 
-    # پایان پروسه برای این کاربر
+    # لغو جاب انقضای فرآیند رزرو و پاک‌سازی حافظه نشست
+    cancel_checkout_timeout_job(context, user_id)
     context.user_data.clear()
 
     user_receipt_ack = (

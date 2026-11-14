@@ -68,6 +68,7 @@ class TestBotModularHandlers(unittest.IsolatedAsyncioTestCase):
             'handle_cancel_callback',
             'handle_admin_callback',
             'send_24h_reminders_job',
+            'checkout_timeout_job',
         ]
         for sym in expected_symbols:
             self.assertTrue(hasattr(main, sym), f"Expected symbol '{sym}' missing from main.py")

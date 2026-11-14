@@ -360,14 +360,16 @@ def delete_admin_receipt_messages(appointment_id):
     conn.commit()
     conn.close()
 
-def expire_stale_pending_appointments(timeout_hours=2, now=None) -> int:
+def expire_stale_pending_appointments(timeout_hours=None, now=None) -> int:
     """
-    Queries pending appointments created more than timeout_hours ago,
+    Queries pending appointments created more than timeout_hours ago (default: config.PENDING_EXPIRY_MINUTES),
     updates their status to 'expired', and sets updated_at.
     Because status='expired', the partial unique index idx_appointments_active_slot
     automatically frees the slot.
     Returns the number of expired records.
     """
+    if timeout_hours is None:
+        timeout_hours = getattr(config, "PENDING_EXPIRY_MINUTES", 120) / 60
     conn = get_connection()
     cursor = conn.cursor()
     
