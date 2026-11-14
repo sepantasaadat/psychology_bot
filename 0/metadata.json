@@ -1,0 +1,35 @@
+{
+  "cli_version": "0.13.1",
+  "checkpoint_id": "01M7DXZSB1S2P16RX596DEC8F8",
+  "session_id": "9d6548a5-7161-4bb6-895e-0f21be64e5d4",
+  "strategy": "manual-commit",
+  "created_at": "2026-11-14T21:04:09.1974486Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "app.py",
+    "graphify-out/GRAPH_REPORT.md",
+    "graphify-out/graph.html",
+    "graphify-out/graph.json",
+    "pytest.ini",
+    "tests/conftest.py",
+    "tests/test_concurrency.py"
+  ],
+  "agent": "Antigravity",
+  "model": "gemini-3.8-flash-high",
+  "turn_id": "bc235fa9283f",
+  "redaction": {
+    "replacements": 2,
+    "layers": {
+      "betterleaks": 0,
+      "connection_string": 0,
+      "credential_key": 0,
+      "credential_value": 2,
+      "credentialed_uri": 0,
+      "entropy": 0,
+      "key_context": 0,
+      "provider_token": 0,
+      "shell_stdin": 0
+    }
+  }
+}
