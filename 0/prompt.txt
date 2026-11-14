@@ -1,0 +1,1 @@
+@[plugin:superpowers] it's ok
