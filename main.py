@@ -180,380 +180,465 @@ async def complete_admin_review_session(query, context, user_id):
         reply_markup=get_main_menu_keyboard(user_id)
     )
 
-async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def menu_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     user_id = update.effective_user.id
     message_id = query.message.message_id if query.message else None
-    logger.info(f"Callback query '{query.data}' received from user_id={user_id}, message_id={message_id}")
+    logger.info(f"Callback query '{query.data}' received in menu_callback from user_id={user_id}, message_id={message_id}")
     await query.answer()
-    
-    # ------------------ دکمه منوی اصلی ------------------
-    if query.data == "main_menu":
-        context.user_data.clear()
-        await query.edit_message_text(
-            "به منوی اصلی بازگشتید. لطفاً گزینه مورد نظر خود را انتخاب فرمایید: 🌿", 
-            reply_markup=get_main_menu_keyboard(user_id)
-        )
+    context.user_data.clear()
+    await query.edit_message_text(
+        "به منوی اصلی بازگشتید. لطفاً گزینه مورد نظر خود را انتخاب فرمایید: 🌿", 
+        reply_markup=get_main_menu_keyboard(user_id)
+    )
 
-    # ------------------ ارتباط با پذیرش و پشتیبانی ------------------
-    elif query.data == "emergency_contact":
-        keyboard = [
-            [InlineKeyboardButton("💬 گفت‌وگو با پذیرش در تلگرام", url=f"https://t.me/{ADMIN_USERNAME}")],
-            [InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data="main_menu")]
-        ]
-        contact_text = (
-            "🤝 ارتباط با پذیرش و پشتیبانی کلینیک روان‌شناسی دکتر شفائی:\n\n"
-            "مراجع ارجمند، چنانچه پیش از رزرو نوبت نیاز به راهنمایی تخصصی، هماهنگی یا پاسخ به پرسش‌های خود دارید، از مسیرهای زیر پاسخگوی شما هستیم:\n\n"
-            f"📞 تماس تلفنی با پذیرش: {ADMIN_PHONE}\n"
-            f"💬 پشتیبانی تلگرام: @{ADMIN_USERNAME}\n\n"
-            "ساعات پاسخگویی: شنبه تا چهارشنبه، هماهنگ با تقویم کاری کلینیک 🌱"
-        )
+async def emergency_contact_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    user_id = update.effective_user.id
+    message_id = query.message.message_id if query.message else None
+    logger.info(f"Callback query '{query.data}' received in emergency_contact_callback from user_id={user_id}, message_id={message_id}")
+    await query.answer()
+    keyboard = [
+        [InlineKeyboardButton("💬 گفت‌وگو با پذیرش در تلگرام", url=f"https://t.me/{ADMIN_USERNAME}")],
+        [InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data="main_menu")]
+    ]
+    contact_text = (
+        "🤝 ارتباط با پذیرش و پشتیبانی کلینیک روان‌شناسی دکتر شفائی:\n\n"
+        "مراجع ارجمند، چنانچه پیش از رزرو نوبت نیاز به راهنمایی تخصصی، هماهنگی یا پاسخ به پرسش‌های خود دارید، از مسیرهای زیر پاسخگوی شما هستیم:\n\n"
+        f"📞 تماس تلفنی با پذیرش: {ADMIN_PHONE}\n"
+        f"💬 پشتیبانی تلگرام: @{ADMIN_USERNAME}\n\n"
+        "ساعات پاسخگویی: شنبه تا چهارشنبه، هماهنگ با تقویم کاری کلینیک 🌱"
+    )
+    await query.edit_message_text(
+        contact_text,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+async def admin_panel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    user_id = update.effective_user.id
+    message_id = query.message.message_id if query.message else None
+    logger.info(f"Callback query '{query.data}' received in admin_panel_callback from user_id={user_id}, message_id={message_id}")
+    await query.answer()
+
+    if user_id not in ADMIN_IDS:
+        await query.answer("⛔ شما دسترسی مدیریت به این عملیات را ندارید.", show_alert=True)
+        return
+
+    appointments = database.get_all_confirmed_appointments()
+    if not appointments:
+        keyboard = [[InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data="main_menu")]]
         await query.edit_message_text(
-            contact_text,
+            "در حال حاضر هیچ نوبت قطعی و تایید‌شده‌ای در سامانه ثبت نشده است. 📋", 
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
+        return
+        
+    keyboard = []
+    for appt in appointments:
+        # appt: (id, date, time, full_name, session_type)
+        app_id, d, t, name, stype = appt
+        btn_text = f"❌ لغو: {d} | ساعت {t} | {name}"
+        keyboard.append([InlineKeyboardButton(btn_text, callback_data=f"del_{app_id}")])
+        
+    keyboard.append([InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data="main_menu")])
+    await query.edit_message_text(
+        "📋 فهرست نوبت‌های قطعی و تایید‌شده:\n\n"
+        "جهت لغو نوبت و آزادسازی مجدد زمان مشاوره برای مراجعین، روی نوبت مورد نظر کلیک فرمایید:", 
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
 
-    # ------------------ پنل مدیریت نوبت‌ها (ویژه مدیریت) ------------------
-    elif query.data == "admin_panel" and user_id in ADMIN_IDS:
-        appointments = database.get_all_confirmed_appointments()
-        if not appointments:
-            keyboard = [[InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data="main_menu")]]
+async def admin_delete_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    user_id = update.effective_user.id
+    message_id = query.message.message_id if query.message else None
+    logger.info(f"Callback query '{query.data}' received in admin_delete_callback from user_id={user_id}, message_id={message_id}")
+    await query.answer()
+
+    if user_id not in ADMIN_IDS:
+        await query.answer("⛔ شما دسترسی مدیریت به این عملیات را ندارید.", show_alert=True)
+        return
+
+    app_id = query.data.split("_")[1]
+    database.delete_appointment(app_id)
+    keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل مدیریت", callback_data="admin_panel")]]
+    await query.edit_message_text(
+        "✅ نوبت مشاوره با موفقیت لغو گردید و زمان آن مجدداً برای رزرو مراجعین آزاد شد. 🌱", 
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+async def book_appointment_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    user_id = update.effective_user.id
+    message_id = query.message.message_id if query.message else None
+    logger.info(f"Callback query '{query.data}' received in book_appointment_callback from user_id={user_id}, message_id={message_id}")
+    await query.answer()
+
+    is_admin = user_id in ADMIN_IDS
+    upcoming_days = get_upcoming_days(5, is_admin=is_admin)
+    keyboard = []
+    for day_obj, day_name in upcoming_days:
+        date_str = day_obj.strftime("%Y/%m/%d")
+        keyboard.append([InlineKeyboardButton(f"🗓 {day_name} ({date_str})", callback_data=f"date_{date_str}")])
+    
+    keyboard.append([InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data="main_menu")])
+    date_prompt_text = (
+        "📅 گام اول: انتخاب تاریخ مشاوره\n\n"
+        "لطفاً یکی از روزهای کاری کلینیک (شنبه تا چهارشنبه) را برای حضور یا برگزاری جلسه انتخاب فرمایید:"
+    )
+    await query.edit_message_text(date_prompt_text, reply_markup=InlineKeyboardMarkup(keyboard))
+
+async def date_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    user_id = update.effective_user.id
+    message_id = query.message.message_id if query.message else None
+    logger.info(f"Callback query '{query.data}' received in date_callback from user_id={user_id}, message_id={message_id}")
+    await query.answer()
+
+    selected_date = config.normalize_digits(query.data.split("_")[1])
+    
+    # بررسی دسترسی نقش: مراجعین عادی مجاز به انتخاب تاریخ‌های گذشته، امروز یا فردا نیستند
+    if user_id not in ADMIN_IDS:
+        today_date = jdatetime.date.today()
+        if today_date.year < 1405:
+            today_date = jdatetime.date(1405, 1, 1)
+        min_allowed_date = today_date + jdatetime.timedelta(days=MIN_ADVANCE_DAYS)
+        min_allowed_str = min_allowed_date.strftime("%Y/%m/%d")
+        
+        if selected_date < min_allowed_str:
+            keyboard = [[InlineKeyboardButton("🔙 بازگشت به انتخاب تاریخ", callback_data="book_appointment")]]
             await query.edit_message_text(
-                "در حال حاضر هیچ نوبت قطعی و تایید‌شده‌ای در سامانه ثبت نشده است. 📋", 
+                "⚠️ مراجع گرامی؛\n"
+                "رزرو نوبت برای امروز و فردا منحصراً از طریق تماس تلفنی با پذیرش کلینیک امکان‌پذیر می‌باشد.\n"
+                "لطفاً نوبت مورد نظر خود را از میان روزهای بعد انتخاب فرمایید. 🌱",
                 reply_markup=InlineKeyboardMarkup(keyboard)
             )
             return
-            
-        keyboard = []
-        for appt in appointments:
-            # appt: (id, date, time, full_name, session_type)
-            app_id, d, t, name, stype = appt
-            btn_text = f"❌ لغو: {d} | ساعت {t} | {name}"
-            keyboard.append([InlineKeyboardButton(btn_text, callback_data=f"del_{app_id}")])
-            
-        keyboard.append([InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data="main_menu")])
-        await query.edit_message_text(
-            "📋 فهرست نوبت‌های قطعی و تایید‌شده:\n\n"
-            "جهت لغو نوبت و آزادسازی مجدد زمان مشاوره برای مراجعین، روی نوبت مورد نظر کلیک فرمایید:", 
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
 
-    elif query.data.startswith("del_") and user_id in ADMIN_IDS:
-        app_id = query.data.split("_")[1]
-        database.delete_appointment(app_id)
-        keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل مدیریت", callback_data="admin_panel")]]
-        await query.edit_message_text(
-            "✅ نوبت مشاوره با موفقیت لغو گردید و زمان آن مجدداً برای رزرو مراجعین آزاد شد. 🌱", 
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
+    booked_times = database.get_booked_times(selected_date)
+    
+    hours = config.WORKING_HOURS
+    keyboard = []
+    for hour in hours:
+        if hour not in booked_times:
+            end_hour = int(hour.split(":")[0]) + 1
+            button_text = f"⏰ ساعت {hour} الی {end_hour}:00"
+            keyboard.append([InlineKeyboardButton(button_text, callback_data=f"time_{selected_date}_{hour}")])
+    
+    if not keyboard:
+        keyboard.append([InlineKeyboardButton("⚠️ تمامی ساعت‌های این روز تکمیل است", callback_data="none")])
+        
+    keyboard.append([InlineKeyboardButton("🔙 بازگشت به انتخاب تاریخ", callback_data="book_appointment")])
+    time_prompt_text = (
+        f"🗓 تاریخ انتخابی: {selected_date}\n\n"
+        "⏰ گام دوم: انتخاب ساعت جلسه مشاوره\n"
+        "لطفاً زمان مورد نظر خود را از میان ساعت‌های خالی زیر انتخاب فرمایید:"
+    )
+    await query.edit_message_text(time_prompt_text, reply_markup=InlineKeyboardMarkup(keyboard))
 
-    # ------------------ لغو نوبت توسط مراجعین عادی ------------------
-    elif query.data.startswith("user_cancel_"):
-        app_id = query.data.split("_")[2]
-        app_info = database.get_appointment(app_id)
-        if not app_info:
+async def time_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    user_id = update.effective_user.id
+    message_id = query.message.message_id if query.message else None
+    logger.info(f"Callback query '{query.data}' received in time_callback from user_id={user_id}, message_id={message_id}")
+    await query.answer()
+
+    parts = query.data.split("_")
+    selected_date = config.normalize_digits(parts[1])
+    selected_time = config.normalize_digits(parts[2])
+    
+    # بررسی دسترسی نقش: مراجعین عادی مجاز به ثبت زمان برای تاریخ‌های گذشته، امروز یا فردا نیستند
+    if user_id not in ADMIN_IDS:
+        today_date = jdatetime.date.today()
+        if today_date.year < 1405:
+            today_date = jdatetime.date(1405, 1, 1)
+        min_allowed_date = today_date + jdatetime.timedelta(days=MIN_ADVANCE_DAYS)
+        min_allowed_str = min_allowed_date.strftime("%Y/%m/%d")
+        
+        if selected_date < min_allowed_str:
+            keyboard = [[InlineKeyboardButton("🔙 بازگشت به انتخاب تاریخ", callback_data="book_appointment")]]
             await query.edit_message_text(
-                "⚠️ این نوبت قبلاً لغو شده یا یافت نشد.",
-                reply_markup=get_main_menu_keyboard(user_id)
+                "⚠️ مراجع گرامی؛\n"
+                "رزرو نوبت برای امروز و فردا منحصراً از طریق تماس تلفنی با پذیرش کلینیک امکان‌پذیر می‌باشد.\n"
+                "لطفاً نوبت مورد نظر خود را از میان روزهای بعد انتخاب فرمایید. 🌱",
+                reply_markup=InlineKeyboardMarkup(keyboard)
             )
             return
 
-        client_id, date, time, s_type, name, _ = app_info
+    context.user_data['selected_date'] = selected_date
+    context.user_data['selected_time'] = selected_time
+    
+    keyboard = [
+        [InlineKeyboardButton("💻 مشاوره آنلاین", callback_data="type_آنلاین")],
+        [InlineKeyboardButton("🏢 مشاوره حضوری", callback_data="type_حضوری")],
+        [InlineKeyboardButton("🔙 بازگشت به انتخاب ساعت", callback_data=f"date_{selected_date}")]
+    ]
+    type_prompt_text = (
+        f"🗓 تاریخ: {selected_date} | ⏰ ساعت: {selected_time}\n\n"
+        "🌿 گام سوم: شیوه برگزاری جلسه مشاوره\n"
+        "لطفاً شیوه مورد نظر خود را تعیین فرمایید:"
+    )
+    await query.edit_message_text(type_prompt_text, reply_markup=InlineKeyboardMarkup(keyboard))
 
-        # بررسی احراز هویت و مالکیت نوبت: مراجع فقط مجاز به لغو نوبت‌های متعلق به خود است
-        if client_id != user_id and user_id not in ADMIN_IDS:
-            await query.answer("⛔ شما مجاز به لغو این نوبت نیستید.", show_alert=True)
-            return
+async def type_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    user_id = update.effective_user.id
+    message_id = query.message.message_id if query.message else None
+    logger.info(f"Callback query '{query.data}' received in type_callback from user_id={user_id}, message_id={message_id}")
+    await query.answer()
 
-        # بررسی ضوابط زمانی لغو نوبت (قانون ۴۸ ساعت و عدم انقضا)
-        eligible, reason = can_cancel_appointment(date, time)
-        if not eligible:
-            if reason == "expired":
-                await query.edit_message_text(
-                    "⚠️ زمان این نوبت مشاوره سپری شده است و امکان لغو آن وجود ندارد. 🌱",
-                    reply_markup=get_main_menu_keyboard(user_id)
-                )
-            elif reason == "within_48_hours":
-                apology_policy_text = (
-                    "⚠️ مراجع گرامی؛\n"
-                    "طبق ضوابط کلینیک، لغو نوبت مشاوره حداکثر تا ۴۸ ساعت پیش از موعد جلسه امکان‌پذیر می‌باشد.\n\n"
-                    "با توجه به اینکه کمتر از ۴۸ ساعت تا زمان جلسه شما باقی مانده است، امکان لغو خودکار از طریق سامانه وجود ندارد.\n"
-                    "در صورت نیاز اضطراری به هماهنگی، لطفاً مستقیماً با پذیرش کلینیک تماس حاصل فرمایید. 🌱"
-                )
-                await query.edit_message_text(
-                    apology_policy_text,
-                    reply_markup=get_main_menu_keyboard(user_id)
-                )
-            return
+    session_type = query.data.split("_")[1]
+    context.user_data['session_type'] = session_type
+    
+    context.user_data['state'] = 'awaiting_name'
+    
+    keyboard = [[InlineKeyboardButton("❌ انصراف و بازگشت", callback_data="main_menu")]]
+    name_prompt_text = (
+        f"🌿 شیوه جلسه: {session_type}\n\n"
+        "👤 گام چهارم: مشخصات مراجع ارجمند\n\n"
+        "لطفاً نام و نام خانوادگی کامل خود را جهت ثبت پرونده و صدور نوبت ارسال فرمایید:"
+    )
+    await query.edit_message_text(name_prompt_text, reply_markup=InlineKeyboardMarkup(keyboard))
 
-        # حذف مستقیم رکورد نوبت از پایگاه داده در صورت احراز شرایط لغو
-        database.delete_appointment(app_id)
+async def user_cancel_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    user_id = update.effective_user.id
+    message_id = query.message.message_id if query.message else None
+    logger.info(f"Callback query '{query.data}' received in user_cancel_callback from user_id={user_id}, message_id={message_id}")
+    await query.answer()
 
-        # پیام تایید لغو به مراجع و بازسازی منوی اصلی مراجع بدون دکمه لغو شده
-        cancel_ack_text = (
-            f"✅ نوبت مشاوره شما مورخ {date} (ساعت {time}) با موفقیت لغو گردید. 🌱\n\n"
-            "جهت رزرو نوبت جدید یا هماهنگی با پذیرش می‌توانید از منوی زیر استفاده فرمایید:"
-        )
+    app_id = query.data.split("_")[2]
+    app_info = database.get_appointment(app_id)
+    if not app_info:
         await query.edit_message_text(
-            cancel_ack_text,
+            "⚠️ این نوبت قبلاً لغو شده یا یافت نشد.",
             reply_markup=get_main_menu_keyboard(user_id)
         )
+        return
 
-        # ارسال پیام اطلاع‌رسانی لغو نوبت به تمام ادمین‌ها و بازگرداندن نشست ادمین به منوی اصلی
-        admin_alert_text = (
-            "⚠️ گزارش لغو نوبت توسط مراجع:\n\n"
-            f"👤 نام مراجع: {name}\n"
-            f"📅 تاریخ جلسه: {date}\n"
-            f"⏰ ساعت جلسه: {time}\n"
-            f"🩺 نوع جلسه: {s_type}\n"
-            f"🆔 شناسه نوبت: #{app_id}"
-        )
-        for admin in ADMIN_IDS:
-            try:
-                await context.bot.send_message(chat_id=admin, text=admin_alert_text)
-                await context.bot.send_message(
-                    chat_id=admin,
-                    text="منوی اصلی پذیرش و مدیریت کلینیک: 🌿",
-                    reply_markup=get_main_menu_keyboard(admin)
-                )
-            except Exception as e:
-                logger.error(f"Error sending cancellation alert to admin {admin}: {e}")
+    client_id, date, time, s_type, name, _ = app_info
 
-    # ------------------ فرآیند رزرو وقت مشاوره ------------------
-    elif query.data == "book_appointment":
-        is_admin = user_id in ADMIN_IDS
-        upcoming_days = get_upcoming_days(5, is_admin=is_admin)
-        keyboard = []
-        for day_obj, day_name in upcoming_days:
-            date_str = day_obj.strftime("%Y/%m/%d")
-            keyboard.append([InlineKeyboardButton(f"🗓 {day_name} ({date_str})", callback_data=f"date_{date_str}")])
-        
-        keyboard.append([InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data="main_menu")])
-        date_prompt_text = (
-            "📅 گام اول: انتخاب تاریخ مشاوره\n\n"
-            "لطفاً یکی از روزهای کاری کلینیک (شنبه تا چهارشنبه) را برای حضور یا برگزاری جلسه انتخاب فرمایید:"
-        )
-        await query.edit_message_text(date_prompt_text, reply_markup=InlineKeyboardMarkup(keyboard))
-        
-    elif query.data.startswith("date_"):
-        selected_date = config.normalize_digits(query.data.split("_")[1])
-        
-        # بررسی دسترسی نقش: مراجعین عادی مجاز به انتخاب تاریخ‌های گذشته، امروز یا فردا نیستند
-        if user_id not in ADMIN_IDS:
-            today_date = jdatetime.date.today()
-            if today_date.year < 1405:
-                today_date = jdatetime.date(1405, 1, 1)
-            min_allowed_date = today_date + jdatetime.timedelta(days=MIN_ADVANCE_DAYS)
-            min_allowed_str = min_allowed_date.strftime("%Y/%m/%d")
-            
-            if selected_date < min_allowed_str:
-                keyboard = [[InlineKeyboardButton("🔙 بازگشت به انتخاب تاریخ", callback_data="book_appointment")]]
-                await query.edit_message_text(
-                    "⚠️ مراجع گرامی؛\n"
-                    "رزرو نوبت برای امروز و فردا منحصراً از طریق تماس تلفنی با پذیرش کلینیک امکان‌پذیر می‌باشد.\n"
-                    "لطفاً نوبت مورد نظر خود را از میان روزهای بعد انتخاب فرمایید. 🌱",
-                    reply_markup=InlineKeyboardMarkup(keyboard)
-                )
-                return
+    # بررسی احراز هویت و مالکیت نوبت: مراجع فقط مجاز به لغو نوبت‌های متعلق به خود است
+    if client_id != user_id and user_id not in ADMIN_IDS:
+        await query.answer("⛔ شما مجاز به لغو این نوبت نیستید.", show_alert=True)
+        return
 
-        booked_times = database.get_booked_times(selected_date)
-        
-        hours = config.WORKING_HOURS
-        keyboard = []
-        for hour in hours:
-            if hour not in booked_times:
-                end_hour = int(hour.split(":")[0]) + 1
-                button_text = f"⏰ ساعت {hour} الی {end_hour}:00"
-                keyboard.append([InlineKeyboardButton(button_text, callback_data=f"time_{selected_date}_{hour}")])
-        
-        if not keyboard:
-            keyboard.append([InlineKeyboardButton("⚠️ تمامی ساعت‌های این روز تکمیل است", callback_data="none")])
-            
-        keyboard.append([InlineKeyboardButton("🔙 بازگشت به انتخاب تاریخ", callback_data="book_appointment")])
-        time_prompt_text = (
-            f"🗓 تاریخ انتخابی: {selected_date}\n\n"
-            "⏰ گام دوم: انتخاب ساعت جلسه مشاوره\n"
-            "لطفاً زمان مورد نظر خود را از میان ساعت‌های خالی زیر انتخاب فرمایید:"
-        )
-        await query.edit_message_text(time_prompt_text, reply_markup=InlineKeyboardMarkup(keyboard))
-        
-    elif query.data.startswith("time_"):
-        parts = query.data.split("_")
-        selected_date = config.normalize_digits(parts[1])
-        selected_time = config.normalize_digits(parts[2])
-        
-        # بررسی دسترسی نقش: مراجعین عادی مجاز به ثبت زمان برای تاریخ‌های گذشته، امروز یا فردا نیستند
-        if user_id not in ADMIN_IDS:
-            today_date = jdatetime.date.today()
-            if today_date.year < 1405:
-                today_date = jdatetime.date(1405, 1, 1)
-            min_allowed_date = today_date + jdatetime.timedelta(days=MIN_ADVANCE_DAYS)
-            min_allowed_str = min_allowed_date.strftime("%Y/%m/%d")
-            
-            if selected_date < min_allowed_str:
-                keyboard = [[InlineKeyboardButton("🔙 بازگشت به انتخاب تاریخ", callback_data="book_appointment")]]
-                await query.edit_message_text(
-                    "⚠️ مراجع گرامی؛\n"
-                    "رزرو نوبت برای امروز و فردا منحصراً از طریق تماس تلفنی با پذیرش کلینیک امکان‌پذیر می‌باشد.\n"
-                    "لطفاً نوبت مورد نظر خود را از میان روزهای بعد انتخاب فرمایید. 🌱",
-                    reply_markup=InlineKeyboardMarkup(keyboard)
-                )
-                return
-
-        context.user_data['selected_date'] = selected_date
-        context.user_data['selected_time'] = selected_time
-        
-        keyboard = [
-            [InlineKeyboardButton("💻 مشاوره آنلاین", callback_data="type_آنلاین")],
-            [InlineKeyboardButton("🏢 مشاوره حضوری", callback_data="type_حضوری")],
-            [InlineKeyboardButton("🔙 بازگشت به انتخاب ساعت", callback_data=f"date_{selected_date}")]
-        ]
-        type_prompt_text = (
-            f"🗓 تاریخ: {selected_date} | ⏰ ساعت: {selected_time}\n\n"
-            "🌿 گام سوم: شیوه برگزاری جلسه مشاوره\n"
-            "لطفاً شیوه مورد نظر خود را تعیین فرمایید:"
-        )
-        await query.edit_message_text(type_prompt_text, reply_markup=InlineKeyboardMarkup(keyboard))
-
-    elif query.data.startswith("type_"):
-        session_type = query.data.split("_")[1]
-        context.user_data['session_type'] = session_type
-        
-        context.user_data['state'] = 'awaiting_name'
-        
-        keyboard = [[InlineKeyboardButton("❌ انصراف و بازگشت", callback_data="main_menu")]]
-        name_prompt_text = (
-            f"🌿 شیوه جلسه: {session_type}\n\n"
-            "👤 گام چهارم: مشخصات مراجع ارجمند\n\n"
-            "لطفاً نام و نام خانوادگی کامل خود را جهت ثبت پرونده و صدور نوبت ارسال فرمایید:"
-        )
-        await query.edit_message_text(name_prompt_text, reply_markup=InlineKeyboardMarkup(keyboard))
-
-    # ------------------ تایید / رد ادمین‌ها [آپدیت ۱ و ۲] ------------------
-    elif query.data.startswith("approve_") or query.data.startswith("reject_"):
-        if user_id not in ADMIN_IDS:
-            await query.answer("⛔ شما دسترسی مدیریت به این عملیات را ندارید.", show_alert=True)
-            return
-
-        action, appointment_id = query.data.split("_")
-        
-        app_info = database.get_appointment(appointment_id)
-        if not app_info:
-            await query.edit_message_caption(
-                caption="⚠️ این نوبت در دیتابیس یافت نشد!",
-                reply_markup=None
+    # بررسی ضوابط زمانی لغو نوبت (قانون ۴۸ ساعت و عدم انقضا)
+    eligible, reason = can_cancel_appointment(date, time)
+    if not eligible:
+        if reason == "expired":
+            await query.edit_message_text(
+                "⚠️ زمان این نوبت مشاوره سپری شده است و امکان لغو آن وجود ندارد. 🌱",
+                reply_markup=get_main_menu_keyboard(user_id)
             )
-            await complete_admin_review_session(query, context, user_id)
-            return
-            
-        client_id, date, time, s_type, name, current_status = app_info
-
-        # جلوگیری از تداخل دو ادمین: اگر قبلاً تایید/رد شده، دیگر کاری نکن
-        if current_status != "pending":
-            base_caption = query.message.caption or ""
-            await query.edit_message_caption(
-                caption=f"{base_caption}\n\n⚠️ این نوبت قبلاً توسط ادمین دیگری تعیین تکلیف شده است.",
-                reply_markup=None
+        elif reason == "within_48_hours":
+            apology_policy_text = (
+                "⚠️ مراجع گرامی؛\n"
+                "طبق ضوابط کلینیک، لغو نوبت مشاوره حداکثر تا ۴۸ ساعت پیش از موعد جلسه امکان‌پذیر می‌باشد.\n\n"
+                "با توجه به اینکه کمتر از ۴۸ ساعت تا زمان جلسه شما باقی مانده است، امکان لغو خودکار از طریق سامانه وجود ندارد.\n"
+                "در صورت نیاز اضطراری به هماهنگی، لطفاً مستقیماً با پذیرش کلینیک تماس حاصل فرمایید. 🌱"
             )
-            await complete_admin_review_session(query, context, user_id)
-            return
-
-        if action == "approve":
-            database.update_appointment_status(appointment_id, "confirmed")
-            await query.edit_message_caption(
-                caption=f"{query.message.caption}\n\n✅ توسط شما تایید قطعی شد.",
-                reply_markup=None
+            await query.edit_message_text(
+                apology_policy_text,
+                reply_markup=get_main_menu_keyboard(user_id)
             )
-            
-            # ارسال تاییدیه قطعی به مراجع
-            if client_id != 0:
-                client_confirm_text = (
-                    f"🌸 مراجع ارجمند، جناب/سرکار {name}؛\n\n"
-                    "✅ رسید پرداخت شما بررسی و نوبت مشاوره شما با موفقیت قطعی گردید.\n\n"
-                    "📋 مشخصات نوبت قطعی شما:\n"
-                    f"📅 تاریخ جلسه: {date}\n"
-                    f"⏰ ساعت جلسه: {time}\n"
-                    f"🩺 نوع جلسه: {s_type}\n\n"
-                    "📍 یادآوری مراجعین حضوری: لطفاً ۱۰ دقیقه پیش از موعد در کلینیک حضور داشته باشید.\n"
-                    "💻 یادآوری مراجعین آنلاین: لینک ورود پیش از آغاز جلسه هماهنگ خواهد شد.\n\n"
-                    "با آرزوی آرامش و تندرستی روان برای شما 🌱"
-                )
-                await context.bot.send_message(
-                    chat_id=client_id, 
-                    text=client_confirm_text,
-                    reply_markup=get_main_menu_keyboard(client_id)
-                )
-            else:
-                await context.bot.send_message(
-                    chat_id=query.message.chat_id,
-                    text=f"📞 این نوبت از طریق وب‌سایت ثبت شده است. لطفاً جهت هماهنگی نهایی با مراجع گرامی تماس حاصل فرمایید:\n{name}"
-                )
+        return
 
-            # حذف پیام رسید و دکمه‌ها برای سایر ادمین‌ها و ارسال برنامه به‌روزشده هفتگی + منوی اصلی
-            receipt_map = dict(database.get_admin_receipt_messages(int(appointment_id)))
-            weekly_schedule_text = format_upcoming_week_appointments()
+    # حذف مستقیم رکورد نوبت از پایگاه داده در صورت احراز شرایط لغو
+    database.delete_appointment(app_id)
 
-            for other_admin in ADMIN_IDS:
-                if other_admin != user_id:
-                    msg_id = receipt_map.get(other_admin)
-                    if msg_id:
-                        try:
-                            await context.bot.delete_message(chat_id=other_admin, message_id=msg_id)
-                        except Exception as e:
-                            logger.error(f"Error deleting receipt message {msg_id} for admin {other_admin}: {e}")
-                            try:
-                                await context.bot.edit_message_reply_markup(
-                                    chat_id=other_admin,
-                                    message_id=msg_id,
-                                    reply_markup=None
-                                )
-                            except Exception as e_edit:
-                                logger.error(f"Error removing buttons for admin {other_admin}: {e_edit}")
+    # پیام تایید لغو به مراجع و بازسازی منوی اصلی مراجع بدون دکمه لغو شده
+    cancel_ack_text = (
+        f"✅ نوبت مشاوره شما مورخ {date} (ساعت {time}) با موفقیت لغو گردید. 🌱\n\n"
+        "جهت رزرو نوبت جدید یا هماهنگی با پذیرش می‌توانید از منوی زیر استفاده فرمایید:"
+    )
+    await query.edit_message_text(
+        cancel_ack_text,
+        reply_markup=get_main_menu_keyboard(user_id)
+    )
 
-                    if hasattr(context, "application") and hasattr(context.application, "user_data"):
-                        if other_admin in context.application.user_data:
-                            context.application.user_data[other_admin].clear()
-
-                    try:
-                        await context.bot.send_message(chat_id=other_admin, text=weekly_schedule_text)
-                        await context.bot.send_message(
-                            chat_id=other_admin,
-                            text="منوی اصلی پذیرش و مدیریت کلینیک: 🌿",
-                            reply_markup=get_main_menu_keyboard(other_admin)
-                        )
-                    except Exception as e:
-                        logger.error(f"Error sending schedule/menu to admin {other_admin}: {e}")
-            
-            database.delete_admin_receipt_messages(int(appointment_id))
-
-        elif action == "reject":
-            database.update_appointment_status(appointment_id, "rejected")
-            await query.edit_message_caption(
-                caption=f"{query.message.caption}\n\n❌ توسط شما رد شد.",
-                reply_markup=None
+    # ارسال پیام اطلاع‌رسانی لغو نوبت به تمام ادمین‌ها و بازگرداندن نشست ادمین به منوی اصلی
+    admin_alert_text = (
+        "⚠️ گزارش لغو نوبت توسط مراجع:\n\n"
+        f"👤 نام مراجع: {name}\n"
+        f"📅 تاریخ جلسه: {date}\n"
+        f"⏰ ساعت جلسه: {time}\n"
+        f"🩺 نوع جلسه: {s_type}\n"
+        f"🆔 شناسه نوبت: #{app_id}"
+    )
+    for admin in ADMIN_IDS:
+        try:
+            await context.bot.send_message(chat_id=admin, text=admin_alert_text)
+            await context.bot.send_message(
+                chat_id=admin,
+                text="منوی اصلی پذیرش و مدیریت کلینیک: 🌿",
+                reply_markup=get_main_menu_keyboard(admin)
             )
-            
-            if client_id != 0:
-                client_reject_text = (
-                    f"مراجع ارجمند، جناب/سرکار {name}؛\n\n"
-                    f"⚠️ متأسفانه رسید واریزی ارسالی برای وقت مشاوره مورخ {date} (ساعت {time}) مورد تایید قرار نگرفت (به‌دلیل عدم انطباق یا ناخوانا بودن رسید).\n\n"
-                    "در صورت تمایل به پیگیری، با پذیرش کلینیک تماس حاصل فرمایید یا از طریق منو مجدداً اقدام کنید. 🌿"
-                )
-                await context.bot.send_message(
-                    chat_id=client_id, 
-                    text=client_reject_text,
-                    reply_markup=get_main_menu_keyboard(client_id)
-                )
-            else:
-                await context.bot.send_message(
-                    chat_id=query.message.chat_id,
-                    text=f"📞 این نوبت از طریق وب‌سایت بود و رد شد. در صورت نیاز با شماره درج شده تماس بگیرید:\n{name}"
-                )
+        except Exception as e:
+            logger.error(f"Error sending cancellation alert to admin {admin}: {e}")
 
-            database.delete_admin_receipt_messages(int(appointment_id))
+async def admin_review_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    user_id = update.effective_user.id
+    message_id = query.message.message_id if query.message else None
+    logger.info(f"Callback query '{query.data}' received in admin_review_callback from user_id={user_id}, message_id={message_id}")
+    await query.answer()
 
-        # ریست خودکار نشست ادمین، ارسال برنامه هفتگی نوبت‌ها و بازگشت به منوی اصلی
+    if user_id not in ADMIN_IDS:
+        await query.answer("⛔ شما دسترسی مدیریت به این عملیات را ندارید.", show_alert=True)
+        return
+
+    action, appointment_id = query.data.split("_")
+    
+    app_info = database.get_appointment(appointment_id)
+    if not app_info:
+        await query.edit_message_caption(
+            caption="⚠️ این نوبت در دیتابیس یافت نشد!",
+            reply_markup=None
+        )
         await complete_admin_review_session(query, context, user_id)
+        return
+        
+    client_id, date, time, s_type, name, current_status = app_info
+
+    # جلوگیری از تداخل دو ادمین: اگر قبلاً تایید/رد شده، دیگر کاری نکن
+    if current_status != "pending":
+        base_caption = query.message.caption or ""
+        await query.edit_message_caption(
+            caption=f"{base_caption}\n\n⚠️ این نوبت قبلاً توسط ادمین دیگری تعیین تکلیف شده است.",
+            reply_markup=None
+        )
+        await complete_admin_review_session(query, context, user_id)
+        return
+
+    if action == "approve":
+        database.update_appointment_status(appointment_id, "confirmed")
+        await query.edit_message_caption(
+            caption=f"{query.message.caption}\n\n✅ توسط شما تایید قطعی شد.",
+            reply_markup=None
+        )
+        
+        # ارسال تاییدیه قطعی به مراجع
+        if client_id != 0:
+            client_confirm_text = (
+                f"🌸 مراجع ارجمند، جناب/سرکار {name}؛\n\n"
+                "✅ رسید پرداخت شما بررسی و نوبت مشاوره شما با موفقیت قطعی گردید.\n\n"
+                "📋 مشخصات نوبت قطعی شما:\n"
+                f"📅 تاریخ جلسه: {date}\n"
+                f"⏰ ساعت جلسه: {time}\n"
+                f"🩺 نوع جلسه: {s_type}\n\n"
+                "📍 یادآوری مراجعین حضوری: لطفاً ۱۰ دقیقه پیش از موعد در کلینیک حضور داشته باشید.\n"
+                "💻 یادآوری مراجعین آنلاین: لینک ورود پیش از آغاز جلسه هماهنگ خواهد شد.\n\n"
+                "با آرزوی آرامش و تندرستی روان برای شما 🌱"
+            )
+            await context.bot.send_message(
+                chat_id=client_id, 
+                text=client_confirm_text,
+                reply_markup=get_main_menu_keyboard(client_id)
+            )
+        else:
+            await context.bot.send_message(
+                chat_id=query.message.chat_id,
+                text=f"📞 این نوبت از طریق وب‌سایت ثبت شده است. لطفاً جهت هماهنگی نهایی با مراجع گرامی تماس حاصل فرمایید:\n{name}"
+            )
+
+        # حذف پیام رسید و دکمه‌ها برای سایر ادمین‌ها و ارسال برنامه به‌روزشده هفتگی + منوی اصلی
+        receipt_map = dict(database.get_admin_receipt_messages(int(appointment_id)))
+        weekly_schedule_text = format_upcoming_week_appointments()
+
+        for other_admin in ADMIN_IDS:
+            if other_admin != user_id:
+                msg_id = receipt_map.get(other_admin)
+                if msg_id:
+                    try:
+                        await context.bot.delete_message(chat_id=other_admin, message_id=msg_id)
+                    except Exception as e:
+                        logger.error(f"Error deleting receipt message {msg_id} for admin {other_admin}: {e}")
+                        try:
+                            await context.bot.edit_message_reply_markup(
+                                chat_id=other_admin,
+                                message_id=msg_id,
+                                reply_markup=None
+                            )
+                        except Exception as e_edit:
+                            logger.error(f"Error removing buttons for admin {other_admin}: {e_edit}")
+
+                if hasattr(context, "application") and hasattr(context.application, "user_data"):
+                    if other_admin in context.application.user_data:
+                        context.application.user_data[other_admin].clear()
+
+                try:
+                    await context.bot.send_message(chat_id=other_admin, text=weekly_schedule_text)
+                    await context.bot.send_message(
+                        chat_id=other_admin,
+                        text="منوی اصلی پذیرش و مدیریت کلینیک: 🌿",
+                        reply_markup=get_main_menu_keyboard(other_admin)
+                    )
+                except Exception as e:
+                    logger.error(f"Error sending schedule/menu to admin {other_admin}: {e}")
+        
+        database.delete_admin_receipt_messages(int(appointment_id))
+
+    elif action == "reject":
+        database.update_appointment_status(appointment_id, "rejected")
+        await query.edit_message_caption(
+            caption=f"{query.message.caption}\n\n❌ توسط شما رد شد.",
+            reply_markup=None
+        )
+        
+        if client_id != 0:
+            client_reject_text = (
+                f"مراجع ارجمند، جناب/سرکار {name}؛\n\n"
+                f"⚠️ متأسفانه رسید واریزی ارسالی برای وقت مشاوره مورخ {date} (ساعت {time}) مورد تایید قرار نگرفت (به‌دلیل عدم انطباق یا ناخوانا بودن رسید).\n\n"
+                "در صورت تمایل به پیگیری، با پذیرش کلینیک تماس حاصل فرمایید یا از طریق منو مجدداً اقدام کنید. 🌿"
+            )
+            await context.bot.send_message(
+                chat_id=client_id, 
+                text=client_reject_text,
+                reply_markup=get_main_menu_keyboard(client_id)
+            )
+        else:
+            await context.bot.send_message(
+                chat_id=query.message.chat_id,
+                text=f"📞 این نوبت از طریق وب‌سایت بود و رد شد. در صورت نیاز با شماره درج شده تماس بگیرید:\n{name}"
+            )
+
+        database.delete_admin_receipt_messages(int(appointment_id))
+
+    # ریست خودکار نشست ادمین، ارسال برنامه هفتگی نوبت‌ها و بازگشت به منوی اصلی
+    await complete_admin_review_session(query, context, user_id)
+
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Router delegating callback queries to modular callback handlers for backward compatibility.
+    """
+    query = update.callback_query
+    data = query.data or ""
+    if data == "main_menu":
+        await menu_callback(update, context)
+    elif data == "emergency_contact":
+        await emergency_contact_callback(update, context)
+    elif data == "admin_panel":
+        await admin_panel_callback(update, context)
+    elif data.startswith("del_"):
+        await admin_delete_callback(update, context)
+    elif data == "book_appointment":
+        await book_appointment_callback(update, context)
+    elif data.startswith("date_"):
+        await date_callback(update, context)
+    elif data.startswith("time_"):
+        await time_callback(update, context)
+    elif data.startswith("type_"):
+        await type_callback(update, context)
+    elif data.startswith("user_cancel_"):
+        await user_cancel_callback(update, context)
+    elif data.startswith("approve_") or data.startswith("reject_"):
+        await admin_review_callback(update, context)
+    elif data == "none":
+        await query.answer()
+    else:
+        logger.warning(f"Unhandled callback query data: {data}")
+        await query.answer()
 
 # هندلر دریافت پیام‌های متنی (نام مراجع و پاسخ عمومی)
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -708,7 +793,16 @@ def main():
     app.add_error_handler(error_handler)
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", start))
-    app.add_handler(CallbackQueryHandler(button_handler))
+    app.add_handler(CallbackQueryHandler(menu_callback, pattern=r"^main_menu$"))
+    app.add_handler(CallbackQueryHandler(emergency_contact_callback, pattern=r"^emergency_contact$"))
+    app.add_handler(CallbackQueryHandler(admin_panel_callback, pattern=r"^admin_panel$"))
+    app.add_handler(CallbackQueryHandler(admin_delete_callback, pattern=r"^del_\d+$"))
+    app.add_handler(CallbackQueryHandler(book_appointment_callback, pattern=r"^book_appointment$"))
+    app.add_handler(CallbackQueryHandler(date_callback, pattern=r"^date_"))
+    app.add_handler(CallbackQueryHandler(time_callback, pattern=r"^time_"))
+    app.add_handler(CallbackQueryHandler(type_callback, pattern=r"^type_"))
+    app.add_handler(CallbackQueryHandler(user_cancel_callback, pattern=r"^user_cancel_\d+$"))
+    app.add_handler(CallbackQueryHandler(admin_review_callback, pattern=r"^(approve|reject)_\d+$"))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text)) # اضافه شدن هندلر متن برای دریافت نام و شروع
     app.add_handler(MessageHandler(filters.PHOTO, handle_receipt))
     

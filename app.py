@@ -107,6 +107,7 @@ def about():
     return render_template('about.html')
 
 @app.route('/booking', methods=['GET', 'POST'])
+@app.route('/reserve', methods=['GET', 'POST'])
 def booking():
     if request.method == 'GET':
         days = get_1405_working_days()
