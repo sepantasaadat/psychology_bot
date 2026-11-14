@@ -62,9 +62,11 @@ def setup_database(db_path=None):
     cursor.execute("PRAGMA table_info(appointments)")
     columns = [row[1] for row in cursor.fetchall()]
     if "created_at" not in columns:
-        cursor.execute("ALTER TABLE appointments ADD COLUMN created_at TEXT DEFAULT (datetime('now', 'localtime'))")
+        cursor.execute("ALTER TABLE appointments ADD COLUMN created_at TEXT")
+        cursor.execute("UPDATE appointments SET created_at = datetime('now', 'localtime') WHERE created_at IS NULL")
     if "updated_at" not in columns:
-        cursor.execute("ALTER TABLE appointments ADD COLUMN updated_at TEXT DEFAULT (datetime('now', 'localtime'))")
+        cursor.execute("ALTER TABLE appointments ADD COLUMN updated_at TEXT")
+        cursor.execute("UPDATE appointments SET updated_at = datetime('now', 'localtime') WHERE updated_at IS NULL")
     if "reminder_sent" not in columns:
         cursor.execute("ALTER TABLE appointments ADD COLUMN reminder_sent INTEGER DEFAULT 0")
 
