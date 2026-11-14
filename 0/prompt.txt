@@ -1,0 +1,120 @@
+خب اوکی شد
+
+---
+
+@[plugin:superpowers] You are tasked with executing a comprehensive, line-by-line security, bug-fix, architectural refactoring, and CI-stabilization overhaul of this repository (`sepantasaadat/psychology_bot`).
+
+Before modifying any file, inspect the entire repository structure, including `app.py`, `main.py`, `database.py`, `daily_report.py`, `templates/`, `test_database.py`, `test_bot.py`, and `.github/workflows/`. Use the `superpowers` verification and TDD workflow (`test-driven-development` and `verification-before-completion`): every change must pass `pytest -v` with zero failures before completion.
+
+---
+
+### CRITICAL COMPATIBILITY RULES (WHY CI PREVIOUSLY FAILED)
+1. **Do NOT break existing function imports or signatures used by `test_database.py` and `test_bot.py`:**
+   - In `database.py`, preserve these exact function names and compatible signatures:
+     - `get_connection()`
+     - `init_db()`
+     - `add_pending_appointment(user_id, user_name, phone, date, time, receipt_file=None, source="bot")` (and alias `create_appointment` to it if needed)
+     - `get_booked_times(date)`
+     - `get_available_times(date)`
+     - `update_appointment_status(appointment_id, new_status)`
+     - `delete_appointment(appointment_id)` (implement as a soft-delete setting `status = 'cancelled'`, while returning `True`/`rowcount` as expected by existing tests)
+     - `get_user_appointments(user_id)` (return active appointments where `status IN ('pending', 'approved')`)
+     - `get_appointment_by_id(appointment_id)`
+     - `get_weekly_appointments(start_date=None, end_date=None)`
+   - In `main.py`, preserve top-level importable symbols expected by `test_bot.py` (`start`, `button_handler`, `handle_message`, `handle_photo`, etc.). Refactor `button_handler` by splitting its 450-line `if/elif` chain into modular pattern-based handler functions (`handle_menu_callback`, `handle_date_callback`, `handle_time_callback`, `handle_cancel_callback`, `handle_admin_callback`) while keeping `button_handler(update, context)` as a clean 10-line router that delegates to them AND registering pattern-based `CallbackQueryHandler`s in `main()`.
+2. **Do NOT crash at import time when env vars are unset in CI:**
+   - Never raise an exception at module import time in `config.py`, `main.py`, `app.py`, or `daily_report.py` if `BOT_TOKEN` or `SMTP_PASSWORD` is missing. Provide safe fallbacks during `TESTING` / import time, and only enforce `BOT_TOKEN` inside `main.py`'s `if __name__ == "__main__": main()` entrypoint.
+3. **Preserve `:memory:` SQLite compatibility when `database.get_connection` is patched in tests:**
+   - In `test_database.py`, tests patch `database.get_connection`. Ensure helper functions in `database.py` use `conn = get_connection()` and `conn.commit()` carefully without destroying shared in-memory test databases if a test fixture passes an unclosable/shared `:memory:` mock connection, or ensure `PRAGMA` statements and migrations run cleanly inside `init_db()` and `get_connection()`.
+4. **Preserve all Flask route endpoint names used in `templates/base.html` and `templates/reserve.html`:**
+   - Inspect `templates/*.html` for all `url_for(...)` calls and AJAX `fetch(...)` URLs (such as `home`, `about`, `articles`, `reserve`, and `/get_times/<date>` or `/api/available-times`) and make sure every single endpoint exists in `app.py`.
+
+---
+
+### DETAILED 18-POINT REMEDIATION CHECKLIST
+
+#### Category 1: Security (Fix First)
+1. **`daily_report.py` (Line 11 Plaintext Gmail App Password):**
+   - Remove the hardcoded Gmail App Password (`kjwr...`) and email strings immediately.
+   - Read `SMTP_EMAIL`, `SMTP_PASSWORD`, and `REPORT_RECIPIENT_EMAIL` from `os.environ` via `config.py`.
+   - Document the exact `git filter-repo` command in `README.md` to purge `kjwr*` from historical commits.
+2. **`app.py` (Hardcoded `secret_key` and `debug=True`):**
+   - Load `app.secret_key` from `os.environ.get("FLASK_SECRET_KEY")` with a secure random fallback (`os.urandom(32).hex()`).
+   - Set `debug = os.environ.get("FLASK_DEBUG", "0") == "1"` so `debug=False` is the default everywhere.
+3. **`app.py` & `templates/reserve.html` (Insecure Receipt Uploads, No Validation, No Size Limit, No CSRF):**
+   - Store uploaded web receipts OUTSIDE `static/` in a private directory (`UPLOAD_FOLDER = BASE_DIR / "private_uploads"`, configurable via env/app.config).
+   - Generate a random filename using `f"{uuid.uuid4().hex}{ext}"` so user filenames never collide or overwrite existing receipts, and never use user-supplied filenames on disk.
+   - Validate uploaded files by inspecting actual image bytes with `Pillow` (`Image.open(io.BytesIO(raw_bytes)).verify()` and format check restricted to `JPEG`, `PNG`, `WEBP`). Reject non-images or corrupted files with HTTP 400 and a clear flash message.
+   - Set `app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024` (5 MB) and handle `413 RequestEntityTooLarge`.
+   - Add CSRF protection (via `flask_wtf.csrf.CSRFProtect` or session-backed CSRF token validation) and inject `<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">` into `templates/reserve.html`.
+4. **`main.py` (PII Message Logging in a Psychology Clinic):**
+   - Remove all logging of `update.message.text`, patient names, or phone numbers.
+   - Log only non-sensitive metadata (`user_id`, `message_id`, callback action type).
+   - Set `logging.getLogger("httpx").setLevel(logging.WARNING)` so the Telegram Bot token URL is not written to logs.
+
+#### Category 2: Bugs
+5. **`app.py` (`/` Renders the About Page):**
+   - Fix the stacked decorator bug where `@app.route("/")` was placed on `about()`.
+   - Bind `@app.route("/")` exclusively to `home()` (rendering `index.html`) and `@app.route("/about")` exclusively to `about()` (rendering `about.html`). Keep `@app.route("/articles")` on `articles()`.
+6. **`config.py`, `app.py`, `main.py` (Hardcoded Year 1405 in `get_1405_working_days()`):**
+   - Implement `get_upcoming_working_days(days_ahead=60)` in `config.py` using `jdatetime` anchored to `Asia/Tehran`. It must dynamically generate working days starting from `today + 2 days` (`MIN_ADVANCE_DAYS = 2`), seamlessly crossing the Nowruz boundary from 1405 into 1406 and future years.
+   - Keep `get_1405_working_days()` as a deprecated wrapper calling `get_upcoming_working_days()` so any external caller or legacy test importing `get_1405_working_days` continues to work without breaking.
+7. **`database.py`, `app.py`, `main.py` (Double Booking Race Condition):**
+   - In `init_db()`, create a partial unique index on active appointments:
+     ```sql
+     CREATE UNIQUE INDEX IF NOT EXISTS idx_appointments_active_slot
+     ON appointments(date, time)
+     WHERE status IN ('pending', 'approved');
+     ```
+   - In `add_pending_appointment()`, catch `sqlite3.IntegrityError` (or re-verify atomically inside an `IMMEDIATE` transaction) and raise a custom `SlotAlreadyBookedError` (or return `None`/`False` gracefully where expected, while handling conflicts cleanly in both `app.py` and `main.py` so two users can never book the same `(date, time)`).
+8. **`app.py` & `config.py` (Web Form Missing "No Today or Tomorrow" Rule & POST Validation):**
+   - Create a unified server-side validator `validate_booking_input(date_str, time_str, phone_str)` in `config.py` that:
+     - Normalizes Persian/Arabic numerals (`۰-۹`, `٠-٩`) to ASCII (`0-9`).
+     - Validates Iranian mobile numbers (`^09\d{9}$`).
+     - Verifies the Jalali date is a valid working day and is strictly `>= today_jalali + 2 days` in `Asia/Tehran` time (enforcing the "no today or tomorrow" rule).
+     - Verifies `time_str` is in `WORKING_HOURS`.
+   - Call this validator on `POST /reserve` in `app.py` AND in the booking flow in `main.py`.
+9. **`main.py` (Missing Admin & Ownership Checks on `approve_`, `reject_`, `user_cancel_`):**
+   - In `approve_` and `reject_` callbacks: verify `query.from_user.id in config.ADMIN_IDS`; if not, answer callback with an alert (`"⛔ شما دسترسی ادمین ندارید."`) and return immediately without touching the database.
+   - In `user_cancel_` callbacks: fetch the appointment with `get_appointment_by_id(appt_id)` and verify `appt["user_id"] == query.from_user.id or query.from_user.id in config.ADMIN_IDS`; if not, answer callback with an ownership error alert and return immediately.
+10. **`database.py` & `main.py` (Pending Appointments Never Expire):**
+    - Add `created_at` (ISO-8601 timestamp in `Asia/Tehran`) to `appointments`.
+    - Implement `expire_stale_pending_appointments(expiry_minutes=120)` in `database.py` that updates rows with `status = 'pending'` older than `expiry_minutes` to `status = 'expired'`.
+    - Call `expire_stale_pending_appointments()` inside `get_booked_times()` and via a periodic job in `main.py`.
+
+#### Category 3: Architecture
+11. **`database.py` (SQLite Concurrency Across 3 Processes):**
+    - In `get_connection()`, enable `PRAGMA journal_mode=WAL;`, `PRAGMA busy_timeout=30000;`, `PRAGMA synchronous=NORMAL;`, and `sqlite3.connect(..., timeout=30.0)`.
+12. **`config.py` (Centralize Duplicated Constants):**
+    - Move `ADMIN_IDS`, `WORKING_HOURS`, `WORKING_WEEKDAYS`, `CLINIC_PHONE`, `CARD_NUMBER`, `DB_PATH`, `UPLOAD_FOLDER`, and `TEHRAN_TZ = ZoneInfo("Asia/Tehran")` into `config.py` and import them into `app.py`, `main.py`, `database.py`, and `daily_report.py`.
+13. **`main.py` (Split 450-Line `button_handler`):**
+    - Refactor the monolithic `if/elif` chain into focused, pattern-based handlers (`handle_menu_callback`, `handle_month_callback`, `handle_day_callback`, `handle_time_callback`, `handle_user_cancel_callback`, `handle_admin_decision_callback`, `handle_admin_panel_callback`).
+    - Keep `button_handler(update, context)` as a clean dispatcher that routes `query.data` by prefix to those functions so both pattern-based handlers and existing unit tests calling `button_handler` directly work seamlessly.
+14. **`config.py`, `main.py`, `app.py`, `daily_report.py` (Explicit `Asia/Tehran` Timezone):**
+    - Replace all naive `datetime.now()` and `jdatetime.datetime.now()` calls with timezone-aware helpers `now_tehran()` and `now_jalali()` using `ZoneInfo("Asia/Tehran")`.
+    - Ensure the 48-hour cancellation rule (`can_cancel_appointment`) calculates the exact time delta in `Asia/Tehran`.
+15. **`database.py` (Soft-Delete Cancellation + Audit Trail):**
+    - Add `created_at` and `updated_at` columns (with safe `ALTER TABLE` migration in `init_db()` for existing `clinic.db` databases).
+    - Change `delete_appointment(appointment_id)` and user cancellation to update `status = 'cancelled'` instead of executing `DELETE FROM appointments`, preserving the audit trail while freeing the `(date, time)` slot.
+
+#### Category 4: Features, Tooling & Comprehensive Testing
+16. **`main.py` & `daily_report.py` (24-Hour Client Reminder + Telegram Daily Report):**
+    - Add `reminder_sent INTEGER DEFAULT 0` to `appointments`.
+    - Add `send_24h_reminders_job(context)` in `main.py` (scheduled via `job_queue`) to send a Telegram reminder to users with `status = 'approved'` and `reminder_sent = 0` whose appointment is within the next 24 hours, then mark `reminder_sent = 1`.
+    - Update `daily_report.py` so the report is sent both via Gmail SMTP and directly to all `ADMIN_IDS` on Telegram.
+17. **Repository Tooling & DevOps (`README.md`, `.env.example`, `.gitignore`, `requirements.txt`, `systemd` / `Docker`, `.github/workflows/ci.yml`):**
+    - Add `static/uploads/`, `private_uploads/`, `.env`, `*.db`, `*.db-wal`, `*.db-shm` to `.gitignore`.
+    - Pin all package versions in `requirements.txt` (including `Flask`, `Flask-WTF`, `Pillow`, `jdatetime`, `python-telegram-bot[job-queue]`, `python-dotenv`, `gunicorn`, `pytest`, `pytest-asyncio`).
+    - Provide `.env.example`, `Dockerfile`, `docker-compose.yml`, `systemd` service templates, a complete `README.md`, and a working `.github/workflows/ci.yml` that runs `pytest -v`.
+18. **`test_database.py`, `test_bot.py`, and `test_web.py` (Full Test Suite & Web Path Coverage):**
+    - Inspect existing `test_database.py` and `test_bot.py` and ensure every test passes.
+    - Add comprehensive web path tests (`test_web.py` or inside the existing test suite) using Flask's `app.test_client()` and `tmp_path` fixtures covering:
+      - `GET /` renders Home page (not About page) and `GET /about` renders About page.
+      - `POST /reserve` rejects today/tomorrow dates, non-working hours, invalid phone numbers, and spoofed non-image files (HTTP 400).
+      - `POST /reserve` accepts valid future working days + valid PNG/JPEG images, stores receipts outside `static/` with random UUID filenames, and prevents overwriting when two users upload files with the same original filename.
+      - Double booking the same `(date, time)` slot across Web or Bot is blocked by the unique index, while cancelling (`status = 'cancelled'`) or expiring (`status = 'expired'`) frees the slot for re-booking.
+      - Rolling working days generator works across the 1405 -> 1406 Nowruz rollover.
+      - `approve_`, `reject_`, and `user_cancel_` reject unauthorized users.
+
+### Final Verification Step
+Run `pytest -v` locally across the entire test suite (`test_database.py`, `test_bot.py`, `test_web.py`). Fix any failing assertions, fixture issues, or import errors until 100% of tests pass, then show me a summary of all modified files and test results.
