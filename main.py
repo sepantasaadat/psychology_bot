@@ -783,6 +783,42 @@ async def handle_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             logger.error(f"خطا در ارسال برای ادمین {admin}: {e}")
 
+async def send_appointment_reminders_job(context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Periodic job that checks for confirmed appointments occurring within the next
+    24 hours and sends reminder messages to clients.
+    """
+    try:
+        due_appointments = database.get_appointments_due_for_reminder()
+    except Exception as e:
+        logger.error(f"Error fetching appointments due for reminder: {e}")
+        return
+
+    for appt in due_appointments:
+        app_id, user_id, date, time, full_name, session_type = appt
+        reminder_text = (
+            f"🌸 مراجع ارجمند، جناب/سرکار {full_name}؛\n\n"
+            f"یادآوری وقت مشاوره شما:\n"
+            f"📅 تاریخ جلسه: {date}\n"
+            f"⏰ ساعت جلسه: {time}\n"
+            f"🩺 نوع جلسه: {session_type}\n\n"
+            f"📍 یادآوری مراجعین حضوری: لطفاً ۱۰ دقیقه پیش از موعد در کلینیک حضور داشته باشید.\n"
+            f"💻 یادآوری مراجعین آنلاین: هماهنگی‌های لازم پیش از جلسه انجام خواهد شد.\n\n"
+            f"با آرزوی آرامش و تندرستی برای شما 🌱"
+        )
+        try:
+            await context.bot.send_message(chat_id=user_id, text=reminder_text)
+            database.mark_reminder_as_sent(app_id)
+            logger.info(f"24h appointment reminder sent to client user_id={user_id} for appointment_id={app_id}")
+        except Exception as e:
+            logger.error(f"Failed to send 24h reminder to user_id={user_id} for appointment_id={app_id}: {e}")
+            err_msg = str(e).lower()
+            if "blocked" in err_msg or "forbidden" in err_msg or "chat not found" in err_msg:
+                try:
+                    database.mark_reminder_as_sent(app_id)
+                except Exception:
+                    pass
+
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.error("Exception while handling an update:", exc_info=context.error)
 
@@ -791,6 +827,8 @@ def main():
     app = Application.builder().token(TOKEN).build()
     
     app.add_error_handler(error_handler)
+    if app.job_queue:
+        app.job_queue.run_repeating(send_appointment_reminders_job, interval=1800, first=10)
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", start))
     app.add_handler(CallbackQueryHandler(menu_callback, pattern=r"^main_menu$"))

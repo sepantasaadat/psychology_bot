@@ -2,6 +2,8 @@ import os
 import sqlite3
 import datetime
 import logging
+import jdatetime
+import config
 try:
     from config import TEHRAN_TZ
 except ImportError:
@@ -38,7 +40,7 @@ def setup_database(db_path=None):
         )
     ''')
 
-    # [آپدیت]: اضافه شدن ستون‌های created_at و updated_at
+    # [آپدیت]: اضافه شدن ستون‌های created_at و updated_at و reminder_sent
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS appointments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -51,17 +53,20 @@ def setup_database(db_path=None):
             receipt_file_id TEXT,
             created_at TEXT DEFAULT (datetime('now', 'localtime')),
             updated_at TEXT DEFAULT (datetime('now', 'localtime')),
+            reminder_sent INTEGER DEFAULT 0,
             FOREIGN KEY (user_id) REFERENCES users (user_id)
         )
     ''')
 
-    # مایگریشن ایمن در صورت وجود قبلی جدول بدون ستون‌های زمانی
+    # مایگریشن ایمن در صورت وجود قبلی جدول بدون ستون‌های زمانی و یادآوری
     cursor.execute("PRAGMA table_info(appointments)")
     columns = [row[1] for row in cursor.fetchall()]
     if "created_at" not in columns:
         cursor.execute("ALTER TABLE appointments ADD COLUMN created_at TEXT DEFAULT (datetime('now', 'localtime'))")
     if "updated_at" not in columns:
         cursor.execute("ALTER TABLE appointments ADD COLUMN updated_at TEXT DEFAULT (datetime('now', 'localtime'))")
+    if "reminder_sent" not in columns:
+        cursor.execute("ALTER TABLE appointments ADD COLUMN reminder_sent INTEGER DEFAULT 0")
 
     # ایندکس یکتا برای جلوگیری از ثبت تکراری نوبت در وضعیت‌های فعال (pending, approved, confirmed)
     cursor.execute('''
@@ -294,6 +299,84 @@ def expire_stale_pending_appointments(timeout_hours=2, now=None) -> int:
     
     conn.close()
     return len(expired_ids)
+
+def get_appointments_due_for_reminder(now=None) -> list[tuple]:
+    """
+    Finds confirmed appointments where reminder_sent = 0 and user_id != 0
+    scheduled within the next 24 hours (between now and now + 24 hours in Asia/Tehran).
+    Returns list of rows: (id, user_id, date, time, full_name, session_type).
+    """
+    if now is None:
+        current_time = datetime.datetime.now(TEHRAN_TZ)
+    elif isinstance(now, datetime.datetime):
+        if now.tzinfo is None:
+            current_time = now.replace(tzinfo=TEHRAN_TZ)
+        else:
+            current_time = now.astimezone(TEHRAN_TZ)
+    elif isinstance(now, jdatetime.datetime):
+        gdt = now.togregorian()
+        if gdt.tzinfo is None:
+            current_time = gdt.replace(tzinfo=TEHRAN_TZ)
+        else:
+            current_time = gdt.astimezone(TEHRAN_TZ)
+    else:
+        raise ValueError(f"Unsupported now type: {type(now)}")
+
+    window_end = current_time + datetime.timedelta(hours=24)
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT id, user_id, date, time, full_name, session_type
+        FROM appointments
+        WHERE status = 'confirmed'
+          AND reminder_sent = 0
+          AND user_id != 0
+          AND user_id IS NOT NULL
+        ORDER BY date, time
+    ''')
+    rows = cursor.fetchall()
+    conn.close()
+
+    due_appointments = []
+    for row in rows:
+        app_id, user_id, date_str, time_str, full_name, session_type = row
+        if not date_str or not time_str:
+            continue
+        try:
+            norm_date = config.normalize_digits(date_str).strip()
+            norm_time = config.normalize_digits(time_str).strip()
+            parts_date = norm_date.split('/')
+            parts_time = norm_time.split(':')
+            if len(parts_date) != 3 or len(parts_time) != 2:
+                continue
+            y, m, d = map(int, parts_date)
+            h, mn = map(int, parts_time)
+            appt_jdt = jdatetime.datetime(y, m, d, h, mn)
+            appt_gdt = appt_jdt.togregorian().replace(tzinfo=TEHRAN_TZ)
+
+            if current_time <= appt_gdt <= window_end:
+                due_appointments.append(row)
+        except Exception as e:
+            logger.warning(f"Error parsing appointment {app_id} datetime ({date_str} {time_str}): {e}")
+            continue
+
+    return due_appointments
+
+def mark_reminder_as_sent(appointment_id: int) -> None:
+    """
+    Updates reminder_sent = 1 and updated_at for the specified appointment.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    now_tehran_iso = datetime.datetime.now(TEHRAN_TZ).isoformat()
+    cursor.execute('''
+        UPDATE appointments
+        SET reminder_sent = 1, updated_at = ?
+        WHERE id = ?
+    ''', (now_tehran_iso, int(appointment_id)))
+    conn.commit()
+    conn.close()
 
 # اطمینان از مقداردهی اولیه جداول پایگاه داده در زمان بارگذاری ماژول
 setup_database()
