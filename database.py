@@ -1,7 +1,11 @@
+import os
 import sqlite3
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "clinic.db")
+
 def get_connection():
-    return sqlite3.connect("clinic.db")
+    return sqlite3.connect(DB_PATH)
 
 def setup_database():
     conn = get_connection()
@@ -157,8 +161,8 @@ def get_user_confirmed_appointments_for_week(user_id, start_date_str, end_date_s
 def delete_appointment(appointment_id):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute('DELETE FROM appointments WHERE id = ?', (appointment_id,))
-    cursor.execute('DELETE FROM admin_receipt_messages WHERE appointment_id = ?', (appointment_id,))
+    cursor.execute('DELETE FROM appointments WHERE id = ?', (int(appointment_id),))
+    cursor.execute('DELETE FROM admin_receipt_messages WHERE appointment_id = ?', (int(appointment_id),))
     conn.commit()
     conn.close()
 
@@ -168,7 +172,7 @@ def save_admin_receipt_message(appointment_id, admin_id, message_id):
     cursor.execute('''
         INSERT OR REPLACE INTO admin_receipt_messages (appointment_id, admin_id, message_id)
         VALUES (?, ?, ?)
-    ''', (appointment_id, admin_id, message_id))
+    ''', (int(appointment_id), int(admin_id), int(message_id)))
     conn.commit()
     conn.close()
 
@@ -179,7 +183,7 @@ def get_admin_receipt_messages(appointment_id):
         SELECT admin_id, message_id
         FROM admin_receipt_messages
         WHERE appointment_id = ?
-    ''', (appointment_id,))
+    ''', (int(appointment_id),))
     rows = cursor.fetchall()
     conn.close()
     return rows
@@ -187,9 +191,12 @@ def get_admin_receipt_messages(appointment_id):
 def delete_admin_receipt_messages(appointment_id):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute('DELETE FROM admin_receipt_messages WHERE appointment_id = ?', (appointment_id,))
+    cursor.execute('DELETE FROM admin_receipt_messages WHERE appointment_id = ?', (int(appointment_id),))
     conn.commit()
     conn.close()
+
+# اطمینان از مقداردهی اولیه جداول پایگاه داده در زمان بارگذاری ماژول
+setup_database()
 
 if __name__ == "__main__":
     setup_database()

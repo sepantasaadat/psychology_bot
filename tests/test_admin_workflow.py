@@ -100,20 +100,22 @@ class TestAdminWorkflow(unittest.IsolatedAsyncioTestCase):
         # Verify admin user_data was cleared
         self.assertEqual(context.user_data, {})
 
-        # Verify messages sent to client and admin
-        # Call 1: confirmation to client (chat_id=999)
-        # Call 2: weekly schedule to admin (chat_id=MAIN_ADMIN_ID)
-        # Call 3: main menu to admin (chat_id=MAIN_ADMIN_ID)
-        self.assertEqual(context.bot.send_message.call_count, 3)
+        # Verify messages sent to client and admins
+        # Client: 1 confirmation
+        # Other admins: 2 messages each (schedule + menu)
+        # Approving admin: 2 messages (schedule + menu)
+        # Total = 1 + 2*(len(ADMIN_IDS)-1) + 2 = 7 messages
+        expected_total = 1 + 2 * (len(main.ADMIN_IDS) - 1) + 2
+        self.assertEqual(context.bot.send_message.call_count, expected_total)
 
-        admin_schedule_call = context.bot.send_message.call_args_list[1]
-        self.assertEqual(admin_schedule_call[1]["chat_id"], main.MAIN_ADMIN_ID)
-        self.assertIn("برنامه کاری ۷ روز آینده", admin_schedule_call[1]["text"])
-
-        admin_menu_call = context.bot.send_message.call_args_list[2]
-        self.assertEqual(admin_menu_call[1]["chat_id"], main.MAIN_ADMIN_ID)
-        self.assertIn("منوی اصلی", admin_menu_call[1]["text"])
-        self.assertIsNotNone(admin_menu_call[1]["reply_markup"])
+        approving_admin_calls = [
+            call for call in context.bot.send_message.call_args_list
+            if call[1].get("chat_id") == main.MAIN_ADMIN_ID
+        ]
+        self.assertEqual(len(approving_admin_calls), 2)
+        self.assertIn("برنامه کاری ۷ روز آینده", approving_admin_calls[0][1]["text"])
+        self.assertIn("منوی اصلی", approving_admin_calls[1][1]["text"])
+        self.assertIsNotNone(approving_admin_calls[1][1]["reply_markup"])
 
     async def test_already_handled_appointment_triggers_schedule_and_menu(self):
         # Insert an already confirmed appointment
@@ -264,6 +266,99 @@ class TestAdminWorkflow(unittest.IsolatedAsyncioTestCase):
         # 3. Database tracking cleanup:
         # All receipt messages for this appointment should be cleared
         self.assertEqual(database.get_admin_receipt_messages(app_id), [])
+
+    async def test_approval_untracked_receipt_still_notifies_other_admins(self):
+        # Insert a pending appointment without any records in admin_receipt_messages
+        conn = database.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id)
+            VALUES (555, '1405/01/03', '17:00', 'حضوری', 'کاربر قدیمی', 'pending', 'p_old')
+        ''')
+        app_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
+        update = MagicMock()
+        query = MagicMock()
+        query.data = f"approve_{app_id}"
+        query.answer = AsyncMock()
+        query.edit_message_caption = AsyncMock()
+        query.message.caption = "رسید قدیمی"
+        query.message.chat_id = main.MAIN_ADMIN_ID
+        query.from_user.id = main.MAIN_ADMIN_ID
+        update.callback_query = query
+        update.effective_user.id = main.MAIN_ADMIN_ID
+        update.effective_user.username = "clinic_admin"
+
+        context = MagicMock()
+        context.user_data = {}
+        context.bot.send_message = AsyncMock()
+        context.bot.delete_message = AsyncMock()
+
+        await main.button_handler(update, context)
+
+        # delete_message should not be called because receipt was not tracked
+        context.bot.delete_message.assert_not_called()
+
+        # But SECOND_ADMIN_ID and SEPANTA_ADMIN_ID must still receive schedule and menu
+        for other_admin in [main.SECOND_ADMIN_ID, main.SEPANTA_ADMIN_ID]:
+            other_calls = [
+                call for call in context.bot.send_message.call_args_list
+                if call[1].get("chat_id") == other_admin
+            ]
+            self.assertEqual(len(other_calls), 2)
+            self.assertIn("برنامه کاری ۷ روز آینده", other_calls[0][1]["text"])
+            self.assertIn("منوی اصلی", other_calls[1][1]["text"])
+
+    async def test_approval_delete_message_failure_falls_back_to_edit_reply_markup(self):
+        conn = database.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id)
+            VALUES (444, '1405/01/03', '17:00', 'حضوری', 'کاربر تستی', 'pending', 'p_err')
+        ''')
+        app_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
+        database.save_admin_receipt_message(app_id, main.SECOND_ADMIN_ID, 5005)
+
+        update = MagicMock()
+        query = MagicMock()
+        query.data = f"approve_{app_id}"
+        query.answer = AsyncMock()
+        query.edit_message_caption = AsyncMock()
+        query.message.caption = "رسید تست"
+        query.message.chat_id = main.MAIN_ADMIN_ID
+        query.from_user.id = main.MAIN_ADMIN_ID
+        update.callback_query = query
+        update.effective_user.id = main.MAIN_ADMIN_ID
+        update.effective_user.username = "clinic_admin"
+
+        context = MagicMock()
+        context.user_data = {}
+        context.bot.send_message = AsyncMock()
+        context.bot.delete_message = AsyncMock(side_effect=Exception("Telegram deleteMessage failed"))
+        context.bot.edit_message_reply_markup = AsyncMock()
+
+        await main.button_handler(update, context)
+
+        # verify delete_message was attempted
+        context.bot.delete_message.assert_called_once_with(chat_id=main.SECOND_ADMIN_ID, message_id=5005)
+        # verify fallback to edit_message_reply_markup
+        context.bot.edit_message_reply_markup.assert_called_once_with(
+            chat_id=main.SECOND_ADMIN_ID,
+            message_id=5005,
+            reply_markup=None
+        )
+
+        # verify other admin still received schedule and menu
+        second_admin_calls = [
+            call for call in context.bot.send_message.call_args_list
+            if call[1].get("chat_id") == main.SECOND_ADMIN_ID
+        ]
+        self.assertEqual(len(second_admin_calls), 2)
 
     async def test_handle_receipt_saves_admin_receipt_messages(self):
         user_update = MagicMock()

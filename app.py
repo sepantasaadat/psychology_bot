@@ -16,14 +16,14 @@ ADMIN_IDS = [56073956, 8034655716, 95033750]
 
 app = Flask(__name__)
 app.secret_key = 'super_secret_psychology_key'
-DATABASE = 'clinic.db'
+DATABASE = database.DB_PATH
 
 # ساخت پوشه برای ذخیره موقت رسیدهای سایت
 UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 def get_db_connection():
-    conn = sqlite3.connect(DATABASE, timeout=15)
+    conn = database.get_connection()
     conn.row_factory = sqlite3.Row
     return conn
 

@@ -470,26 +470,41 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
 
             # حذف پیام رسید و دکمه‌ها برای سایر ادمین‌ها و ارسال برنامه به‌روزشده هفتگی + منوی اصلی
-            other_receipt_msgs = database.get_admin_receipt_messages(appointment_id)
+            receipt_map = dict(database.get_admin_receipt_messages(int(appointment_id)))
             weekly_schedule_text = format_upcoming_week_appointments()
-            for admin_id, msg_id in other_receipt_msgs:
-                if admin_id != user_id:
+
+            for other_admin in ADMIN_IDS:
+                if other_admin != user_id:
+                    msg_id = receipt_map.get(other_admin)
+                    if msg_id:
+                        try:
+                            await context.bot.delete_message(chat_id=other_admin, message_id=msg_id)
+                        except Exception as e:
+                            logger.error(f"Error deleting receipt message {msg_id} for admin {other_admin}: {e}")
+                            try:
+                                await context.bot.edit_message_reply_markup(
+                                    chat_id=other_admin,
+                                    message_id=msg_id,
+                                    reply_markup=None
+                                )
+                            except Exception as e_edit:
+                                logger.error(f"Error removing buttons for admin {other_admin}: {e_edit}")
+
+                    if hasattr(context, "application") and hasattr(context.application, "user_data"):
+                        if other_admin in context.application.user_data:
+                            context.application.user_data[other_admin].clear()
+
                     try:
-                        await context.bot.delete_message(chat_id=admin_id, message_id=msg_id)
-                    except Exception as e:
-                        logger.error(f"Error deleting receipt message for admin {admin_id}: {e}")
-                    
-                    try:
-                        await context.bot.send_message(chat_id=admin_id, text=weekly_schedule_text)
+                        await context.bot.send_message(chat_id=other_admin, text=weekly_schedule_text)
                         await context.bot.send_message(
-                            chat_id=admin_id,
+                            chat_id=other_admin,
                             text="منوی اصلی پذیرش و مدیریت کلینیک: 🌿",
-                            reply_markup=get_main_menu_keyboard(admin_id)
+                            reply_markup=get_main_menu_keyboard(other_admin)
                         )
                     except Exception as e:
-                        logger.error(f"Error sending schedule/menu to admin {admin_id}: {e}")
+                        logger.error(f"Error sending schedule/menu to admin {other_admin}: {e}")
             
-            database.delete_admin_receipt_messages(appointment_id)
+            database.delete_admin_receipt_messages(int(appointment_id))
 
         elif action == "reject":
             database.update_appointment_status(appointment_id, "rejected")
@@ -515,7 +530,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     text=f"📞 این نوبت از طریق وب‌سایت بود و رد شد. در صورت نیاز با شماره درج شده تماس بگیرید:\n{name}"
                 )
 
-            database.delete_admin_receipt_messages(appointment_id)
+            database.delete_admin_receipt_messages(int(appointment_id))
 
         # ریست خودکار نشست ادمین، ارسال برنامه هفتگی نوبت‌ها و بازگشت به منوی اصلی
         await complete_admin_review_session(query, context, user_id)
