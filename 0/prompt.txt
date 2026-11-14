@@ -1,0 +1,56 @@
+خب خیلی دقیق بگو چه طور از گیتهاب ببرم روی سرور
+
+---
+
+خب انجام دادم ، الان طبق آخرین آپدیتی که در کدها انجام دادی شخص چه قدر فرصت دارد عکس رسید پرداختی را بفرستد؟ و اینکه آیاعکس هایی که کاربران میفرستند در سرور ذخیره می شود و حجم سرور را پر میکند؟
+
+---
+
+@[plugin:superpowers] Invoke the `superpowers` plugin workflows (`test-driven-development` and `verification-before-completion`) to audit and implement a strict **1-Hour (60-Minute) Checkout Session & Slot Hold Timeout** for users who select a time slot in the Telegram bot (`main.py` / `database.py` / `config.py`) but pause or abandon the flow during the Name Entry, Phone Entry, or Payment Receipt Upload steps.
+
+### Phase 1: Codebase Audit & Precise Explanation
+First, inspect `main.py`, `database.py`, and `config.py` and answer these exact questions clearly before modifying code:
+1. When a user clicks a time slot (`time_...` callback), is the slot currently locked in the SQLite database immediately, held only in `context.user_data`, or only inserted into `appointments` after the receipt photo is uploaded?
+2. If a user stops at the "Enter Name", "Enter Phone", or "Send Receipt Photo" step and never continues, when (if ever) does their reservation session expire, and when does that time slot become available to the general public again?
+3. What currently happens to `PENDING_EXPIRY_MINUTES` in `config.py` / `database.py` vs. the in-memory `context.user_data` state in `main.py`?
+
+---
+
+### Phase 2: Implement the 1-Hour (60-Minute) Checkout Timeout & Auto-Reset
+Implement a complete, concurrency-safe **60-minute (3600-second) reservation completion window** from the exact moment the user selects a time slot (`time_` callback), following these rules:
+
+1. **Configuration (`config.py`):**
+   - Define `BOOKING_STEP_TIMEOUT_MINUTES = 60` (1 hour) and ensure any temporary slot hold or uncompleted booking expiration aligns with this 60-minute window in `Asia/Tehran` time (`config.now_tehran()`).
+
+2. **Start the 1-Hour Timer on Time Selection (`main.py` & `database.py`):**
+   - When the user selects an available time slot in the bot:
+     - Store `context.user_data["booking_started_at"] = config.now_tehran().isoformat()` along with the selected date, time, and current step (`awaiting_name`).
+     - If the slot is temporarily held/locked so another user cannot steal it while the current user is entering details and making the bank transfer, ensure that hold expires automatically after 60 minutes if not completed.
+     - Inform the user in the prompt message that they have **1 hour** to enter their details and upload the payment receipt (`"⏳ توجه: شما ۱ ساعت فرصت دارید تا اطلاعات خود را وارد کرده و تصویر فیش واریزی را ارسال نمایید؛ در غیر این صورت نوبت به صورت خودکار آزاد خواهد شد."`).
+     - If `context.job_queue` is available, schedule a per-user one-off timeout job (`run_once`, `when=3600`, named `f"checkout_timeout_{user_id}"`) removing any previous timeout job for that user.
+
+3. **Proactive Expiration via `job_queue` (Push Notification & Auto-Restart after 1 Hour):**
+   - If the 60-minute `checkout_timeout_{user_id}` job fires and the user is still in an incomplete booking step (`awaiting_name`, `awaiting_phone`, or `awaiting_receipt`):
+     - Clear their booking state (`context.user_data.clear()`) and release any temporary slot hold so the slot is immediately available to the public again.
+     - Send a message to the user:
+       `"⏳ مهلت ۱ ساعته شما برای تکمیل مراحل رزرو و ارسال فیش واریزی به پایان رسید و این زمان برای سایر مراجعین آزاد شد.\n\nلطفاً در صورت تمایل مجدداً از منوی اصلی اقدام فرمایید:"`
+     - Attach the main menu keyboard (`start` / main menu view) so the bot effectively restarts from the home screen for them.
+   - As soon as the user successfully uploads their receipt photo (or cancels/returns to the main menu), cancel their pending `checkout_timeout_{user_id}` job immediately.
+
+4. **Reactive Guard on Every Step (`handle_message` & `handle_photo`):**
+   - Inside the text handler (Name and Phone steps) and photo handler (Receipt upload step), before processing the user's input, check `booking_started_at` in `context.user_data`.
+   - Calculate elapsed time using `config.now_tehran()`. If `elapsed_seconds > 3600` (1 hour):
+     - Clear `context.user_data.clear()`, release any held slot, cancel any leftover timeout job, and do NOT proceed with the booking.
+     - Reply with:
+       `"⏳ مهلت ۱ ساعته شما برای تکمیل رزرو به پایان رسیده است. لطفاً از صفحه اول مجدداً نوبت خود را انتخاب کنید:"`
+     - Show the main menu keyboard (`build_main_menu_keyboard` / start screen) so the user starts fresh from the first page.
+
+---
+
+### Phase 3: TDD Verification (`pytest`)
+- Keep all **112 existing tests** passing without breaking any existing function signatures or fixtures.
+- Add dedicated unit tests in `tests/` verifying:
+  1. Selecting a time slot records `booking_started_at` and allows completing Name -> Phone -> Receipt within 60 minutes.
+  2. If a user pauses at the Name entry step or Receipt upload step for > 60 minutes (simulated via `monkeypatch` advancing `now_tehran()` by 61 minutes), sending a name, phone number, or photo is rejected with the expiration message, clears `context.user_data`, returns the user to the main menu, and frees the time slot for other users.
+  3. The background timeout callback (`checkout_timeout`) resets the user's session and sends the expiration + main menu message if triggered after 1 hour.
+- Run `pytest -v` and show me the audit findings plus the green test suite output.
