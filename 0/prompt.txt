@@ -1,0 +1,50 @@
+@[plugin:superpowers] Invoke the `superpowers` plugin workflows (`writing-skills`, `subagent-driven-development`, `test-driven-development`, and `verification-before-completion`) to architect and create 5 reusable, production-grade specialized sub-agents for my repository (`sepantasaadat/psychology_bot` — a hybrid Python application combining a Flask web app, a `python-telegram-bot` v21+ polling service, and scheduled reporting scripts sharing a local SQLite database `clinic.db` deployed on an Ubuntu VPS).
+
+### Phase 1: Create 5 Persistent Sub-Agents Using Superpowers Conventions
+Create dedicated sub-agent definitions (with strict system prompts, tool boundaries, verification checklists, and reusable workflows) so they serve both our immediate 18-point refactoring roadmap and all future feature development:
+
+1. **`security-privacy-auditor` (AppSec & Healthcare PII Guardian)**
+   - **Mission:** Enforce secret management, secure file upload handling, strict RBAC/ownership authorization, CSRF protection, and zero-PII logging across Web and Telegram Bot interfaces.
+   - **Core Superpowers Rules:**
+     - Audit commits and code for hardcoded credentials (API keys, SMTP app passwords, Flask `secret_key`); enforce `.env` loading via `os.environ` and provide `git-filter-repo` remediation commands when secrets leak.
+     - Ensure Flask never runs with `debug=True` in production and enforces `CSRFProtect` and `MAX_CONTENT_LENGTH`.
+     - Enforce storing user-uploaded files (e.g., payment receipts) outside `static/` using randomized UUID filenames, validating actual magic bytes/image integrity via `Pillow` (`Image.open().verify()` + re-encoding) before disk write.
+     - Audit `logging` calls in `main.py` and `app.py` to guarantee patient names, phone numbers, and confidential message bodies are never written to logs (log only `user_id`, `message_id`, and state transitions; set `httpx` and `telegram` loggers to `WARNING`).
+     - Verify explicit authorization guards on every state-mutating endpoint and Telegram callback (`ADMIN_IDS` check on `approve_`/`reject_`, and `user_id` ownership check on `user_cancel_`).
+
+2. **`sqlite-temporal-architect` (Concurrency, Schema & Jalali Timezone Specialist)**
+   - **Mission:** Own `database.py` and temporal/calendar logic in `config.py`, guaranteeing ACID concurrency across multiple OS processes and rock-solid Jalali (`jdatetime`) + `Asia/Tehran` timezone math.
+   - **Core Superpowers Rules:**
+     - Configure every SQLite connection with `PRAGMA journal_mode=WAL;`, `PRAGMA busy_timeout=30000;`, `PRAGMA synchronous=NORMAL;`, and `PRAGMA foreign_keys=ON;`.
+     - Eliminate Time-of-Check to Time-of-Use (TOCTOU) double-booking bugs by enforcing a partial unique index at the database engine level: `CREATE UNIQUE INDEX IF NOT EXISTS idx_appointments_active_slot ON appointments(date, time) WHERE status IN ('pending', 'approved');` and translating `sqlite3.IntegrityError` into domain exceptions.
+     - Ban hard-coded Jalali years (such as `get_1405_working_days()`). Implement rolling-window working day generators (`get_upcoming_working_days(days_ahead=60)`) anchored explicitly to `ZoneInfo("Asia/Tehran")` that seamlessly cross Nowruz year boundaries (1405 -> 1406+).
+     - Enforce soft-deletes (`status IN ('pending', 'approved', 'rejected', 'cancelled', 'expired')`) with ISO-8601 `created_at` and `updated_at` timestamps in `Asia/Tehran` time, plus automated expiration of stale `pending` rows.
+
+3. **`bot-web-core-engineer` (Unified Domain Logic, Flask & Telegram Bot Architect)**
+   - **Mission:** Maintain parity between `app.py` (Flask) and `main.py` (`python-telegram-bot`), eliminating duplicated constants and monolithic handlers.
+   - **Core Superpowers Rules:**
+     - Centralize all environment configs, clinic constants (`ADMIN_IDS`, `WORKING_HOURS`, `WORKING_WEEKDAYS`, `MIN_ADVANCE_DAYS=2`, `CANCELLATION_HOURS_LIMIT=48`), digit normalizers (Persian/Arabic to ASCII), and `validate_booking_request()` inside `config.py`.
+     - Ensure both `POST /reserve` on Web and the Telegram Bot flow call the exact same server-side validator enforcing the "no today or tomorrow" rule, working day/hour validation, and `^09\d{9}$` phone validation.
+     - Keep Flask route decorators clean and unstacked (`@app.route("/")` on `home()`, `@app.route("/about")` on `about()`).
+     - Replace monolithic `if/elif` callback routers (`button_handler`) with modular, single-responsibility async handlers dispatched via regex patterns in `CallbackQueryHandler(..., pattern=r"^...")`.
+     - Implement scheduled jobs via `Application.job_queue` for 24-hour client appointment reminders (`reminder_sent` flag) and dual-channel (Gmail SMTP + Telegram Admin broadcast) daily/weekly reports in `daily_report.py`.
+
+4. **`tdd-qa-verifier` (Pytest & Superpowers Red-Green-Refactor Enforcer)**
+   - **Mission:** Enforce strict Test-Driven Development (`superpowers:test-driven-development`) across database, web, and bot layers.
+   - **Core Superpowers Rules:**
+     - Maintain an isolated `pytest` suite (`tests/`) using `tmp_path` SQLite databases and `monkeypatch` fixtures.
+     - Test Flask routes via `app.test_client()`, covering `GET /`, `GET /about`, `POST /reserve` with valid/invalid dates (today/tomorrow rejection), Persian numeral normalization, spoofed non-image uploads, UUID receipt storage outside `static/`, and HTTP 409 conflict on concurrent slot booking.
+     - Test Jalali year rollover (`1405-12-25` -> `1406-01-xx`), automatic expiration of stale `pending` appointments, 48-hour cancellation cutoffs in `Asia/Tehran`, and soft-cancellation slot release.
+
+5. **`devops-vps-guardian` (CI/CD, Systemd, Docker & Repo Hygiene Engineer)**
+   - **Mission:** Own deployment reliability, reproducibility, and repository hygiene.
+   - **Core Superpowers Rules:**
+     - Maintain pinned dependencies in `requirements.txt`, `.env.example`, and `.gitignore` (excluding `.env`, `*.db*`, `static/uploads/`, `private_uploads/`).
+     - Provide hardened `systemd` unit files (for Gunicorn `app:app`, `main.py` bot, and `daily_report.timer`), `Dockerfile` / `docker-compose.yml`, and `.github/workflows/ci.yml` running `pytest` on every push and pull request.
+
+---
+
+### Phase 2: Execution Instructions
+1. First, generate and save the 5 sub-agent skill/agent files in our workspace following the `superpowers` skill/agent directory standard so they remain permanently available for future prompts.
+2. Next, create a structured implementation plan (`superpowers:writing-plans`) mapping the 18 audit items of `psychology_bot` to these 5 sub-agents.
+3. Pause and show me the created sub-agent files and the execution plan, then wait for my confirmation so we can execute the refactoring step-by-step using `subagent-driven-development`.
