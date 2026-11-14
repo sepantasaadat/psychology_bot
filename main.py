@@ -33,11 +33,12 @@ ADMIN_PHONE = config.ADMIN_PHONE
 CLINIC_WEBSITE = config.CLINIC_WEBSITE
 # ==========================================
 
-# دیکشنری برای تبدیل شماره روز به نام روز فارسی [آپدیت ۳]
-PERSIAN_WEEKDAYS = {
-    0: "شنبه", 1: "یکشنبه", 2: "دوشنبه", 
-    3: "سه‌شنبه", 4: "چهارشنبه"
-}
+# تقویم کاری و روزهای هفته برگرفته از تنظیمات متمرکز سیستم
+PERSIAN_WEEKDAYS = config.PERSIAN_WEEKDAYS
+WORKING_HOURS = config.WORKING_HOURS
+WORKING_WEEKDAYS = config.WORKING_WEEKDAYS
+MIN_ADVANCE_DAYS = config.MIN_ADVANCE_DAYS
+CANCELLATION_HOURS_LIMIT = config.CANCELLATION_HOURS_LIMIT
 
 def get_upcoming_days(days_count=5, is_admin=False, reference_date=None):
     days = []
@@ -50,13 +51,13 @@ def get_upcoming_days(days_count=5, is_admin=False, reference_date=None):
 
     # مراجعین عادی امکان رزرو برای امروز و فردا را ندارند
     if not is_admin:
-        current_date = start_date + jdatetime.timedelta(days=2)
+        current_date = start_date + jdatetime.timedelta(days=MIN_ADVANCE_DAYS)
     else:
         current_date = start_date
 
     added = 0
     while added < days_count:
-        if current_date.weekday() <= 4:
+        if current_date.weekday() in WORKING_WEEKDAYS:
             # حالا به جای فقط تاریخ، نام روز را هم برمی‌گردانیم [آپدیت ۳]
             day_name = PERSIAN_WEEKDAYS[current_date.weekday()]
             days.append((current_date, day_name))
@@ -91,6 +92,8 @@ def format_upcoming_week_appointments(reference_date=None):
 
 # توابع کمکی برای تحلیل زمان و اعمال قوانین لغو نوبت
 def parse_appointment_datetime(date_str, time_str):
+    date_str = config.normalize_digits(date_str)
+    time_str = config.normalize_digits(time_str)
     y, m, d = map(int, date_str.split('/'))
     h, mn = map(int, time_str.split(':'))
     return jdatetime.datetime(y, m, d, h, mn)
@@ -333,14 +336,14 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(date_prompt_text, reply_markup=InlineKeyboardMarkup(keyboard))
         
     elif query.data.startswith("date_"):
-        selected_date = query.data.split("_")[1]
+        selected_date = config.normalize_digits(query.data.split("_")[1])
         
         # بررسی دسترسی نقش: مراجعین عادی مجاز به انتخاب تاریخ‌های گذشته، امروز یا فردا نیستند
         if user_id not in ADMIN_IDS:
             today_date = jdatetime.date.today()
             if today_date.year < 1405:
                 today_date = jdatetime.date(1405, 1, 1)
-            min_allowed_date = today_date + jdatetime.timedelta(days=2)
+            min_allowed_date = today_date + jdatetime.timedelta(days=MIN_ADVANCE_DAYS)
             min_allowed_str = min_allowed_date.strftime("%Y/%m/%d")
             
             if selected_date < min_allowed_str:
@@ -355,7 +358,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         booked_times = database.get_booked_times(selected_date)
         
-        hours = ["17:00", "18:00", "19:00", "20:00", "21:00"]
+        hours = config.WORKING_HOURS
         keyboard = []
         for hour in hours:
             if hour not in booked_times:
@@ -375,14 +378,16 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(time_prompt_text, reply_markup=InlineKeyboardMarkup(keyboard))
         
     elif query.data.startswith("time_"):
-        _, selected_date, selected_time = query.data.split("_")
+        parts = query.data.split("_")
+        selected_date = config.normalize_digits(parts[1])
+        selected_time = config.normalize_digits(parts[2])
         
         # بررسی دسترسی نقش: مراجعین عادی مجاز به ثبت زمان برای تاریخ‌های گذشته، امروز یا فردا نیستند
         if user_id not in ADMIN_IDS:
             today_date = jdatetime.date.today()
             if today_date.year < 1405:
                 today_date = jdatetime.date(1405, 1, 1)
-            min_allowed_date = today_date + jdatetime.timedelta(days=2)
+            min_allowed_date = today_date + jdatetime.timedelta(days=MIN_ADVANCE_DAYS)
             min_allowed_str = min_allowed_date.strftime("%Y/%m/%d")
             
             if selected_date < min_allowed_str:

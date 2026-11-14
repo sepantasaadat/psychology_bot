@@ -48,29 +48,16 @@ def setup_web_user():
 setup_web_user()
 
 def get_1405_working_days():
-    start_date = jdatetime.date(1405, 1, 1)
-    today = jdatetime.date.today()
-    if today.year == 1405:
-        start_date = today
-
-    days = []
-    current_date = start_date
-    added = 0
-    while added < 15:
-        if current_date.weekday() <= 4:
-            days.append(current_date.strftime("%Y/%m/%d"))
-            added += 1
-        current_date = current_date + jdatetime.timedelta(days=1)
-    return days
+    return config.get_upcoming_working_days(15, is_admin=False)
 
 def get_available_hours(selected_date):
-    all_hours = ["17:00", "18:00", "19:00", "20:00", "21:00"]
+    selected_date = config.normalize_digits(selected_date)
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT time FROM appointments WHERE date = ? AND status IN ('pending', 'confirmed')", (selected_date,))
     booked_times = [row['time'] for row in cursor.fetchall()]
     conn.close()
-    return [h for h in all_hours if h not in booked_times]
+    return [h for h in config.WORKING_HOURS if h not in booked_times]
 
 # Send appointment notification and inline buttons to admins via Telegram
 def send_receipt_to_telegram(app_id, name_with_phone, date, time, session_type, filepath):
@@ -132,15 +119,43 @@ def booking():
         phone = request.form.get('phone')
         session_type = request.form.get('session_type')
         
+        # Unified validation
+        is_valid, error_code = config.validate_booking_request(
+            date_str=selected_date,
+            time_str=selected_time,
+            full_name=full_name,
+            phone=phone,
+            is_admin=False
+        )
+        if not is_valid:
+            error_messages = {
+                "invalid_phone": "شماره موبایل وارد شده نامعتبر است. لطفاً شماره موبایل ۱۱ رقمی معتبر (مثال: 09123456789) وارد فرمایید.",
+                "advance_notice_required": "رزرو نوبت برای امروز و فردا امکان‌پذیر نیست. لطفاً نوبت خود را حداقل از ۲ روز قبل انتخاب فرمایید.",
+                "past_date": "امکان انتخاب تاریخ‌های سپری‌شده وجود ندارد. لطفاً یک تاریخ معتبر انتخاب فرمایید.",
+                "non_working_day": "روز انتخابی خارج از روزهای کاری کلینیک (شنبه تا چهارشنبه) است.",
+                "invalid_time": "ساعت انتخابی نامعتبر است. لطفاً از میان ساعت‌های مجاز کاری کلینیک انتخاب فرمایید.",
+                "invalid_date": "فرمت یا مقدار تاریخ انتخابی نامعتبر است.",
+                "invalid_name": "لطفاً نام و نام خانوادگی کامل مراجع (حداقل ۳ حرف) را وارد فرمایید."
+            }
+            msg = error_messages.get(error_code, "اطلاعات ارسالی نامعتبر است.")
+            flash(msg, "danger")
+            return render_template('booking.html', days=get_1405_working_days()), 400
+
+        # Digits normalization
+        selected_date = config.normalize_digits(selected_date).strip()
+        selected_time = config.normalize_digits(selected_time).strip()
+        phone = config.normalize_digits(phone).strip() if phone else ""
+        full_name = full_name.strip() if full_name else ""
+
         available_hours = get_available_hours(selected_date)
         if selected_time not in available_hours:
             flash(f"متاسفانه ساعت {selected_time} در تاریخ {selected_date} پر شده است.", "danger")
-            return redirect(url_for('booking'))
+            return render_template('booking.html', days=get_1405_working_days()), 400
             
         receipt_file = request.files.get('receipt')
         if not receipt_file or receipt_file.filename == '':
             flash("آپلود عکس رسید پرداخت الزامی است.", "danger")
-            return redirect(url_for('booking'))
+            return render_template('booking.html', days=get_1405_working_days()), 400
             
         try:
             filepath = process_and_save_receipt(receipt_file, dest_dir=PRIVATE_UPLOADS_FOLDER)

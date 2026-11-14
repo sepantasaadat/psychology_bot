@@ -72,10 +72,11 @@ class TestUploadSecurityAndRBAC(unittest.IsolatedAsyncioTestCase):
         )
 
         # 2. Uploading spoofed file through Flask /booking endpoint
+        valid_date = config.get_upcoming_working_days(1, is_admin=False)[0]
         response = self.client.post(
             '/booking',
             data={
-                'date': '1405/01/10',
+                'date': valid_date,
                 'time': '17:00',
                 'full_name': 'مهاجم سایبری',
                 'phone': '09120000000',
@@ -130,11 +131,12 @@ class TestUploadSecurityAndRBAC(unittest.IsolatedAsyncioTestCase):
 
         # Test end-to-end booking upload with mock telegram notification
         valid_jpeg = self._create_dummy_image(fmt="JPEG", size=(80, 80), color="purple")
+        valid_date = config.get_upcoming_working_days(1, is_admin=False)[0]
         with patch.object(app, 'send_receipt_to_telegram') as mock_send:
             res = self.client.post(
                 '/booking',
                 data={
-                    'date': '1405/01/10',
+                    'date': valid_date,
                     'time': '18:00',
                     'full_name': 'سارا احمدی',
                     'phone': '09121111111',
@@ -260,11 +262,12 @@ class TestUploadSecurityAndRBAC(unittest.IsolatedAsyncioTestCase):
         When WTF_CSRF_ENABLED is True, submitting a form without valid CSRF token is rejected with HTTP 400.
         """
         app.app.config['WTF_CSRF_ENABLED'] = True
+        valid_date = config.get_upcoming_working_days(1, is_admin=False)[0]
         try:
             res = self.client.post(
                 '/booking',
                 data={
-                    'date': '1405/01/10',
+                    'date': valid_date,
                     'time': '17:00',
                     'full_name': 'تست بدون توکن',
                     'phone': '09123333333',
