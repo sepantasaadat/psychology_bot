@@ -25,6 +25,7 @@
                 {% endwith %}
 
                 <form method="POST" action="/booking" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <div class="mb-4">
                         <label for="full_name" class="form-label text-muted small fw-bold">نام و نام خانوادگی مراجع:</label>
                         <input type="text" class="form-control form-control-lg bg-light border-0" id="full_name" name="full_name" required placeholder="مثال: علی رضایی">

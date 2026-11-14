@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from werkzeug.utils import secure_filename
+from flask_wtf.csrf import CSRFProtect
 import sqlite3
 import jdatetime
 import os
@@ -8,6 +9,7 @@ import json
 import logging
 import config
 import database
+from security import process_and_save_receipt
 
 # Suppress noisy external loggers
 logging.getLogger("werkzeug").setLevel(logging.WARNING)
@@ -19,11 +21,14 @@ ADMIN_IDS = config.ADMIN_IDS
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', config.FLASK_SECRET_KEY)
+app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB upload limit
+app.config.setdefault('WTF_CSRF_ENABLED', True)
+csrf = CSRFProtect(app)
 DATABASE = database.DB_PATH
 
-# Folder for receipt uploads
-UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'uploads')
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+# Private folder for receipt uploads outside web root
+PRIVATE_UPLOADS_FOLDER = getattr(config, 'PRIVATE_UPLOADS_DIR', os.path.join(config.BASE_DIR, 'private_uploads'))
+os.makedirs(PRIVATE_UPLOADS_FOLDER, exist_ok=True)
 
 def get_db_connection():
     conn = database.get_connection()
@@ -137,9 +142,12 @@ def booking():
             flash("آپلود عکس رسید پرداخت الزامی است.", "danger")
             return redirect(url_for('booking'))
             
-        filename = secure_filename(receipt_file.filename)
-        filepath = os.path.join(UPLOAD_FOLDER, filename)
-        receipt_file.save(filepath)
+        try:
+            filepath = process_and_save_receipt(receipt_file, dest_dir=PRIVATE_UPLOADS_FOLDER)
+        except ValueError as e:
+            logger.warning(f"Rejected invalid receipt upload: {e}")
+            flash("فایل ارسال شده نامعتبر یا فاقد فرمت تصویری مجاز است. لطفاً یک تصویر معتبر (JPG، PNG، WEBP) ارسال فرمایید.", "danger")
+            return render_template('booking.html', days=get_1405_working_days()), 400
         
         name_with_phone = f"{full_name} | {phone}"
         

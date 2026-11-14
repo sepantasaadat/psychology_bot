@@ -1,7 +1,12 @@
 import os
 import datetime
+from pathlib import Path
 from zoneinfo import ZoneInfo
 import jdatetime
+
+# Base directory and storage paths
+BASE_DIR = Path(__file__).resolve().parent
+PRIVATE_UPLOADS_DIR = BASE_DIR / 'private_uploads'
 
 # Load environment variables from .env file if available
 try:

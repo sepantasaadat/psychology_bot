@@ -257,6 +257,11 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         client_id, date, time, s_type, name, _ = app_info
 
+        # بررسی احراز هویت و مالکیت نوبت: مراجع فقط مجاز به لغو نوبت‌های متعلق به خود است
+        if client_id != user_id and user_id not in ADMIN_IDS:
+            await query.answer("⛔ شما مجاز به لغو این نوبت نیستید.", show_alert=True)
+            return
+
         # بررسی ضوابط زمانی لغو نوبت (قانون ۴۸ ساعت و عدم انقضا)
         eligible, reason = can_cancel_appointment(date, time)
         if not eligible:
@@ -421,6 +426,10 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ------------------ تایید / رد ادمین‌ها [آپدیت ۱ و ۲] ------------------
     elif query.data.startswith("approve_") or query.data.startswith("reject_"):
+        if user_id not in ADMIN_IDS:
+            await query.answer("⛔ شما دسترسی مدیریت به این عملیات را ندارید.", show_alert=True)
+            return
+
         action, appointment_id = query.data.split("_")
         
         app_info = database.get_appointment(appointment_id)
