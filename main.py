@@ -515,6 +515,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     text=f"📞 این نوبت از طریق وب‌سایت بود و رد شد. در صورت نیاز با شماره درج شده تماس بگیرید:\n{name}"
                 )
 
+            database.delete_admin_receipt_messages(appointment_id)
+
         # ریست خودکار نشست ادمین، ارسال برنامه هفتگی نوبت‌ها و بازگشت به منوی اصلی
         await complete_admin_review_session(query, context, user_id)
 
@@ -659,6 +661,7 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
     logger.error("Exception while handling an update:", exc_info=context.error)
 
 def main():
+    database.setup_database()
     app = Application.builder().token(TOKEN).build()
     
     app.add_error_handler(error_handler)

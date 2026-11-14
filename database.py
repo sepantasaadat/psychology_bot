@@ -158,6 +158,7 @@ def delete_appointment(appointment_id):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute('DELETE FROM appointments WHERE id = ?', (appointment_id,))
+    cursor.execute('DELETE FROM admin_receipt_messages WHERE appointment_id = ?', (appointment_id,))
     conn.commit()
     conn.close()
 

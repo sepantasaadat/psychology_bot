@@ -306,5 +306,29 @@ class TestAdminWorkflow(unittest.IsolatedAsyncioTestCase):
         for admin_id in main.ADMIN_IDS:
             self.assertIn((admin_id, 8888), saved_msgs)
 
+    def test_main_calls_setup_database(self):
+        with unittest.mock.patch('database.setup_database') as mock_setup, \
+             unittest.mock.patch('telegram.ext.Application.builder') as mock_builder:
+            mock_app = MagicMock()
+            mock_builder.return_value.token.return_value.build.return_value = mock_app
+            main.main()
+            mock_setup.assert_called_once()
+
+    def test_web_send_receipt_saves_admin_receipt_messages(self):
+        import app
+        with unittest.mock.patch('builtins.open', unittest.mock.mock_open(read_data=b'fake_image')), \
+             unittest.mock.patch('requests.post') as mock_post:
+            mock_resp = MagicMock()
+            mock_resp.status_code = 200
+            mock_resp.json.return_value = {"ok": True, "result": {"message_id": 9911}}
+            mock_post.return_value = mock_resp
+
+            app.send_receipt_to_telegram(55, "مراجع وب", "1405/01/01", "18:00", "حضوری", "fake.png")
+
+            saved_msgs = database.get_admin_receipt_messages(55)
+            self.assertEqual(len(saved_msgs), len(app.ADMIN_IDS))
+            for admin in app.ADMIN_IDS:
+                self.assertIn((admin, 9911), saved_msgs)
+
 if __name__ == '__main__':
     unittest.main()

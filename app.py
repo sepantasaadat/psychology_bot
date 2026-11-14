@@ -8,6 +8,7 @@ from email.mime.multipart import MIMEMultipart
 import os
 import requests
 import json
+import database
 
 # تنظیمات تلگرام برای ارسال عکس رسید
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
@@ -93,7 +94,12 @@ def send_receipt_to_telegram(app_id, name_with_phone, date, time, session_type, 
                     "caption": caption,
                     "reply_markup": json.dumps(reply_markup)
                 }
-                requests.post(url, data=payload, files={"photo": photo})
+                res = requests.post(url, data=payload, files={"photo": photo})
+                if res.status_code == 200:
+                    res_data = res.json()
+                    msg_id = res_data.get("result", {}).get("message_id")
+                    if msg_id:
+                        database.save_admin_receipt_message(app_id, admin, msg_id)
         except Exception as e:
             print(f"Error sending to telegram admin: {e}")
 
