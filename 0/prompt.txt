@@ -1,0 +1,50 @@
+آیا نیازی نیست پسوردی که از اکانت گوگلم در کد ها بودش جایگزین کنم جایی خیلی دقیق توضیح بده
+
+---
+
+جایی که کد 16 رقمی میدهد را پیدا نکردم دقیق بگرد پیدا کن کجاس
+
+---
+
+خب انجام دادم و به همان صورت که گفتی در سرور ذخیره کردم ، پس مطمئن باشم دیگر این رمزم در خطر نیست در صفحه گیت هاب و در کدهای اصلی اثری از آن نیست ، دوباره دقیق چک کن مطمئن شو کد ها از نظر منطقی کار میکند و تست بگیر هیچ چیز کم و کسر نباشد همه چیز برای بردن روی سرور از گیت هاب آماده است ؟ اطلاعاتی لازم نداری که من برایت تامین کنم؟
+
+---
+
+root@ubuntu-London-0:~/psychology_bot# source .venv/bin/activate
+-bash: .venv/bin/activate: No such file or directory
+
+---
+
+@[plugin:superpowers] root@ubuntu-London-0:~# systemctl status psychobot --no-pager
+● psychobot.service - Telegram Appointment Bot for Psychology Clinic
+     Loaded: loaded (/etc/systemd/system/psychobot.service; enabled; preset: enabled)
+     Active: activating (auto-restart) (Result: exit-code) since Sat 2026-11-14 21:57:58 UTC; 1s ago
+    Process: 1816492 ExecStart=/root/psychology_bot/venv/bin/python main.py (code=exited, status=1/FAILURE)
+   Main PID: 1816492 (code=exited, status=1/FAILURE)
+        CPU: 420ms
+
+Nov 14 21:57:58 ubuntu-London-0 systemd[1]: psychobot.service: Failed with result 'exit-code'. هیچ واکنشی نشون نمیدهد ربات
+
+---
+
+@[plugin:superpowers] root@ubuntu-London-0:~# journalctl -u psychobot -n 20 --no-pager
+Nov 14 21:59:45 ubuntu-London-0 python[1816555]:   File "/root/psychology_bot/database.py", line 382, in <module>
+Nov 14 21:59:45 ubuntu-London-0 python[1816555]:     setup_database()
+Nov 14 21:59:45 ubuntu-London-0 python[1816555]:   File "/root/psychology_bot/database.py", line 65, in setup_database
+Nov 14 21:59:45 ubuntu-London-0 python[1816555]:     cursor.execute("ALTER TABLE appointments ADD COLUMN created_at TEXT DEFAULT (datetime('now', 'localtime'))")
+Nov 14 21:59:45 ubuntu-London-0 python[1816555]: sqlite3.OperationalError: Cannot add a column with non-constant default
+Nov 14 21:59:45 ubuntu-London-0 systemd[1]: psychobot.service: Main process exited, code=exited, status=1/FAILURE
+Nov 14 21:59:45 ubuntu-London-0 systemd[1]: psychobot.service: Failed with result 'exit-code'.
+Nov 14 21:59:50 ubuntu-London-0 systemd[1]: psychobot.service: Scheduled restart job, restart counter is at 37.
+Nov 14 21:59:50 ubuntu-London-0 systemd[1]: Started psychobot.service - Telegram Appointment Bot for Psychology Clinic.
+Nov 14 21:59:51 ubuntu-London-0 python[1816559]: Traceback (most recent call last):
+Nov 14 21:59:51 ubuntu-London-0 python[1816559]:   File "/root/psychology_bot/main.py", line 5, in <module>
+Nov 14 21:59:51 ubuntu-London-0 python[1816559]:     import database
+Nov 14 21:59:51 ubuntu-London-0 python[1816559]:     ^^^^^^^^^^^^^^^
+Nov 14 21:59:51 ubuntu-London-0 python[1816559]:   File "/root/psychology_bot/database.py", line 382, in <module>
+Nov 14 21:59:51 ubuntu-London-0 python[1816559]:     setup_database()
+Nov 14 21:59:51 ubuntu-London-0 python[1816559]:   File "/root/psychology_bot/database.py", line 65, in setup_database
+Nov 14 21:59:51 ubuntu-London-0 python[1816559]:     cursor.execute("ALTER TABLE appointments ADD COLUMN created_at TEXT DEFAULT (datetime('now', 'localtime'))")
+Nov 14 21:59:51 ubuntu-London-0 python[1816559]: sqlite3.OperationalError: Cannot add a column with non-constant default
+Nov 14 21:59:51 ubuntu-London-0 systemd[1]: psychobot.service: Main process exited, code=exited, status=1/FAILURE
+Nov 14 21:59:51 ubuntu-London-0 systemd[1]: psychobot.service: Failed with result 'exit-code'.

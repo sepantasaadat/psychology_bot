@@ -1,0 +1,34 @@
+{
+  "cli_version": "0.13.1",
+  "checkpoint_id": "01M7E177WKRHAXDD99Z799M10G",
+  "session_id": "bc33b0c6-57c3-4b45-897d-6a4a3b990b80",
+  "strategy": "manual-commit",
+  "created_at": "2026-11-14T22:00:38.8778019Z",
+  "branch": "main",
+  "checkpoints_count": 6,
+  "files_touched": [
+    "database.py"
+  ],
+  "agent": "Antigravity",
+  "model": "",
+  "turn_id": "dde025bd375c",
+  "checkpoint_transcript_start": 1656,
+  "transcript_lines_at_start": 1656,
+  "redaction": {
+    "replacements": 185,
+    "layers": {
+      "betterleaks": 4,
+      "connection_string": 0,
+      "credential_key": 0,
+      "credential_value": 22,
+      "credentialed_uri": 0,
+      "entropy": 159,
+      "key_context": 0,
+      "provider_token": 0,
+      "shell_stdin": 0
+    }
+  },
+  "session_metrics": {
+    "turn_count": 36
+  }
+}
