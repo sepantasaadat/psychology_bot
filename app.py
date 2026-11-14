@@ -167,15 +167,19 @@ def booking():
         
         name_with_phone = f"{full_name} | {phone}"
         
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute('''
-            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id)
-            VALUES (?, ?, ?, ?, ?, 'pending', ?)
-        ''', (0, selected_date, selected_time, session_type, name_with_phone, filepath))
-        app_id = cursor.lastrowid
-        conn.commit()
-        conn.close()
+        try:
+            app_id = database.add_pending_appointment(
+                user_id=0,
+                date=selected_date,
+                time=selected_time,
+                session_type=session_type,
+                full_name=name_with_phone,
+                receipt_file_id=filepath
+            )
+        except (database.SlotAlreadyBookedError, sqlite3.IntegrityError):
+            logger.warning(f"Concurrent double booking prevented on web for slot {selected_date} {selected_time}")
+            flash(f"متاسفانه ساعت {selected_time} در تاریخ {selected_date} لحظاتی پیش توسط مراجع دیگری رزرو شد.", "danger")
+            return render_template('booking.html', days=get_1405_working_days()), 409
         
         logger.info(f"Web booking submitted successfully: appointment_id={app_id}")
         send_receipt_to_telegram(app_id, name_with_phone, selected_date, selected_time, session_type, filepath)
