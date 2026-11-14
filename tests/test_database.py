@@ -133,5 +133,24 @@ class TestDatabaseWeeklyAppointments(unittest.TestCase):
         self.assertEqual(len(res_202), 1)
         self.assertEqual(res_202[0][1], '1405/01/04')
 
+    def test_admin_receipt_messages_crud(self):
+        database.save_admin_receipt_message(10, 101, 501)
+        database.save_admin_receipt_message(10, 102, 502)
+
+        messages = database.get_admin_receipt_messages(10)
+        self.assertEqual(len(messages), 2)
+        self.assertIn((101, 501), messages)
+        self.assertIn((102, 502), messages)
+
+        # Test replace functionality
+        database.save_admin_receipt_message(10, 101, 999)
+        messages_updated = database.get_admin_receipt_messages(10)
+        self.assertEqual(len(messages_updated), 2)
+        self.assertIn((101, 999), messages_updated)
+
+        # Test delete
+        database.delete_admin_receipt_messages(10)
+        self.assertEqual(database.get_admin_receipt_messages(10), [])
+
 if __name__ == '__main__':
     unittest.main()

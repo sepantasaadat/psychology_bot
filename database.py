@@ -30,6 +30,16 @@ def setup_database():
         )
     ''')
 
+    # جدول نگهداری شناسه پیام‌های فیش واریزی ارسال شده به ادمین‌ها
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS admin_receipt_messages (
+            appointment_id INTEGER,
+            admin_id INTEGER,
+            message_id INTEGER,
+            PRIMARY KEY (appointment_id, admin_id)
+        )
+    ''')
+
     conn.commit()
     conn.close()
     print("Database updated successfully with new columns!")
@@ -148,6 +158,35 @@ def delete_appointment(appointment_id):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute('DELETE FROM appointments WHERE id = ?', (appointment_id,))
+    conn.commit()
+    conn.close()
+
+def save_admin_receipt_message(appointment_id, admin_id, message_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT OR REPLACE INTO admin_receipt_messages (appointment_id, admin_id, message_id)
+        VALUES (?, ?, ?)
+    ''', (appointment_id, admin_id, message_id))
+    conn.commit()
+    conn.close()
+
+def get_admin_receipt_messages(appointment_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT admin_id, message_id
+        FROM admin_receipt_messages
+        WHERE appointment_id = ?
+    ''', (appointment_id,))
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+def delete_admin_receipt_messages(appointment_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM admin_receipt_messages WHERE appointment_id = ?', (appointment_id,))
     conn.commit()
     conn.close()
 
