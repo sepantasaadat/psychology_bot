@@ -1,0 +1,49 @@
+{
+  "cli_version": "0.13.1",
+  "checkpoint_id": "01M7DZ6CBJJPQV2EAW26PWHFJW",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    ".dockerignore",
+    ".env.example",
+    ".github/workflows/ci.yml",
+    ".gitignore",
+    "Dockerfile",
+    "config.py",
+    "database.py",
+    "deploy/README.md",
+    "deploy/systemd/psychobot-bot.service",
+    "deploy/systemd/psychobot-report.service",
+    "deploy/systemd/psychobot-report.timer",
+    "deploy/systemd/psychobot-web.service",
+    "docker-compose.yml",
+    "graphify-out/GRAPH_REPORT.md",
+    "graphify-out/graph.html",
+    "graphify-out/graph.json",
+    "requirements.txt",
+    "tests/test_devops_deployment.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": ""
+    }
+  ],
+  "redaction": {
+    "replacements": 14,
+    "layers": {
+      "betterleaks": 5,
+      "connection_string": 0,
+      "credential_key": 0,
+      "credential_value": 7,
+      "credentialed_uri": 0,
+      "entropy": 4,
+      "key_context": 0,
+      "provider_token": 0,
+      "shell_stdin": 0
+    }
+  }
+}
