@@ -1,11 +1,14 @@
 import os
 import sqlite3
 import datetime
+import logging
 try:
     from config import TEHRAN_TZ
 except ImportError:
     from zoneinfo import ZoneInfo
     TEHRAN_TZ = ZoneInfo("Asia/Tehran")
+
+logger = logging.getLogger(__name__)
 
 class SlotAlreadyBookedError(Exception):
     """Raised when attempting to book an active slot that is already booked."""
@@ -79,7 +82,7 @@ def setup_database(db_path=None):
 
     conn.commit()
     conn.close()
-    print("Database updated successfully with new columns!")
+    logger.debug("Database setup completed successfully.")
 
 def add_user(user_id, first_name, username):
     conn = get_connection()

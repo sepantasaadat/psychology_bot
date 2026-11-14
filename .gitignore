@@ -1,5 +1,5 @@
 # Database
-clinic.db
+clinic.db*
 
 # Virtual Environment
 venv/
@@ -10,8 +10,17 @@ env/
 __pycache__/
 *.pyc
 
-# Secret files (اگر فایلی برای توکن‌ها داری)
+# Secret & Environment files
 .env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# Upload directories (private and public)
+private_uploads/
+static/uploads/
 
 # Graphify local state & cache
 graphify-out/cache/

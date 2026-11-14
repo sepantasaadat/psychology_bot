@@ -5,8 +5,15 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Mess
 import database  
 
 import logging
+import config
+
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Suppress noisy external loggers
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("telegram").setLevel(logging.WARNING)
+logging.getLogger("werkzeug").setLevel(logging.WARNING)
 
 # ==========================================
 # استانداردهای نگارش و لحن پیام‌های کلینیک روان‌شناسی دکتر شفائی:
@@ -14,16 +21,16 @@ logger = logging.getLogger(__name__)
 # ۲. استفاده از ایموجی‌های ملایم و متناسب با روان‌شناسی و سلامت روان (🌱, 🌿, 🌸, 🧠, 🕊️, 📅, ⏰, 💳, 🏢, 💻, 🩺, 📋).
 # ۳. پرهیز از ایموجی‌ها و واژه‌های اضطراب‌آور (مانند 🚨) در ارتباط با مراجعین.
 # ==========================================
-TOKEN = os.environ.get("BOT_TOKEN", "YOUR-BOT-TOKEN") # در سرور از متغیر محیطی خوانده می‌شود
+TOKEN = os.environ.get("BOT_TOKEN", config.BOT_TOKEN)
 BOT_USERNAME = "Drshafaeiclinic_bot"
 BOT_NAME = "Drshafaei_clinic"
-MAIN_ADMIN_ID = 56073956
-SECOND_ADMIN_ID = 8034655716 # شناسه ادمین دوم کلینیک
-SEPANTA_ADMIN_ID = 95033750 # شناسه دکتر سپنتا
-ADMIN_IDS = [MAIN_ADMIN_ID, SECOND_ADMIN_ID, SEPANTA_ADMIN_ID] # لیست ادمین‌ها
-ADMIN_USERNAME = "drshafaei_psychological_clinic" # آیدی تلگرام پذیرش کلینیک جهت هماهنگی و پشتیبانی
-ADMIN_PHONE = "09213689461" # شماره تماس کلینیک
-CLINIC_WEBSITE = "https://drshafaeiclinic.ir/" # آدرس وب‌سایت کلینیک
+MAIN_ADMIN_ID = config.MAIN_ADMIN_ID
+SECOND_ADMIN_ID = config.SECOND_ADMIN_ID
+SEPANTA_ADMIN_ID = config.SEPANTA_ADMIN_ID
+ADMIN_IDS = config.ADMIN_IDS
+ADMIN_USERNAME = config.ADMIN_USERNAME
+ADMIN_PHONE = config.ADMIN_PHONE
+CLINIC_WEBSITE = config.CLINIC_WEBSITE
 # ==========================================
 
 # دیکشنری برای تبدیل شماره روز به نام روز فارسی [آپدیت ۳]
@@ -146,8 +153,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # پاک کردن حافظه موقت کاربر جهت شروع فرآیند تازه
     context.user_data.clear()
     user_id = update.effective_user.id
-    username = update.effective_user.username or "None"
-    logger.info(f"Command /start received from user {user_id} (@{username})")
+    logger.info(f"Command /start received from user_id={user_id}")
     
     welcome_text = (
         "درود و احترام؛\n"
@@ -174,8 +180,8 @@ async def complete_admin_review_session(query, context, user_id):
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     user_id = update.effective_user.id
-    username = update.effective_user.username or "None"
-    logger.info(f"Callback query '{query.data}' received from user {user_id} (@{username})")
+    message_id = query.message.message_id if query.message else None
+    logger.info(f"Callback query '{query.data}' received from user_id={user_id}, message_id={message_id}")
     await query.answer()
     
     # ------------------ دکمه منوی اصلی ------------------
@@ -537,10 +543,14 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # هندلر دریافت پیام‌های متنی (نام مراجع و پاسخ عمومی)
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if context.user_data.get('state') == 'awaiting_name':
+    user = update.effective_user
+    user_id = user.id
+    message_id = update.message.message_id
+    state = context.user_data.get('state')
+
+    if state == 'awaiting_name':
         full_name = update.message.text.strip()
-        user = update.effective_user
-        user_id = user.id
+        logger.info(f"Text message received in state=awaiting_name from user_id={user_id}, message_id={message_id}")
 
         # در صورتی که رزروکننده یکی از ادمین‌های کلینیک باشد، مرحله ارسال فیش و تایید ادمین بایپس شده و نوبت مستقیماً ثبت قطعی می‌گردد
         if user_id in ADMIN_IDS:
@@ -597,9 +607,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
     else:
-        user_id = update.effective_user.id
-        username = update.effective_user.username or "None"
-        logger.info(f"Text message received outside booking from user {user_id} (@{username}): {update.message.text}")
+        logger.info(f"Text message received outside booking from user_id={user_id}, message_id={message_id}")
         general_prompt_text = (
             "درود و احترام؛ 🌱\n"
             "به سامانه نوبت‌دهی کلینیک روان‌شناسی دکتر شفائی خوش آمدید.\n"
@@ -618,6 +626,9 @@ async def handle_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     photo_file_id = update.message.photo[-1].file_id
     user = update.effective_user
+    user_id = user.id
+    message_id = update.message.message_id
+    logger.info(f"Receipt photo received from user_id={user_id}, message_id={message_id}")
     
     date = context.user_data['selected_date']
     time = context.user_data['selected_time']
@@ -627,6 +638,7 @@ async def handle_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE):
     database.add_user(user.id, user.first_name, user.username)
     # [آپدیت ۷ و ۸]: ارسال دیتای جدید به دیتابیس
     appointment_id = database.add_pending_appointment(user.id, date, time, session_type, full_name, photo_file_id)
+    logger.info(f"Pending appointment created: appointment_id={appointment_id}, user_id={user_id}")
 
     # پایان پروسه برای این کاربر
     context.user_data.clear()

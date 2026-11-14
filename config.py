@@ -1,6 +1,14 @@
+import os
 import datetime
 from zoneinfo import ZoneInfo
 import jdatetime
+
+# Load environment variables from .env file if available
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 # Timezone & Calendar Configurations
 TEHRAN_TZ = ZoneInfo("Asia/Tehran")
@@ -20,11 +28,38 @@ PERSIAN_WEEKDAYS = {
     6: "جمعه",
 }
 
-# Administrative User IDs
-MAIN_ADMIN_ID = 56073956
-SECOND_ADMIN_ID = 8034655716
-SEPANTA_ADMIN_ID = 95033750
-ADMIN_IDS = [MAIN_ADMIN_ID, SECOND_ADMIN_ID, SEPANTA_ADMIN_ID]
+# Administrative User IDs and Access Control
+def _parse_admin_ids(env_val):
+    if not env_val:
+        return [56073956, 8034655716, 95033750]
+    try:
+        return [int(x.strip()) for x in env_val.split(",") if x.strip()]
+    except Exception:
+        return [56073956, 8034655716, 95033750]
+
+ADMIN_IDS = _parse_admin_ids(os.environ.get("ADMIN_IDS"))
+MAIN_ADMIN_ID = ADMIN_IDS[0] if ADMIN_IDS else 56073956
+SECOND_ADMIN_ID = ADMIN_IDS[1] if len(ADMIN_IDS) > 1 else 8034655716
+SEPANTA_ADMIN_ID = ADMIN_IDS[2] if len(ADMIN_IDS) > 2 else 95033750
+
+# Clinic Reception Contact Details
+ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "drshafaei_psychological_clinic")
+ADMIN_PHONE = os.environ.get("ADMIN_PHONE", "09213689461")
+CLINIC_WEBSITE = os.environ.get("CLINIC_WEBSITE", "https://drshafaeiclinic.ir/")
+
+# Bot & Web Application Credentials
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
+FLASK_SECRET_KEY = os.environ.get("FLASK_SECRET_KEY", "dev-insecure-secret-key-change-in-production")
+
+# SMTP / Email Notification Configuration
+SMTP_SERVER = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
+try:
+    SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+except ValueError:
+    SMTP_PORT = 587
+SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "")
+SENDER_PASSWORD = os.environ.get("SENDER_PASSWORD", "")
+RECEIVER_EMAIL = os.environ.get("RECEIVER_EMAIL", "")
 
 def get_upcoming_working_days(days_count=5, is_admin=False, reference_date=None):
     """

@@ -2,23 +2,26 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from werkzeug.utils import secure_filename
 import sqlite3
 import jdatetime
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 import os
 import requests
 import json
+import logging
+import config
 import database
 
-# تنظیمات تلگرام برای ارسال عکس رسید
-BOT_TOKEN = os.environ.get("BOT_TOKEN")
-ADMIN_IDS = [56073956, 8034655716, 95033750]
+# Suppress noisy external loggers
+logging.getLogger("werkzeug").setLevel(logging.WARNING)
+logger = logging.getLogger(__name__)
+
+# Telegram settings for receipt forwarding
+BOT_TOKEN = os.environ.get("BOT_TOKEN", config.BOT_TOKEN)
+ADMIN_IDS = config.ADMIN_IDS
 
 app = Flask(__name__)
-app.secret_key = 'super_secret_psychology_key'
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', config.FLASK_SECRET_KEY)
 DATABASE = database.DB_PATH
 
-# ساخت پوشه برای ذخیره موقت رسیدهای سایت
+# Folder for receipt uploads
 UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -64,7 +67,7 @@ def get_available_hours(selected_date):
     conn.close()
     return [h for h in all_hours if h not in booked_times]
 
-# ارسال درخواست و دکمه شیشه‌ای به تلگرام با فرمت استاندارد کلینیک روان‌شناسی
+# Send appointment notification and inline buttons to admins via Telegram
 def send_receipt_to_telegram(app_id, name_with_phone, date, time, session_type, filepath):
     caption = (
         "🌐 درخواست جدید وقت مشاوره از وب‌سایت:\n\n"
@@ -101,16 +104,15 @@ def send_receipt_to_telegram(app_id, name_with_phone, date, time, session_type, 
                     if msg_id:
                         database.save_admin_receipt_message(app_id, admin, msg_id)
         except Exception as e:
-            print(f"Error sending to telegram admin: {e}")
+            logger.error(f"Error sending receipt notification to admin {admin}: {e}")
 
 @app.route('/')
+def home():
+    return render_template('index.html')
 
 @app.route('/about')
 def about():
     return render_template('about.html')
-
-def home():
-    return render_template('index.html')
 
 @app.route('/booking', methods=['GET', 'POST'])
 def booking():
@@ -139,7 +141,6 @@ def booking():
         filepath = os.path.join(UPLOAD_FOLDER, filename)
         receipt_file.save(filepath)
         
-        # ترکیب نام و شماره تماس برای جلوگیری از تغییر دیتابیس
         name_with_phone = f"{full_name} | {phone}"
         
         conn = get_db_connection()
@@ -152,11 +153,11 @@ def booking():
         conn.commit()
         conn.close()
         
+        logger.info(f"Web booking submitted successfully: appointment_id={app_id}")
         send_receipt_to_telegram(app_id, name_with_phone, selected_date, selected_time, session_type, filepath)
         
         flash("✅ رسید شما با موفقیت ثبت و برای بررسی ارسال شد. نتیجه از طریق تماس یا پیامک به شما اطلاع داده خواهد شد.", "success")
         return redirect(url_for('booking'))
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
-
+    app.run(debug=False, port=5000)
