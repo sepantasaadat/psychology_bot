@@ -1,0 +1,42 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: psychobot-web
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - DB_PATH=/data/clinic.db
+      - PRIVATE_UPLOADS_DIR=/data/uploads
+    ports:
+      - "5000:5000"
+    volumes:
+      - db_data:/data
+      - upload_data:/data/uploads
+    command: ["gunicorn", "--workers", "3", "--bind", "0.0.0.0:5000", "app:app"]
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: psychobot-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - DB_PATH=/data/clinic.db
+      - PRIVATE_UPLOADS_DIR=/data/uploads
+    volumes:
+      - db_data:/data
+      - upload_data:/data/uploads
+    command: ["python", "main.py"]
+    depends_on:
+      - web
+
+volumes:
+  db_data:
+    name: psychobot_db_data
+  upload_data:
+    name: psychobot_upload_data

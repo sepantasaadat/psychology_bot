@@ -7,7 +7,6 @@ import jdatetime
 
 # Base directory and storage paths
 BASE_DIR = Path(__file__).resolve().parent
-PRIVATE_UPLOADS_DIR = BASE_DIR / 'private_uploads'
 
 # Load environment variables from .env file if available
 try:
@@ -15,6 +14,8 @@ try:
     load_dotenv()
 except ImportError:
     pass
+
+PRIVATE_UPLOADS_DIR = Path(os.environ.get("PRIVATE_UPLOADS_DIR", str(BASE_DIR / 'private_uploads')))
 
 # Timezone & Calendar Configurations
 TEHRAN_TZ = ZoneInfo("Asia/Tehran")

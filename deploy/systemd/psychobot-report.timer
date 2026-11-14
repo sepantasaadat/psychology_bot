@@ -1,0 +1,14 @@
+[Unit]
+Description=Trigger Psychology Clinic Daily Report Nightly at 21:00 Tehran Time
+After=network.target
+
+[Timer]
+# Scheduled nightly at 21:00 Tehran time
+# Ensure system timezone is set to Asia/Tehran via:
+#   timedatectl set-timezone Asia/Tehran
+OnCalendar=*-*-* 21:00:00
+Persistent=true
+Unit=psychobot-report.service
+
+[Install]
+WantedBy=timers.target

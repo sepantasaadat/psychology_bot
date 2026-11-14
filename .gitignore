@@ -9,6 +9,8 @@ env/
 # Python Cache
 __pycache__/
 *.pyc
+.pytest_cache/
+.coverage
 
 # Secret & Environment files
 .env

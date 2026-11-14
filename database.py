@@ -17,7 +17,7 @@ class SlotAlreadyBookedError(Exception):
     pass
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "clinic.db")
+DB_PATH = os.environ.get("DB_PATH", os.path.join(BASE_DIR, "clinic.db"))
 
 def get_connection(db_path=None):
     target_path = db_path if db_path is not None else DB_PATH

@@ -1,0 +1,26 @@
+[Unit]
+Description=Psychology Clinic Daily Report Service
+After=network.target
+
+[Service]
+Type=oneshot
+# Dedicated unprivileged system user and group (recommended for Ubuntu VPS)
+# If running as root, comment these out or set User=root and Group=root
+User=psychobot
+Group=psychobot
+
+# Project directory and environment configuration
+# Default standard deployment path: /opt/psychology_bot
+# If deployed under /root/psychology_bot, update:
+#   WorkingDirectory=/root/psychology_bot
+#   EnvironmentFile=/root/psychology_bot/.env
+#   ExecStart=/root/psychology_bot/venv/bin/python daily_report.py
+WorkingDirectory=/opt/psychology_bot
+EnvironmentFile=/opt/psychology_bot/.env
+
+# Execute daily summary report script
+ExecStart=/opt/psychology_bot/venv/bin/python daily_report.py
+
+# Standard output and error logging to systemd journal
+StandardOutput=journal
+StandardError=journal
