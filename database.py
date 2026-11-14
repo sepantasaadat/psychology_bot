@@ -1,5 +1,11 @@
 import os
 import sqlite3
+import datetime
+try:
+    from config import TEHRAN_TZ
+except ImportError:
+    from zoneinfo import ZoneInfo
+    TEHRAN_TZ = ZoneInfo("Asia/Tehran")
 
 class SlotAlreadyBookedError(Exception):
     """Raised when attempting to book an active slot that is already booked."""
@@ -29,7 +35,7 @@ def setup_database(db_path=None):
         )
     ''')
 
-    # [آپدیت]: اضافه شدن دو ستون session_type (نوع جلسه) و full_name (نام کامل)
+    # [آپدیت]: اضافه شدن ستون‌های created_at و updated_at
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS appointments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,10 +45,20 @@ def setup_database(db_path=None):
             session_type TEXT,  -- آنلاین یا حضوری
             full_name TEXT,     -- نام و نام خانوادگی دریافت شده از کاربر
             status TEXT,        
-            receipt_file_id TEXT, 
+            receipt_file_id TEXT,
+            created_at TEXT DEFAULT (datetime('now', 'localtime')),
+            updated_at TEXT DEFAULT (datetime('now', 'localtime')),
             FOREIGN KEY (user_id) REFERENCES users (user_id)
         )
     ''')
+
+    # مایگریشن ایمن در صورت وجود قبلی جدول بدون ستون‌های زمانی
+    cursor.execute("PRAGMA table_info(appointments)")
+    columns = [row[1] for row in cursor.fetchall()]
+    if "created_at" not in columns:
+        cursor.execute("ALTER TABLE appointments ADD COLUMN created_at TEXT DEFAULT (datetime('now', 'localtime'))")
+    if "updated_at" not in columns:
+        cursor.execute("ALTER TABLE appointments ADD COLUMN updated_at TEXT DEFAULT (datetime('now', 'localtime'))")
 
     # ایندکس یکتا برای جلوگیری از ثبت تکراری نوبت در وضعیت‌های فعال (pending, approved, confirmed)
     cursor.execute('''
@@ -75,48 +91,55 @@ def add_user(user_id, first_name, username):
     conn.commit()
     conn.close()
 
-# [آپدیت]: دریافت نوع جلسه و نام کامل برای ثبت اولیه
-def add_pending_appointment(user_id, date, time, session_type, full_name, receipt_file_id):
+# [آپدیت]: دریافت نوع جلسه و نام کامل برای ثبت اولیه به همراه زمان ثبت در تایم‌زون تهران
+def add_pending_appointment(user_id, date, time, session_type, full_name, receipt_file_id, created_at=None):
     conn = get_connection()
     cursor = conn.cursor()
+    now_tehran_iso = created_at if created_at is not None else datetime.datetime.now(TEHRAN_TZ).isoformat()
     try:
         cursor.execute('''
-            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id)
-            VALUES (?, ?, ?, ?, ?, 'pending', ?)
-        ''', (user_id, date, time, session_type, full_name, receipt_file_id))
+            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?)
+        ''', (user_id, date, time, session_type, full_name, receipt_file_id, now_tehran_iso, now_tehran_iso))
         
         appointment_id = cursor.lastrowid
         conn.commit()
         return appointment_id
     except sqlite3.IntegrityError as e:
         conn.rollback()
-        raise SlotAlreadyBookedError(f"Slot {date} {time} is already booked.") from e
+        if "UNIQUE" in str(e).upper():
+            raise SlotAlreadyBookedError(f"Slot {date} {time} is already booked.") from e
+        raise
     finally:
         conn.close()
 
 # ثبت مستقیم و قطعی نوبت (ویژه رزرو توسط ادمین‌های کلینیک بدون نیاز به فیش)
-def add_confirmed_appointment(user_id, date, time, session_type, full_name, receipt_file_id="admin_direct"):
+def add_confirmed_appointment(user_id, date, time, session_type, full_name, receipt_file_id="admin_direct", created_at=None):
     conn = get_connection()
     cursor = conn.cursor()
+    now_tehran_iso = created_at if created_at is not None else datetime.datetime.now(TEHRAN_TZ).isoformat()
     try:
         cursor.execute('''
-            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id)
-            VALUES (?, ?, ?, ?, ?, 'confirmed', ?)
-        ''', (user_id, date, time, session_type, full_name, receipt_file_id))
+            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, 'confirmed', ?, ?, ?)
+        ''', (user_id, date, time, session_type, full_name, receipt_file_id, now_tehran_iso, now_tehran_iso))
         
         appointment_id = cursor.lastrowid
         conn.commit()
         return appointment_id
     except sqlite3.IntegrityError as e:
         conn.rollback()
-        raise SlotAlreadyBookedError(f"Slot {date} {time} is already booked.") from e
+        if "UNIQUE" in str(e).upper():
+            raise SlotAlreadyBookedError(f"Slot {date} {time} is already booked.") from e
+        raise
     finally:
         conn.close()
 
 def update_appointment_status(appointment_id, status):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute('UPDATE appointments SET status = ? WHERE id = ?', (status, appointment_id))
+    now_tehran_iso = datetime.datetime.now(TEHRAN_TZ).isoformat()
+    cursor.execute('UPDATE appointments SET status = ?, updated_at = ? WHERE id = ?', (status, now_tehran_iso, appointment_id))
     conn.commit()
     conn.close()
 
@@ -221,6 +244,53 @@ def delete_admin_receipt_messages(appointment_id):
     cursor.execute('DELETE FROM admin_receipt_messages WHERE appointment_id = ?', (int(appointment_id),))
     conn.commit()
     conn.close()
+
+def expire_stale_pending_appointments(timeout_hours=2, now=None) -> int:
+    """
+    Queries pending appointments created more than timeout_hours ago,
+    updates their status to 'expired', and sets updated_at.
+    Because status='expired', the partial unique index idx_appointments_active_slot
+    automatically frees the slot.
+    Returns the number of expired records.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    current_time = now if now is not None else datetime.datetime.now(TEHRAN_TZ)
+    if current_time.tzinfo is None:
+        current_time = current_time.replace(tzinfo=TEHRAN_TZ)
+    cutoff = current_time - datetime.timedelta(hours=timeout_hours)
+    
+    cursor.execute("SELECT id, created_at FROM appointments WHERE status = 'pending'")
+    rows = cursor.fetchall()
+    
+    expired_ids = []
+    for app_id, created_at_str in rows:
+        if not created_at_str:
+            continue
+        try:
+            created_dt = datetime.datetime.fromisoformat(created_at_str)
+            if created_dt.tzinfo is None:
+                created_dt = created_dt.replace(tzinfo=TEHRAN_TZ)
+            else:
+                created_dt = created_dt.astimezone(TEHRAN_TZ)
+            
+            if created_dt <= cutoff:
+                expired_ids.append(app_id)
+        except Exception:
+            pass
+
+    if expired_ids:
+        now_tehran_iso = current_time.isoformat()
+        placeholders = ','.join(['?'] * len(expired_ids))
+        cursor.execute(
+            f"UPDATE appointments SET status = 'expired', updated_at = ? WHERE id IN ({placeholders})",
+            [now_tehran_iso] + expired_ids
+        )
+        conn.commit()
+    
+    conn.close()
+    return len(expired_ids)
 
 # اطمینان از مقداردهی اولیه جداول پایگاه داده در زمان بارگذاری ماژول
 setup_database()
