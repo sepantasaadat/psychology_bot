@@ -1,0 +1,608 @@
+should i pull any changes  to my vps?
+
+---
+
+/authorized-security-audit # Advanced Security Assessment — Psychology Clinic Platform
+
+Act as a senior Application Security Engineer, Web Penetration Tester, Python Security Auditor, and Defensive Security Consultant.
+
+Use the globally installed `authorized-security-audit` skill and HackingTool 3.1.0 through WSL Ubuntu 24.04.
+
+## 1. Project Scope
+
+Repository:
+https://github.com/sepantasaadat/psychology_bot
+
+Use the currently open local workspace as the primary source of truth. Do not clone another copy or assume the public GitHub version is identical to the local working tree.
+
+This project is a psychology clinic management platform consisting of:
+
+- Flask web application.
+- Telegram bot built with python-telegram-bot.
+- SQLite database.
+- Appointment booking and cancellation workflows.
+- Administrator dashboard and authorization.
+- Payment receipt image uploads.
+- Image validation and processing using Pillow.
+- Telegram notifications and administrator actions.
+- SMTP email notifications and scheduled appointment reports.
+- Configuration and secrets management.
+
+## 2. Security Assessment Objectives
+
+Conduct a comprehensive, evidence-based assessment of the entire application.
+
+### A. Web Application Security
+
+Evaluate:
+
+- Authentication and session management.
+- Authorization and role-based access control.
+- Administrator endpoints.
+- Insecure Direct Object References (IDOR).
+- Cross-Site Request Forgery (CSRF).
+- Cross-Site Scripting (XSS).
+- SQL injection and database query construction.
+- Server-Side Request Forgery (SSRF), where applicable.
+- HTTP security headers.
+- Cookie security flags.
+- Flask secret key management.
+- Debug mode and production configuration.
+- Input validation and output encoding.
+- Request size limits and rate limiting.
+- Error handling and sensitive information disclosure.
+- Production server configuration and reverse proxy trust.
+
+Pay particular attention to appointment creation, approval, rejection, cancellation, and access to administrative functionality.
+
+### B. Telegram Bot Security
+
+Inspect `main.py` and all related bot components.
+
+Evaluate:
+
+- Telegram BOT_TOKEN storage and exposure.
+- Administrator identity verification.
+- Unauthorized callback execution.
+- Callback data manipulation.
+- Privilege escalation.
+- User-to-appointment ownership verification.
+- Unauthorized appointment modification or deletion.
+- Race conditions in appointment booking.
+- Duplicate callback handling.
+- Rate limiting and Telegram API abuse.
+- Sensitive information in logs and Telegram notifications.
+- Long polling and webhook security, where applicable.
+
+Verify that every sensitive administrative operation has server-side authorization checks.
+
+### C. Receipt Upload Security
+
+Pay special attention to `security.py` and the receipt processing pipeline.
+
+Evaluate:
+
+- File type verification using actual file content.
+- MIME type validation.
+- Filename and path traversal protection.
+- Image decompression bombs.
+- Malformed images and parser vulnerabilities.
+- EXIF and metadata handling.
+- Temporary file management.
+- Private storage permissions.
+- Unauthorized receipt retrieval.
+- File overwrite and collision risks.
+- Upload size restrictions.
+- Safe error handling.
+
+Do not assume the existing Pillow re-encoding mechanism is completely secure without validating its implementation.
+
+### D. SQLite and Database Security
+
+Inspect `database.py` and all database interactions.
+
+Evaluate:
+
+- SQL parameterization.
+- Database file permissions.
+- Transaction handling.
+- Appointment ownership and isolation.
+- Concurrent booking and double-booking conditions.
+- Database backup security.
+- Sensitive data retention.
+- Data exposure through administrative queries.
+- Database integrity and failure recovery.
+
+Never inspect or export actual patient records, appointment histories, or production database contents.
+
+Use synthetic records for any required tests.
+
+### E. SMTP and Notification Security
+
+Inspect `daily_report.py`, `config.py`, and all notification code.
+
+Evaluate:
+
+- SMTP credential handling.
+- TLS configuration and certificate verification.
+- Email HTML injection.
+- Sensitive information included in outgoing reports.
+- Telegram notification exposure.
+- Request timeouts and retry handling.
+- Secret leakage through exception messages and logs.
+- Email recipient restrictions.
+
+Do not send actual emails or Telegram messages during testing.
+
+Do not call external notification APIs.
+
+### F. Secrets and Repository Security
+
+Inspect:
+
+- `.env` handling.
+- `.gitignore`.
+- `config.py`.
+- Git commit history.
+- Python dependency manifests.
+- Hardcoded credentials.
+- Default production secrets.
+- Exposed API keys and authentication tokens.
+
+Search for leaked secrets without displaying their actual values.
+
+Redact all potentially sensitive information in reports.
+
+Identify secrets in Git history separately from secrets present in current source files.
+
+Do not rewrite Git history or revoke credentials automatically.
+
+### G. Dependency and Deployment Security
+
+Review:
+
+- `requirements.txt`.
+- Installed Python dependencies.
+- Known vulnerable packages.
+- Dependency compatibility.
+- Flask and Werkzeug security.
+- Pillow security.
+- python-telegram-bot security.
+- Gunicorn configuration.
+- systemd service permissions.
+- Linux file permissions.
+- Production environment configuration.
+- Backup and deployment practices.
+
+Do not install or upgrade dependencies without my explicit approval.
+
+---
+
+## 3. HackingTool Integration
+
+Use HackingTool 3.1.0 from the existing WSL installation.
+
+First:
+
+1. Verify WSL access.
+2. Verify the installed HackingTool executable.
+3. Identify relevant, maintained tools in its installed catalog.
+4. Read the documented commands and requirements.
+5. Select only tools relevant to this application's security assessment.
+
+Use the HackingTool `/find` capability when necessary to discover suitable tools.
+
+For any proposed execution, use the interactive `/goal` workflow.
+
+Before executing a command:
+
+- Show the exact command and arguments.
+- Explain what it tests.
+- Identify the target.
+- Explain expected impact.
+- Obtain my approval for each execution step.
+
+Do not invent tool names, command-line flags, or capabilities.
+
+Do not automatically approve execution steps.
+
+### Active testing restrictions
+
+The only permissible active testing target is an explicitly confirmed local or dedicated staging instance of this application.
+
+Do not scan:
+
+- The public clinic website.
+- The production VPS.
+- Telegram servers or APIs.
+- GitHub infrastructure.
+- Third-party services.
+- Any domain discovered in configuration files.
+
+Do not assume that public project ownership grants permission to test every connected external service.
+
+For local or staging tests, prioritize non-destructive checks such as:
+
+- HTTP security headers.
+- TLS configuration, if applicable.
+- Service exposure.
+- Server configuration.
+- Safe, passive web reconnaissance.
+- Non-invasive security misconfiguration checks.
+
+Do not execute:
+
+- DDoS or stress testing.
+- Brute-force attacks.
+- Credential stuffing.
+- Phishing simulations.
+- Malware or RAT deployment.
+- Persistence mechanisms.
+- Post-exploitation.
+- Destructive exploits.
+- Database dumping.
+- Unauthorized file access.
+- Aggressive fuzzing or payload attacks.
+- Password or hash cracking.
+
+Do not use `sudo` or install additional tools without approval.
+
+If there is no confirmed local staging target, skip active HackingTool modules and complete the source-code assessment using the available local inspection capabilities.
+
+## 4. Privacy and Healthcare Data Protection
+
+This application handles potentially sensitive psychological clinic information.
+
+Treat the following as confidential:
+
+- Patient names.
+- Telephone numbers.
+- Appointment schedules.
+- Session types.
+- Payment receipts.
+- Administrator identifiers.
+- Clinic operational information.
+
+Evaluate data minimization, access restrictions, retention, logging, backups, and secure transmission.
+
+Never display real patient records in the final report.
+
+Use synthetic test information only.
+
+Clearly identify any privacy or data-protection risks that may require additional legal or regulatory assessment.
+
+Do not claim regulatory compliance without sufficient evidence.
+
+## 5. Execution Methodology
+
+Follow these phases in order.
+
+### Phase 1 — Project Reconnaissance
+
+Map the project architecture and identify critical assets, trust boundaries, entry points, sensitive data flows, and external integrations.
+
+Do not execute active security tools at this stage.
+
+### Phase 2 — Static Security Analysis
+
+Perform detailed source-code, configuration, dependency, and Git history analysis.
+
+Identify confirmed vulnerabilities and potential weaknesses separately.
+
+### Phase 3 — HackingTool Assessment Planning
+
+Identify suitable tools from the installed HackingTool catalog.
+
+Prepare a test plan and display proposed commands.
+
+Wait for approval before active testing.
+
+### Phase 4 — Safe Security Verification
+
+Where permitted, conduct approved non-destructive tests against an isolated local or staging environment.
+
+Use test accounts and synthetic records.
+
+### Phase 5 — Finding Validation
+
+Independently validate each finding.
+
+For every finding, establish:
+
+- Evidence.
+- Affected component.
+- Reproducibility.
+- Exploitability.
+- Business impact.
+- Confidence level.
+- Potential false positives.
+
+Do not label a hypothetical weakness as a confirmed vulnerability.
+
+### Phase 6 — Security Report
+
+Produce a detailed report in Persian while preserving technical terminology, code identifiers, commands, and filenames in English.
+
+## 6. Required Deliverable
+
+Produce a professional security assessment containing:
+
+1. Executive Summary.
+2. Application Architecture and Attack Surface.
+3. Threat Model.
+4. Security Findings Summary.
+5. Detailed Technical Findings.
+6. Evidence and Affected File Locations.
+7. Severity and Confidence Classification.
+8. Privacy and Sensitive Data Assessment.
+9. HackingTool Execution Log.
+10. Tests Performed and Tests Not Performed.
+11. Prioritized Remediation Roadmap.
+12. Verification and Regression Testing Plan.
+
+Use these severity categories:
+
+- Critical
+- High
+- Medium
+- Low
+- Informational
+
+For each vulnerability include:
+
+- Finding ID.
+- Severity.
+- Affected file and line number.
+- Technical explanation.
+- Reproducible evidence.
+- Potential impact.
+- Recommended remediation.
+- Verification procedure.
+
+## 7. Operational Restrictions
+
+This is an assessment-only task.
+
+Do not:
+
+- Modify source files.
+- Delete files.
+- Modify databases.
+- Change environment variables.
+- Change production configuration.
+- Commit or push changes.
+- Restart services.
+- Modify Git history.
+- Revoke credentials.
+- Send notifications.
+- Access real patient records.
+
+Present the remediation plan separately.
+
+Any implementation or production change requires my separate explicit approval.
+
+At completion, clearly state which tools were actually executed, which tests were skipped, and which findings remain unverified.
+
+---
+
+@[plugin:superpowers] check this and fix it completely then push it to github : گزارش جامع ارزیابی امنیتی سامانه مدیریت کلینیک روانشناسی (sepantasaadat/psychology_bot)
+این سند گزارش ارزیابی امنیتی، بازبینی ایستا کد مبدأ (SAST)، تحلیل محرمانگی دادههای سلامت و مراجعین و پیکربندی استقرار سامانه [psychology_bot](https://github.com/sepantasaadat/psychology_bot) است. بررسی منحصراً بر پایه نسخه محلی دایرکتوری کاری جاری به عنوان مرجع اصلی حقیقت انجام شد و طبق محدودیتهای تعیینشده، هیچگونه دستکاری، تغییر فایل، ویرایش پایگاه داده یا فراخوانی شبکه خارجی صورت نگرفت.
+۱. چکیده مدیریتی (Executive Summary)
+سامانه حاضر از ترکیب وباپلیکیشن بر پایه Flask، ربات تلگرام با کتابخانه python-telegram-bot، پایگاه داده SQLite و پردازشگر فایل رسید با Pillow تشکیل شده است.
+در تحلیل انجامشده، معماری پایه نسبت به نسخههای ابتدایی پیشرفتهای ملموسی در تفکیک دسترسیها (RBAC)، پارامتریسازی کامل کوئریهای SQL (حفاظت در برابر تزریق کد به دیتابیس) و اعتبارسنجی فرمت تصاویر آپلودی نشان میدهد. با این حال، چندین ضعف امنیتی با درجات اهمیت مختلف شناسایی شد:
+یک مورد آسیبپذیری تزریق کد HTML در گزارشهای ایمیل خودکار (HTML Injection / Email XSS) در صورت درج کاراکترهای خاص در نام مراجع.
+ثبت مقادیر رمزهای عبور قدیمی در فایل آزمونهای نرمافزاری و تاریخچه گیت (Git Commit History).
+وجود کلید محرمانه پیشفرض برای نشستهای وباپلیکیشن در صورت عدم تعریف متغیر محیطی.
+فقدان هدرهای امنیتی HTTP و تنظیمات سختگیرانه برای کوکیها در لایه وب.
+عدم پاکسازی تصاویر رسید واریزی مراجعین پس از انقضا یا رد نوبت و ماندگاری دائمی آن بر روی دیسک سرور.
+۲. معماری سامانه و سطح حمله (Architecture & Attack Surface)
+معماری سامانه شامل پنج بخش اصلی است:
+لایه وب (Flask): مسیرهای عمومی شامل /booking، /reserve، /get_times/<date>، /about و صفحه اصلی. ورودیهای کاربر شامل نام، شماره تماس، تاریخ، ساعت، نوع جلسه و فایل تصویر رسید واریزی است.
+لایه ربات تلگرام: پیامهای دریافتی، پردازش کوئریهای شیشهای (Callback Queries) و جریان رزرو چندمرحلهای نوبت، تایید، رد و لغو نوبت.
+پردازشگر فایل رسید (security.py): اعتبارسنجی یکپارچگی فایل با Pillow، بازکدگذاری به فرمت JPEG و ذخیره در پوشه خصوصی خارج از وبروت.
+پایگاه داده (database.py): مدیریت نشستها، نوبتها و مراجعین در فایل clinic.db با فعالسازی WAL mode و ایندکس یکتا روی نوبتهای فعال.
+گزارشدهی خودکار (daily_report.py): تولید جدول HTML و ارسال شبانه از طریق پروتکل SMTP و ارسال خلاصه به تلگرام ادمینها.
+سطح حمله خارجی (External Attack Surface):
+فرمهای وب دریافت داده و آپلود فایل.
+فراخوانی توابع وب بدون احراز هویت اولیه برای دریافت لیست زمانهای خالی.
+دکمهها و کالبکهای تلگرام که نیازمند کنترل سرورساید هویت کاربر (Telegram User ID) هستند.
+۳. مدلسازی تهدیدات (Threat Model)
+بر اساس مدل STRIDE، بردارهای تهدید زیر برای این سامانه ارزیابی شدند:
+جعل هویت (Spoofing): تلاش برای انجام عملیات مدیریتی نظیر تایید یا رد نوبت با جعل شناسه کاربری ادمین. بررسی کد نشان میدهد کلیه کالبکهای حساس (approve_، reject_، del_) مستقیماً user_id in ADMIN_IDS را در سمت سرور بررسی میکنند و جعل شناسه تلگرام در لایه نرمافزار مسدود است.
+دستکاری دادهها (Tampering): دستکاری تاریخ و ساعت رزرو از طریق درخواستهای دستساز یا تغییر پارامترهای کالبک. سامانه با استفاده از اعتبارسنجی متمرکز در config.py درخواستهای خارج از روزهای کاری یا رزرو برای امروز و فردا را رد میکند.
+افشای اطلاعات (Information Disclosure): افشای اطلاعات هویتی و سلامت بیماران از طریق فایلهای گزارش، لاگها یا باقی ماندن رسیدها در سرور.
+انکارناپذیری (Repudiation): ردیابی رویدادها در فایلهای لاگ به شناسه عددی کاربری (user_id) و شناسه پیام (message_id) محدود شده است تا حریم خصوصی حفظ شود.
+انکار سرویس (Denial of Service): ارسال سیلآسای درخواستهای رزرو وب، ارسال تصاویر با ابعاد فشرده غیرعادی (Decompression Bomb) یا مسدودسازی پردازههای کارگری سرور با درخواستهای معلق شبکه.
+افزایش سطح دسترسی (Elevation of Privilege): امکان لغو نوبت مراجع دیگر توسط فرد ثالث. تابع user_cancel_callback تطابق شناسه کاربر با شناسه ثبتشده در نوبت را بررسی میکند.
+۴. خلاصه یافتههای امنیتی (Security Findings Summary)
+شناسه
+رتبه شدت
+عنوان آسیبپذیری / یافته
+مولفه آسیبپذیر
+وضعیت راستیآزمایی
+SEC-01
+High
+تزریق کد HTML در گزارش ایمیل خودکار (HTML Injection / Email XSS)
+daily_report.py
+قطعی (تاییدشده در کد)
+SEC-02
+High
+نشت اعتبارنامههای قدیمی در تاریخچه گیت و درج رمز در فایل تست
+tests/test_security.py
+قطعی (تاییدشده در کد)
+SEC-03
+Medium
+کلید محرمانه پیشفرض و ناامن برای سشنهای فلسک
+config.py
+قطعی (تاییدشده در کد)
+SEC-04
+Medium
+فقدان هدرهای امنیتی HTTP و پرچمهای امنیتی کوکی
+app.py
+قطعی (تاییدشده در کد)
+SEC-05
+Medium
+عدم وجود محدودکننده نرخ درخواست (Rate Limiting) در فرم عمومی رزرو
+app.py
+قطعی (تاییدشده در کد)
+SEC-06
+Low / Medium
+ذخیرهسازی نامحدود تصاویر فیشهای بانکی بدون چرخه پاکسازی
+security.py
+قطعی (تاییدشده در کد)
+SEC-07
+Low
+فقدان مهلت زمانی (Timeout) در درخواست تلگرام لایه وب و سوکت SMTP
+app.py
+قطعی (تاییدشده در کد)
+SEC-08
+Low
+ریسک مصرف بالای حافظه در بازگشایی تصاویر با ابعاد بزرگ (Pixel Flood)
+security.py
+بالقوه / نیازمند بهینهسازی
+SEC-09
+Informational
+انتشار پورت کانتینر روی کلیه رابطهای شبکه در داکر کامپوز
+docker-compose.yml
+قطعی (تاییدشده در پیکربندی)
+SEC-10
+Informational
+عدم تعیین سقف نسخه دقیق وابستگیها در requirements.txt
+requirements.txt
+قطعی (تاییدشده در پیکربندی)
+۵. یافتههای فنی تفصیلی (Detailed Technical Findings)
+یافته SEC-01: تزریق کد HTML در گزارش ایمیل خودکار (HTML Injection / Email XSS)
+شدت: High
+فایل و خطوط: daily_report.py
+تحلیل فنی: در تابع send_email، اطلاعات نوبتهای هفته آینده برای ساخت جدول HTML به شرح زیر پردازش میشود: python
+table_rows = ""
+for row in rows:
+name = row['full_name'] if isinstance(row, (dict, sqlite3.Row)) else row[0]
+...
+table_rows += f"<tr><td>{name}</td><td>{d}</td><td>{t}</td><td>{stype}</td></tr>"
+متغیر name مستقیماً از ورودی فیلد نام در فرم وب یا پیام متنی تلگرام مراجع استخراج میشود. با توجه به اینکه این متغیر بدون فرار دادن کاراکترهای خاص (html.escape) مستقیماً درون متن HTML درج میشود، چنانچه کاربری در فیلد نام کاراکترهایی مانند تگهای HTML وارد کند، کد ارسالی در قالب ایمیل به اینباکس مدیریت کلینیک رندر میشود. این بردار میتواند منجر به فیشینگ درونبرنامهای، بارگذاری اسکریپت در کلاینتهای ایمیل آسیبپذیر یا تخریب ساختار ایمیلهای اداری شود.
+سناریوی بازتولید: ثبت نام با مقداری نظیر Ali </b><a href="http://malicious.example.com">کلیک کنید</a><b> باعث تزریق لینک جعلی در جدول گزارش ایمیل خواهد شد.
+اثر امنیتی: جعل محتوا و فیشینگ هدفمند در ایمیلهای مدیریتی.
+راهکار اصلاحی: استفاده از تابع استاندارد html.escape پیش از الحاق متغیر به رشته HTML: python
+import html
+name_safe = html.escape(str(name))
+یافته SEC-02: نشت اعتبارنامههای قدیمی در تاریخچه گیت و درج رمز در فایل تست
+شدت: High
+فایل و خطوط: tests/test_security.py و کامیتهای تاریخی (1e220f6، 4d3eac6، 7acf0b2)
+تحلیل فنی: اگرچه در کامیتهای اخیر فایل .env به درستی نادیده گرفته شده و متغیرهای حساس از محیط فراخوانی میشوند، در بررسی تاریخچه کامیتها (Git Log) مشخص شد که کلمات عبور جیمیل و توکنهای تلگرام در گذشته مستقیماً کامیت شده بودند. علاوه بر این، در فایل tests/test_security.py رشته رمز عبور اختصاصی ایمیل برای نگارش تست منفی به صورت متن خام قرار داده شده است (kjwr kvkz sppu fysh). در صورتی که این مخزن در حالت عمومی (Public) قرار گیرد، باتهای پویشگر گیتهاب میتوانند این رشته را استخراج کنند.
+اثر امنیتی: دسترسی غیرمجاز به حساب کاربری ایمیل یا سرویسهای مرتبط در صورتی که رمز عبور در پنل گوگل باطل نشده باشد.
+راهکار اصلاحی:
+باطلسازی قطعی کلمه عبور اختصاصی (App Password) در پنل مدیریت حساب Google.
+حذف متن صریح رمز از فایل تست و جایگزینی آن با بررسی الگوهای عمومی یا دریافت مقدار تست از متغیر ساختگی.
+در صورت نیاز به پاکسازی کامل تاریخچه، استفاده از ابزار استاندارد git-filter-repo (نیازمند هماهنگی جداگانه).
+یافته SEC-03: کلید محرمانه پیشفرض و ناامن برای سشنهای فلسک
+شدت: Medium
+فایل و خطوط: config.py و app.py
+تحلیل فنی: در فایل پیکربندی آمده است: python
+FLASK_SECRET_KEY = REDACTED, "dev-insecure-secret-key-change-in-production")
+چنانچه در محیط عملیاتی متغیر FLASK_SECRET_KEY در فایل .env تعریف نشده باشد، برنامه به کلید ثابت dev-insecure-secret-key-change-in-production رجوع میکند. دانستن کلید سشن فلسک به مهاجم امکان میدهد کوکیهای نشست را جعل کرده و توکنهای محافظت از CSRF را محاسبه یا دور بزند.
+اثر امنیتی: تضعیف مکانیزم دفاعی CSRF و آسیبپذیری جعل نشست کاربری.
+راهکار اصلاحی: توقف راهاندازی وبسرور در حالت تولید در صورت عدم وجود این متغیر، یا تولید کلید تصادفی با صدور هشدار صریح در لاگ.
+یافته SEC-04: فقدان هدرهای امنیتی HTTP و پرچمهای امنیتی کوکی
+شدت: Medium
+فایل و خطوط: app.py
+تحلیل فنی: پاسخهای ارسالی از سمت سرور وب فاقد هدرهای امنیتی مدرن هستند:
+X-Content-Type-Options: nosniff: جلوگیری از تفسیر نادرست فرمت فایل توسط مرورگر.
+X-Frame-Options: SAMEORIGIN یا Content-Security-Policy: frame-ancestors: جلوگیری از حملات Clickjacking.
+Strict-Transport-Security (HSTS): اجبار به استفاده از کانال امن HTTPS. همچنین پرچمهای کوکی نظیر SESSION_COOKIE_SECURE و SESSION_COOKIE_HTTPONLY و SESSION_COOKIE_SAMESITE به صراحت فعال نشدهاند.
+راهکار اصلاحی: استفاده از هوک after_request برای تزریق هدرها: python
+@app.after_request
+def set_security_headers(response):
+response.headers['X-Content-Type-Options'] = 'nosniff'
+response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+return response
+یافته SEC-05: عدم وجود محدودکننده نرخ درخواست (Rate Limiting) در فرم عمومی رزرو
+شدت: Medium
+فایل و خطوط: app.py
+تحلیل فنی: مسیر /booking دارای محدودیت نرخ درخواست نیست. از آنجا که ثبت هر نوبت معتبر شامل اعتبارسنجی تصویر با پردازنده، ذخیره روی دیسک و ارسال فایل عکس از طریق شبکه به چند شناسه تلگرام ادمین است، یک مهاجم با اسکریپت ساده میتواند صدها درخواست ارسال کند. این عمل سبب اشباع حافظه، پر شدن دیسک سرور با فایلهای عکس و اسپم شدن حسابهای تلگرام مسئولان پذیرش خواهد شد.
+اثر امنیتی: محرومسازی از سرویس (DoS) و اخلال در ارتباطات کلینیک.
+راهکار اصلاحی: استفاده از افزونه Flask-Limiter جهت تعیین سقف مجاز (مثلاً حداکثر ۳ یا ۵ رزرو در هر ۱۰ دقیقه برای هر آدرس IP).
+یافته SEC-06: ذخیرهسازی نامحدود تصاویر فیشهای بانکی بدون چرخه پاکسازی
+شدت: Low / Medium
+فایل و خطوط: security.py و database.py
+تحلیل فنی: فایلهای رسید ارسالی کاربران سایت در دایرکتوری private_uploads ذخیره میشوند. زمانی که یک نوبت توسط ادمین تایید، رد یا منقضی میشود، یا توسط مراجع لغو میگردد، تنها رکورد پایگاه داده بهروزرسانی میشود و فایل فیزیکی تصویر از روی دیسک حذف نمیگردد. فیشهای بانکی حاوی اطلاعات حساس مالی (شماره کارت، نام صاحب حساب و کد پیگیری) هستند و انباشت همیشگی آنها ریسک پر شدن فضای ذخیرهسازی و چالشهای حریم خصوصی دادهها را افزایش میدهد.
+اثر امنیتی: تجمع دادههای مالی شخصی و مصرف فزاینده فضای دیسک سرور.
+راهکار اصلاحی: افزودن متد حذف فایل از دیسک هنگام تغییر وضعیت نوبت به rejected، cancelled یا expired در لایه پایگاه داده.
+یافته SEC-07: فقدان مهلت زمانی (Timeout) در درخواست تلگرام لایه وب و سوکت SMTP
+شدت: Low
+فایل و خطوط: app.py و daily_report.py
+تحلیل فنی: در متد send_receipt_to_telegram، فراخوانی requests.post(url, data=payload, files={"photo": photo}) فاقد پارامتر timeout است. همچنین در daily_report.py ارتباط با سرور جیمیل از طریق smtplib.SMTP(server_host, server_port) بدون سقف زمانی اتصال تعریف شده است. در صورت بروز اختلال در اتصال به سرورهای تلگرام یا مسدود شدن شبکه، پردازه ورکر Gunicorn تا زمان نامشخص متوقف میماند و از پاسخگویی به سایر کاربران باز میماند.
+اثر امنیتی: فرسایش منابع و قفل شدن ورکرهای وبسرور.
+راهکار اصلاحی: افزودن پارامتر timeout=10 به متد requests.post و timeout=15 به سازنده smtplib.SMTP.
+یافته SEC-08: ریسک مصرف بالای حافظه در بازگشایی تصاویر با ابعاد بزرگ (Pixel Flood)
+شدت: Low
+فایل و خطوط: security.py
+تحلیل فنی: اگرچه متد verify() فرمت فایل را اعتبارسنجی میکند، در مرحله بعد تصویر با دستور rgb_img = img.convert("RGB") دیکد و به حافظه برده میشود. چنانچه عکسی با حجم فشرده کوچک (مثلاً ۱ مگابایت) اما با ابعاد تصویری بسیار بزرگ (مثلاً ۲۰۰۰۰ در ۲۰۰۰۰ پیکسل) ارسال شود، دیکد کردن آن صدها مگابایت از رم سرور را در لحظه اشغال میکند.
+اثر امنیتی: مصرف لحظهای رم و احتمال ایجاد خطای Out-Of-Memory.
+راهکار اصلاحی: تعریف صریح سقف ابعاد در Pillow: python
+from PIL import Image
+Image.MAX_IMAGE_PIXELS = 10_000_000
+یافته SEC-09: انتشار پورت کانتینر روی کلیه رابطهای شبکه در داکر کامپوز
+شدت: Informational
+فایل و خطوط: docker-compose.yml
+تحلیل فنی: تنظیم ports: - "5000:5000" باعث اتصال پورت به آدرس 0.0.0.0 روی هاست میشود. چنانچه فایروال سرور (UFW) فعال نباشد، وبسرور مستقیماً و بدون عبور از پروکسی معکوس (مانند Nginx که مسئول مدیریت گواهی SSL است) در اینترنت باز خواهد بود.
+راهکار اصلاحی: محدود کردن پورت به هاست محلی: yaml
+ports:
+- "127.0.0.1:5000:5000"
+یافته SEC-10: عدم تعیین سقف نسخه دقیق وابستگیها در requirements.txt
+شدت: Informational
+فایل و خطوط: requirements.txt
+تحلیل فنی: استفاده از علامت >= به جای تثبیت دقیق نسخه با ==، میتواند هنگام نصب مجدد روی سرور یا CI نسخههای جدیدی را نصب کند که ممکن است ناسازگاری یا تغییرات ناخواسته امنیتی داشته باشند.
+راهکار اصلاحی: استفاده از نسخه دقیق بستهها و تولید فایل قفل با ابزارهایی مانند pip-tools یا uv.lock.
+۶. مستندات و موقعیت فایلهای آسیبپذیر (Evidence and File Locations)
+فایلهای مورد استناد در این ارزیابی:
+daily_report.py: درج نام فرارنشده مراجع در جدول HTML ایمیل.
+tests/test_security.py: حضور رشته رمز عبور خام در بدنه فایل آزمون.
+config.py: تعریف مقدار پشتیبان برای کلید محرمانه سشن.
+app.py: پیکربندی پیشفرض کوکیها و عدم درج هدرهای امنیتی.
+app.py: درخواست شبکه بدون تعریف timeout.
+security.py: مسیر ذخیرهسازی نامتقارن با چرخه عمر نوبتها.
+docker-compose.yml: نگاشت پورت به کلیه اینترفیسهای هاست.
+۷. ارزیابی حریم خصوصی و دادههای سلامت (Privacy & Healthcare Data)
+این سامانه به عنوان درگاه رزرو کلینیک روانشناسی، اطلاعات سلامت فردی (PHI) را مدیریت میکند. ارزیابی ابعاد محرمانگی:
+دادههای در حال انتقال (In Transit): در لایه تلگرام، ارتباطات از طریق سرورهای ابری تلگرام منتقل میشوند و به عنوان کانال خارج از کنترل مستقل کلینیک در نظر گرفته میشوند. در لایه وب، وابستگی کامل به پیکربندی TLS در وبسرور میزبان (Nginx/Reverse Proxy) وجود دارد و باید پروتکل HTTPS اجباری باشد.
+دادههای در حالت سکون (At Rest): پایگاه داده SQLite به صورت پیشفرض رمزنگاریشده نیست. دسترسی فیزیکی یا غیرمجاز به فایل clinic.db روی سرور منجر به افشای هویت، شماره تماس و زمان جلسات مشاوره مراجعین خواهد شد.
+لاگها و فایلهای لاگگیری: بررسی کدهای main.py و app.py نشان داد که نام و شماره تلفن مراجعین در متن لاگها ثبت نمیشود و لاگرهای خارجی (werkzeug و httpx) به سطح اخطار محدود شدهاند که از نشت ناخواسته اطلاعات در ژورنال لینوکس جلوگیری میکند.
+۸. گزارش بررسی و وضعیت ابزار HackingTool در محیط WSL
+در انطباق با دستورالعملهای ارزیابی:
+دسترسی به WSL تایید شد: توزیع فعال سیستم Ubuntu-24.04 است.
+فایل اجرایی ابزار در مسیر /home/sepanta/.local/bin/hackingtool شناسایی و پیکربندی آن بازبینی شد.
+کاتالوگ ابزار و پایپلاینهای موجود (pipelines/recon.yaml) شامل ابزارهایی مانند subfinder، httpx و nuclei مورد بررسی قرار گرفت.
+وضعیت اهداف آزمون فعال: هیچ سرویس فعال محلی روی پورتهای ۵۰۰۰ یا ۸۰۰۰ در حال شنود نبود.
+اجرای خطمشی ایمنی: طبق شروط مشخصشده در صورت عدم وجود هدف محلی تاییدشده برای تست نفوذ فعال، پویش شبکه روی وبسایت عمومی کلینیک، سرورهای تلگرام یا گیتهاب اکیداً متوقف ماند و هیچ دستوری بدون اجازه صریح اجرا نشد.
+۹. آزمونهای انجامشده و آزمونهای معلق (Tests Performed & Not Performed)
+آزمونهای انجامشده:
+بازبینی دستی سورسکد کلیه ماژولهای پایتون (app.py, main.py, database.py, security.py, daily_report.py, config.py).
+بازبینی تاریخچه کامل کامیتهای گیت جهت کشف نشتهای احتمالی در نسخههای گذشته.
+بررسی تنظیمات پایگاه داده SQLite و رفتار ایندکس یکتا در شرایط رزرو همزمان.
+راستیآزمایی فایلهای واحد آزمون موجود در مخزن (اجرای موفقیتآمیز ۱۲۰ تست بدون شکست).
+بررسی پیکربندی سرویسهای لینوکس و تنظیمات سندباکس در فولدِرهای استقرار.
+آزمونهای انجامنشده (به دلیل محدودیتهای مجوز و ایمنی):
+آزمون نفوذ پویا (DAST) روی شبکه یا دامنههای خارجی.
+پویش خودکار با Nuclei یا Subfinder در HackingTool به دلیل عدم اجرای سرور تست ایزوله محلی.
+فازینگ ورودی تصاویر با فایلهای مخرب واقعی.
+تست نفوذ سرور عملیاتی یا پورتهای سرور لینوکس خارج از دسترسی لوکال.
+۱۰. نقشه راه اولویتبندی شده اصلاح و امنسازی (Prioritized Remediation Roadmap)
+اقدامات فوری (فاز ۱ - کمتر از ۲۴ ساعت):
+اعمال html.escape روی دادههای واردشده توسط کاربر در تولید ایمیل daily_report.py.
+حذف رشته رمز خام جیمیل از فایل tests/test_security.py.
+افزودن timeout به فراخوانیهای شبکه در app.py و daily_report.py.
+اقدامات میانمدت (فاز ۲ - کمتر از ۷۲ ساعت):
+فعالسازی هدرهای امنیتی HTTP و پرچمهای امنیتی کوکیها در app.py.
+افزودن محدودکننده نرخ درخواست (Flask-Limiter) برای فرم رزرو.
+اضافه کردن متد پاکسازی فایلهای عکس رسید پس از رد، لغو یا انقضای نوبت.
+اقدامات بلندمدت و استقرار (فاز ۳):
+محدودسازی پورت کانتینر وب در docker-compose.yml به 127.0.0.1.
+تثبیت دقیق نسخه کتابخانهها در requirements.txt.
+راهاندازی فرآیند دورهای بکاپگیری رمزنگاریشده از clinic.db.
+۱۱. طرح آزمون راستیآزمایی (Verification & Regression Plan)
+پس از تصمیم برای پیادهسازی اصلاحات:
+افزودن تست واحد در test_reminders_and_reports.py برای تایید اینکه ورودیهای حاوی کاراکترهای HTML در ایمیل گزارش تبدیل به کدهای امن میشوند.
+افزودن تست بررسی هدرهای امنیتی در test_web_routes.py جهت اطمینان از وجود X-Frame-Options و X-Content-Type-Options.
+اجرای مجدد بسته تست کامل با pytest -v برای اطمینان از عدم بروز رگرسیون در فرآیندهای کسبوکار کلینیک.
