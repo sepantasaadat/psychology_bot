@@ -54,6 +54,7 @@ ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "drshafaei_psychological_clini
 ADMIN_PHONE = os.environ.get("ADMIN_PHONE", "09213689461")
 CLINIC_PHONE = os.environ.get("CLINIC_PHONE", ADMIN_PHONE)
 CLINIC_WEBSITE = os.environ.get("CLINIC_WEBSITE", "https://drshafaeiclinic.ir/")
+CLINIC_CHANNEL = os.environ.get("CLINIC_CHANNEL", "https://t.me/DrShafaei_Psychological_Cliniic")
 CARD_NUMBER = os.environ.get("CARD_NUMBER", "6037997512345678")
 
 # Bot & Web Application Credentials

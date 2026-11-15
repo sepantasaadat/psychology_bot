@@ -221,6 +221,31 @@ class TestBotModularHandlers(unittest.IsolatedAsyncioTestCase):
         self.assertIn("ارتباط با پذیرش", call_args[0])
         self.assertIn(main.ADMIN_PHONE, call_args[0])
 
+        reply_markup = query.edit_message_text.call_args[1].get("reply_markup")
+        channel_btns = [
+            btn for row in reply_markup.inline_keyboard for btn in row
+            if getattr(btn, "url", None) == main.CLINIC_CHANNEL
+        ]
+        self.assertEqual(len(channel_btns), 1, "Channel button must be present in emergency contact keyboard")
+
+    def test_main_menu_keyboard_contains_clinic_channel_button(self):
+        """get_main_menu_keyboard includes the official clinic Telegram channel button for all users."""
+        regular_keyboard = main.get_main_menu_keyboard(12345)
+        regular_channel_btns = [
+            btn for row in regular_keyboard.inline_keyboard for btn in row
+            if getattr(btn, "url", None) == main.CLINIC_CHANNEL
+        ]
+        self.assertEqual(len(regular_channel_btns), 1)
+        self.assertEqual(regular_channel_btns[0].url, "https://t.me/DrShafaei_Psychological_Cliniic")
+
+        admin_keyboard = main.get_main_menu_keyboard(main.MAIN_ADMIN_ID)
+        admin_channel_btns = [
+            btn for row in admin_keyboard.inline_keyboard for btn in row
+            if getattr(btn, "url", None) == main.CLINIC_CHANNEL
+        ]
+        self.assertEqual(len(admin_channel_btns), 1)
+        self.assertEqual(admin_channel_btns[0].url, "https://t.me/DrShafaei_Psychological_Cliniic")
+
     async def test_admin_panel_callback_non_admin_blocked(self):
         """admin_panel_callback blocks non-admin users with an alert."""
         update = MagicMock()

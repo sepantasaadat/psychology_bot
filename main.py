@@ -32,6 +32,7 @@ ADMIN_IDS = config.ADMIN_IDS
 ADMIN_USERNAME = config.ADMIN_USERNAME
 ADMIN_PHONE = config.ADMIN_PHONE
 CLINIC_WEBSITE = config.CLINIC_WEBSITE
+CLINIC_CHANNEL = getattr(config, "CLINIC_CHANNEL", "https://t.me/DrShafaei_Psychological_Cliniic")
 # ==========================================
 
 # تقویم کاری و روزهای هفته برگرفته از تنظیمات متمرکز سیستم
@@ -144,6 +145,7 @@ def get_main_menu_keyboard(user_id):
 
     keyboard.extend([
         [InlineKeyboardButton("🤝 ارتباط با پذیرش و پشتیبانی", callback_data="emergency_contact")],
+        [InlineKeyboardButton("📢 کانال رسمی کلینیک", url=CLINIC_CHANNEL)],
         [InlineKeyboardButton("🌐 وب‌سایت رسمی کلینیک", url=CLINIC_WEBSITE)],
     ])
 
@@ -276,6 +278,7 @@ async def emergency_contact_callback(update: Update, context: ContextTypes.DEFAU
     await query.answer()
     keyboard = [
         [InlineKeyboardButton("💬 گفت‌وگو با پذیرش در تلگرام", url=f"https://t.me/{ADMIN_USERNAME}")],
+        [InlineKeyboardButton("📢 کانال رسمی کلینیک", url=CLINIC_CHANNEL)],
         [InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data="main_menu")]
     ]
     contact_text = (
