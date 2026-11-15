@@ -377,5 +377,31 @@ class TestRemindersAndReports(unittest.TestCase):
             mock_smtp_cls.assert_called_once()
             mock_smtp.send_message.assert_called_once()
 
+    def test_daily_report_html_injection_prevention(self):
+        """Verifies daily_report.send_email safely escapes HTML characters in patient data."""
+        import daily_report
+
+        malicious_name = '<script>alert("XSS")</script>&<"test">'
+        mock_rows = [
+            {'full_name': malicious_name, 'date': '1405/01/15', 'time': '16:00', 'session_type': 'حضوری'}
+        ]
+
+        with patch('daily_report.SENDER_EMAIL', 'clinic@gmail.com'), \
+             patch('daily_report.SENDER_PASSWORD', 'secret123'), \
+             patch('daily_report.RECEIVER_EMAIL', 'receiver@gmail.com'), \
+             patch('smtplib.SMTP') as mock_smtp_cls:
+
+            mock_smtp = MagicMock()
+            mock_smtp_cls.return_value = mock_smtp
+
+            res = daily_report.send_email(mock_rows)
+            self.assertTrue(res)
+            mock_smtp_cls.assert_called_with('smtp.gmail.com', 587, timeout=15)
+
+            sent_msg = mock_smtp.send_message.call_args[0][0]
+            raw_html = sent_msg.get_payload()[0].get_payload(decode=True).decode('utf-8')
+            self.assertNotIn('<script>', raw_html)
+            self.assertIn('&lt;script&gt;alert(&quot;XSS&quot;)&lt;/script&gt;', raw_html)
+
 if __name__ == '__main__':
     unittest.main()

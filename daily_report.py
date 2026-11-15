@@ -1,4 +1,5 @@
 import os
+import html
 import sqlite3
 import smtplib
 import logging
@@ -76,7 +77,11 @@ def send_email(rows=None):
         d = row['date'] if isinstance(row, (dict, sqlite3.Row)) else row[1]
         t = row['time'] if isinstance(row, (dict, sqlite3.Row)) else row[2]
         stype = row['session_type'] if isinstance(row, (dict, sqlite3.Row)) else row[3]
-        table_rows += f"<tr><td>{name}</td><td>{d}</td><td>{t}</td><td>{stype}</td></tr>"
+        safe_name = html.escape(str(name))
+        safe_d = html.escape(str(d))
+        safe_t = html.escape(str(t))
+        safe_stype = html.escape(str(stype))
+        table_rows += f"<tr><td>{safe_name}</td><td>{safe_d}</td><td>{safe_t}</td><td>{safe_stype}</td></tr>"
 
     html_report = f"""
     <html dir="rtl">
@@ -99,7 +104,7 @@ def send_email(rows=None):
     msg.attach(MIMEText(html_report, 'html'))
 
     try:
-        server = smtplib.SMTP(server_host, server_port)
+        server = smtplib.SMTP(server_host, server_port, timeout=15)
         server.starttls()
         server.login(sender, password)
         server.send_message(msg)

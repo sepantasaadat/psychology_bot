@@ -4,6 +4,9 @@ from flask_wtf.csrf import CSRFProtect
 import sqlite3
 import jdatetime
 import os
+import time
+import threading
+from collections import defaultdict
 import requests
 import json
 import logging
@@ -23,8 +26,48 @@ app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY') or getattr(config, 'FLASK_SECRET_KEY', None) or os.urandom(32).hex()
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB upload limit
 app.config.setdefault('WTF_CSRF_ENABLED', True)
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+if os.environ.get("FLASK_ENV") == "production" or os.environ.get("SESSION_COOKIE_SECURE", "0") == "1":
+    app.config['SESSION_COOKIE_SECURE'] = True
 csrf = CSRFProtect(app)
 DATABASE = database.DB_PATH
+
+# Thread-safe in-memory rate limiting for booking submissions
+_booking_rate_limit_lock = threading.Lock()
+_booking_rate_limit_records = defaultdict(list)
+
+def is_booking_rate_limited(ip_address: str, max_requests: int = 5, window_seconds: int = 60) -> bool:
+    """Thread-safe sliding window rate limiter per IP address for booking submissions."""
+    now = time.time()
+    with _booking_rate_limit_lock:
+        timestamps = _booking_rate_limit_records[ip_address]
+        valid_timestamps = [t for t in timestamps if now - t < window_seconds]
+        if len(valid_timestamps) >= max_requests:
+            _booking_rate_limit_records[ip_address] = valid_timestamps
+            return True
+        valid_timestamps.append(now)
+        _booking_rate_limit_records[ip_address] = valid_timestamps
+        return False
+
+@app.after_request
+def apply_security_headers(response):
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    response.headers['Permissions-Policy'] = 'camera=(), microphone=(), geolocation=()'
+    csp = (
+        "default-src 'self' https:; "
+        "script-src 'self' https: 'unsafe-inline'; "
+        "style-src 'self' https: 'unsafe-inline'; "
+        "img-src 'self' data: https:; "
+        "font-src 'self' https:; "
+        "frame-ancestors 'self';"
+    )
+    response.headers['Content-Security-Policy'] = csp
+    if os.environ.get("FLASK_ENV") == "production" or os.environ.get("ENABLE_HSTS", "0") == "1":
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    return response
 
 # Private folder for receipt uploads outside web root
 PRIVATE_UPLOADS_FOLDER = getattr(config, 'PRIVATE_UPLOADS_DIR', os.path.join(config.BASE_DIR, 'private_uploads'))
@@ -89,7 +132,7 @@ def send_receipt_to_telegram(app_id, name_with_phone, date, time, session_type, 
                     "caption": caption,
                     "reply_markup": json.dumps(reply_markup)
                 }
-                res = requests.post(url, data=payload, files={"photo": photo})
+                res = requests.post(url, data=payload, files={"photo": photo}, timeout=10)
                 if res.status_code == 200:
                     res_data = res.json()
                     msg_id = res_data.get("result", {}).get("message_id")
@@ -125,6 +168,12 @@ def booking():
         return render_template('booking.html', days=days)
     
     if request.method == 'POST':
+        client_ip = request.headers.get("X-Forwarded-For", request.remote_addr or "127.0.0.1").split(",")[0].strip()
+        if not app.config.get('TESTING') and is_booking_rate_limited(client_ip, max_requests=10, window_seconds=60):
+            logger.warning(f"Rate limit exceeded for booking requests from client_ip={client_ip}")
+            flash("تعداد درخواست‌های ارسالی شما بیش از حد مجاز است. لطفاً چند دقیقه دیگر مجدداً تلاش فرمایید.", "danger")
+            return render_template('booking.html', days=get_1405_working_days()), 429
+
         selected_date = request.form.get('date')
         selected_time = request.form.get('time')
         full_name = request.form.get('full_name')

@@ -190,10 +190,32 @@ def add_confirmed_appointment(user_id, date, time, session_type, full_name, rece
     finally:
         conn.close()
 
+def _safe_cleanup_receipt_file(receipt_ref):
+    """
+    Safely removes physical uploaded receipt image files from private_uploads
+    when an appointment transitions to a terminal inactive status (rejected, cancelled, expired).
+    """
+    if not receipt_ref or not isinstance(receipt_ref, str):
+        return
+    try:
+        if os.path.isfile(receipt_ref) and ("private_uploads" in receipt_ref or os.path.isabs(receipt_ref)):
+            os.remove(receipt_ref)
+            logger.info(f"Purged terminal receipt file: {receipt_ref}")
+    except Exception as e:
+        logger.warning(f"Failed to remove receipt file '{receipt_ref}': {e}")
+
 def update_appointment_status(appointment_id, status):
     conn = get_connection()
     cursor = conn.cursor()
     now_tehran_iso = datetime.datetime.now(TEHRAN_TZ).isoformat()
+    if status in ('rejected', 'cancelled', 'expired'):
+        try:
+            cursor.execute('SELECT receipt_file_id FROM appointments WHERE id = ?', (appointment_id,))
+            row = cursor.fetchone()
+            if row and row[0]:
+                _safe_cleanup_receipt_file(row[0])
+        except Exception as e:
+            logger.warning(f"Error checking receipt file for cleanup: {e}")
     cursor.execute('UPDATE appointments SET status = ?, updated_at = ? WHERE id = ?', (status, now_tehran_iso, appointment_id))
     conn.commit()
     conn.close()
@@ -324,6 +346,13 @@ def delete_appointment(appointment_id):
     conn = get_connection()
     cursor = conn.cursor()
     now_tehran_iso = datetime.datetime.now(TEHRAN_TZ).isoformat()
+    try:
+        cursor.execute('SELECT receipt_file_id FROM appointments WHERE id = ?', (int(appointment_id),))
+        row = cursor.fetchone()
+        if row and row[0]:
+            _safe_cleanup_receipt_file(row[0])
+    except Exception as e:
+        logger.warning(f"Error checking receipt file for deletion cleanup: {e}")
     cursor.execute("UPDATE appointments SET status = 'cancelled', updated_at = ? WHERE id = ?", (now_tehran_iso, int(appointment_id)))
     rowcount = cursor.rowcount
     cursor.execute('DELETE FROM admin_receipt_messages WHERE appointment_id = ?', (int(appointment_id),))
@@ -400,6 +429,13 @@ def expire_stale_pending_appointments(timeout_hours=None, now=None) -> int:
     if expired_ids:
         now_tehran_iso = current_time.isoformat()
         placeholders = ','.join(['?'] * len(expired_ids))
+        try:
+            cursor.execute(f"SELECT receipt_file_id FROM appointments WHERE id IN ({placeholders})", expired_ids)
+            for r_row in cursor.fetchall():
+                if r_row and r_row[0]:
+                    _safe_cleanup_receipt_file(r_row[0])
+        except Exception as e:
+            logger.warning(f"Error checking receipt files for expiration cleanup: {e}")
         cursor.execute(
             f"UPDATE appointments SET status = 'expired', updated_at = ? WHERE id IN ({placeholders})",
             [now_tehran_iso] + expired_ids

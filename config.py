@@ -59,7 +59,12 @@ CARD_NUMBER = os.environ.get("CARD_NUMBER", "6037997512345678")
 
 # Bot & Web Application Credentials
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
-FLASK_SECRET_KEY = os.environ.get("FLASK_SECRET_KEY", "dev-insecure-secret-key-change-in-production")
+_configured_secret = os.environ.get("FLASK_SECRET_KEY")
+if _configured_secret:
+    FLASK_SECRET_KEY = _configured_secret
+else:
+    import secrets
+    FLASK_SECRET_KEY = secrets.token_hex(32)
 DB_PATH = os.environ.get("DB_PATH", str(BASE_DIR / "clinic.db"))
 UPLOAD_FOLDER = str(PRIVATE_UPLOADS_DIR)
 

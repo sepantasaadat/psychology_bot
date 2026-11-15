@@ -6,6 +6,10 @@ from PIL import Image, UnidentifiedImageError
 
 import config
 
+# Maximum pixel threshold and maximum dimension to prevent decompression bombs / pixel floods
+Image.MAX_IMAGE_PIXELS = 10_000_000
+MAX_IMAGE_DIMENSION = 5000
+
 def process_and_save_receipt(file_stream_or_bytes, dest_dir=None) -> str:
     """
     Securely validates and stores uploaded payment receipts.
@@ -59,6 +63,13 @@ def process_and_save_receipt(file_stream_or_bytes, dest_dir=None) -> str:
             img_format = img.format
             if img_format not in ("JPEG", "PNG", "WEBP"):
                 raise ValueError(f"Unsupported image format '{img_format}'. Only JPEG, PNG, and WEBP are allowed.")
+
+            width, height = img.size
+            if width > MAX_IMAGE_DIMENSION or height > MAX_IMAGE_DIMENSION:
+                raise ValueError(f"Image dimensions ({width}x{height}) exceed maximum allowed limit ({MAX_IMAGE_DIMENSION}x{MAX_IMAGE_DIMENSION}).")
+
+            if width * height > Image.MAX_IMAGE_PIXELS:
+                raise ValueError("Image total pixel count exceeds maximum allowable threshold.")
 
             # Re-encode to clean RGB JPEG (strips EXIF, scripts, polyglots)
             rgb_img = img.convert("RGB")

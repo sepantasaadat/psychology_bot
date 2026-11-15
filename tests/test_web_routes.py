@@ -121,6 +121,26 @@ class TestWebRoutes(unittest.TestCase):
             self.assertIn(url_for('booking'), ['/booking', '/reserve'])
             self.assertIn(url_for('reserve'), ['/reserve', '/booking'])
 
+    def test_security_headers_and_cookie_settings(self):
+        """Verify HTTP security headers and session cookie protection flags."""
+        response = self.client.get('/')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers.get('X-Content-Type-Options'), 'nosniff')
+        self.assertEqual(response.headers.get('X-Frame-Options'), 'SAMEORIGIN')
+        self.assertEqual(response.headers.get('Referrer-Policy'), 'strict-origin-when-cross-origin')
+        self.assertIn("default-src", response.headers.get('Content-Security-Policy', ''))
+        self.assertTrue(flask_app.app.config.get('SESSION_COOKIE_HTTPONLY'))
+        self.assertEqual(flask_app.app.config.get('SESSION_COOKIE_SAMESITE'), 'Lax')
+
+    def test_booking_rate_limiter_logic(self):
+        """Verify thread-safe sliding window rate limiter blocks requests exceeding limit."""
+        ip = "192.168.1.100"
+        flask_app._booking_rate_limit_records[ip] = []
+        for _ in range(5):
+            self.assertFalse(flask_app.is_booking_rate_limited(ip, max_requests=5, window_seconds=60))
+        # 6th request should be rate-limited
+        self.assertTrue(flask_app.is_booking_rate_limited(ip, max_requests=5, window_seconds=60))
+
 
 if __name__ == '__main__':
     unittest.main()

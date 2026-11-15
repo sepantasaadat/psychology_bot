@@ -12,6 +12,7 @@ import config
 import database
 import main
 import app
+from security import process_and_save_receipt
 
 class TestUploadSecurityAndRBAC(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
@@ -277,6 +278,39 @@ class TestUploadSecurityAndRBAC(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(res.status_code, 400)
         finally:
             app.app.config['WTF_CSRF_ENABLED'] = False
+
+    def test_terminal_status_purges_receipt_file(self):
+        """Verifies local receipt files are securely purged when appointment is cancelled or rejected."""
+        valid_jpeg = self._create_dummy_image(fmt="JPEG", size=(64, 64))
+        filepath = process_and_save_receipt(valid_jpeg)
+        self.created_files.append(filepath)
+        self.assertTrue(os.path.exists(filepath), "Receipt file must initially exist")
+
+        app_id = database.add_pending_appointment(
+            user_id=123,
+            date="1405/02/01",
+            time="17:00",
+            session_type="حضوری",
+            full_name="تست پاکسازی رسید",
+            receipt_file_id=filepath
+        )
+
+        # Soft-delete (cancellation) should purge the physical receipt file
+        database.delete_appointment(app_id)
+        self.assertFalse(os.path.exists(filepath), "Receipt file must be purged upon cancellation")
+
+    def test_process_and_save_receipt_rejects_oversized_dimensions(self):
+        """Verifies process_and_save_receipt rejects images exceeding MAX_IMAGE_DIMENSION."""
+        from PIL import Image
+        bio = io.BytesIO()
+        # Create an image exceeding MAX_IMAGE_DIMENSION (5000)
+        oversized = Image.new("RGB", (5001, 10), color="white")
+        oversized.save(bio, format="JPEG")
+        bio.seek(0)
+
+        with self.assertRaises(ValueError) as ctx:
+            process_and_save_receipt(bio)
+        self.assertIn("exceed maximum allowed limit", str(ctx.exception))
 
 if __name__ == '__main__':
     unittest.main()
