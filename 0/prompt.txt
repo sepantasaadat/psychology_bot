@@ -1,0 +1,21 @@
+@[plugin:superpowers]  Invoke the `superpowers` plugin (`writing-skills`, `dispatching-parallel-agents`, and `subagent-driven-development`) to create a master **Swarm Orchestrator (`clinic-swarm-coordinator`)** that governs how our 5 specialized sub-agents collaborate on `sepantasaadat/psychology_bot`.
+
+### Swarm Governance Rules to Enforce
+Because `psychology_bot` shares tightly coupled core files (`config.py`, `database.py`, `main.py`, `app.py`, `daily_report.py`), enforce a **Two-Phase Hybrid Swarm Protocol** for every new task or feature request:
+
+1. **Phase A — Parallel Read-Only Discovery Swarm (`dispatching-parallel-agents`):**
+   - Dispatch `security-privacy-auditor`, `sqlite-temporal-architect`, and `bot-web-core-engineer` in parallel in **READ-ONLY mode** to analyze the impact of the requested feature or bug fix.
+   - Each agent outputs a concise contract (schema changes needed, route/callback changes, and security edge cases) without modifying any files yet.
+
+2. **Phase B — Strict File-Ownership Handoff Swarm (Zero Write Collisions):**
+   - Execute code modifications through explicit sequential handoffs where each agent is only allowed to write to its owned files:
+     - **Handoff 1 (`sqlite-temporal-architect`):** Exclusively edits `config.py` and `database.py` (schema, migrations, queries, Jalali/Tehran time logic).
+     - **Handoff 2 (`bot-web-core-engineer`):** Exclusively edits `main.py`, `app.py`, `daily_report.py`, and `templates/*.html` consuming the API exposed in Handoff 1.
+     - **Handoff 3 (`security-privacy-auditor`):** Reviews the diff from Handoffs 1 & 2 for PII leaks, missing RBAC/ownership checks, CSRF, or upload vulnerabilities, applying surgical security patches if needed.
+     - **Handoff 4 (`devops-vps-guardian`):** Updates `requirements.txt`, `.env.example`, Docker/systemd files, or CI workflows if dependencies or env vars changed.
+     - **Handoff 5 (`tdd-qa-verifier`):** Exclusively edits `tests/test_*.py`, writes unit/integration tests for the new behavior, and runs `pytest -v`.
+
+3. **Swarm Circuit Breaker (Self-Healing Rule):**
+   - If `pytest -v` fails at Handoff 5, `tdd-qa-verifier` must NOT rewrite production logic itself; instead, it hands the exact traceback back to the responsible owner agent (`sqlite-temporal-architect` for DB errors, `bot-web-core-engineer` for handler/route errors) until 100% of tests pass.
+
+Save this `clinic-swarm-coordinator` skill/workflow in the project's agent configuration and confirm once it is active.
