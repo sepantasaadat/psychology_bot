@@ -81,7 +81,7 @@
                             واریز نموده و عکس رسید را بارگذاری فرمایید.
                         </p>
                         
-                        <input type="file" class="form-control border-0 bg-white shadow-sm" id="receipt" name="receipt" accept="image/*" required>
+                        <input type="file" class="form-control border-0 bg-white shadow-sm" id="receipt" name="receipt" accept="image/jpeg,image/png,image/webp,image/*" required>
                         
                         <div id="compressionStatus" class="small text-success mt-2 d-none">
                             <i class="bi bi-check2-circle me-1"></i> <span id="compressionMsg">تصویر با موفقیت آماده شد.</span>
@@ -121,7 +121,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const alertContainer = document.getElementById("dynamicAlertContainer");
     const cardBody = document.getElementById("bookingCardBody");
 
-    let compressedReceiptBlob = null;
+    let compressedReceiptFile = null;
 
     function showAlert(message, type) {
         alertContainer.innerHTML = `
@@ -137,6 +137,58 @@ document.addEventListener("DOMContentLoaded", function () {
         submitBtn.disabled = false;
         btnSpinner.classList.add("d-none");
         btnText.innerHTML = '<i class="bi bi-check-circle me-2"></i>ثبت نوبت و ارسال فیش';
+    }
+
+    // High performance image compression (max 1000px, quality 0.70 -> ~40KB-70KB)
+    function compressImageFile(file) {
+        return new Promise((resolve) => {
+            if (!file) return resolve(null);
+            if (file.size < 120 * 1024 && (file.type === "image/jpeg" || file.type === "image/png")) {
+                return resolve(file);
+            }
+
+            const objectUrl = URL.createObjectURL(file);
+            const img = new Image();
+
+            img.onload = function () {
+                URL.revokeObjectURL(objectUrl);
+                const maxDim = 1000;
+                let w = img.width;
+                let h = img.height;
+
+                if (w > maxDim || h > maxDim) {
+                    if (w > h) {
+                        h = Math.round((h * maxDim) / w);
+                        w = maxDim;
+                    } else {
+                        w = Math.round((w * maxDim) / h);
+                        h = maxDim;
+                    }
+                }
+
+                const canvas = document.createElement("canvas");
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0, w, h);
+
+                canvas.toBlob(function (blob) {
+                    if (blob) {
+                        const optimized = new File([blob], "receipt.jpg", { type: "image/jpeg", lastModified: Date.now() });
+                        resolve(optimized);
+                    } else {
+                        resolve(file);
+                    }
+                }, "image/jpeg", 0.70);
+            };
+
+            img.onerror = function () {
+                URL.revokeObjectURL(objectUrl);
+                resolve(file);
+            };
+
+            img.src = objectUrl;
+        });
     }
 
     // Dynamic available hours loader
@@ -170,60 +222,32 @@ document.addEventListener("DOMContentLoaded", function () {
             });
     });
 
-    // Client-side image compression (HTML5 Canvas)
-    receiptInput.addEventListener("change", function () {
-        const file = this.files[0];
-        if (!file || !file.type.startsWith("image/")) {
-            compressedReceiptBlob = null;
+    // Preview and background compression on file select
+    receiptInput.addEventListener("change", async function () {
+        const file = this.files && this.files[0];
+        if (!file) {
+            compressedReceiptFile = null;
             previewContainer.classList.add("d-none");
             compressionStatus.classList.add("d-none");
             return;
         }
 
-        const reader = new FileReader();
-        reader.onload = function (e) {
-            const img = new Image();
-            img.onload = function () {
-                const maxDim = 1600;
-                let width = img.width;
-                let height = img.height;
+        compressionMsg.textContent = "در حال آماده‌سازی تصویر...";
+        compressionStatus.classList.remove("d-none");
 
-                if (width > maxDim || height > maxDim) {
-                    if (width > height) {
-                        height = Math.round((height * maxDim) / width);
-                        width = maxDim;
-                    } else {
-                        width = Math.round((width * maxDim) / height);
-                        height = maxDim;
-                    }
-                }
+        compressedReceiptFile = await compressImageFile(file);
 
-                const canvas = document.createElement("canvas");
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext("2d");
-                ctx.drawImage(img, 0, 0, width, height);
-
-                canvas.toBlob(function (blob) {
-                    if (blob) {
-                        compressedReceiptBlob = blob;
-                        const kbSize = Math.round(blob.size / 1024);
-                        receiptPreview.src = canvas.toDataURL("image/jpeg", 0.85);
-                        previewContainer.classList.remove("d-none");
-                        compressionMsg.textContent = "تصویر فیش آماده شد (" + kbSize + " کیلوبایت)";
-                        compressionStatus.classList.remove("d-none");
-                    } else {
-                        compressedReceiptBlob = file;
-                    }
-                }, "image/jpeg", 0.82);
-            };
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
+        if (compressedReceiptFile) {
+            const kb = Math.round(compressedReceiptFile.size / 1024);
+            const previewUrl = URL.createObjectURL(compressedReceiptFile);
+            receiptPreview.src = previewUrl;
+            previewContainer.classList.remove("d-none");
+            compressionMsg.textContent = "تصویر فیش آماده شد (" + kb + " کیلوبایت)";
+        }
     });
 
-    // AJAX Form submission to prevent navigation / redirect issues
-    bookingForm.addEventListener("submit", function (e) {
+    // AJAX Form submission
+    bookingForm.addEventListener("submit", async function (e) {
         e.preventDefault();
 
         const fullName = document.getElementById("full_name").value.trim();
@@ -237,31 +261,48 @@ document.addEventListener("DOMContentLoaded", function () {
             return;
         }
 
-        const rawFile = receiptInput.files ? receiptInput.files[0] : null;
-        if (!compressedReceiptBlob && !rawFile) {
+        const rawFile = receiptInput.files && receiptInput.files[0];
+        if (!rawFile && !compressedReceiptFile) {
             showAlert("لطفاً تصویر فیش پرداخت را انتخاب فرمایید.", "danger");
             return;
         }
 
         submitBtn.disabled = true;
         btnSpinner.classList.remove("d-none");
-        btnText.textContent = "در حال ثبت نوبت و ارسال رسید...";
+        btnText.textContent = "در حال ارسال و ثبت نوبت...";
 
-        const formData = new FormData(bookingForm);
-        formData.set("is_ajax", "1");
-        if (compressedReceiptBlob) {
-            formData.set("receipt", compressedReceiptBlob, "receipt.jpg");
+        // Ensure compression has completed
+        let fileToSend = compressedReceiptFile;
+        if (!fileToSend && rawFile) {
+            btnText.textContent = "در حال بهینه‌سازی فیش...";
+            fileToSend = await compressImageFile(rawFile);
+            btnText.textContent = "در حال ارسال و ثبت نوبت...";
         }
 
-        fetch("/booking", {
-            method: "POST",
-            body: formData,
-            headers: {
-                "X-Requested-With": "XMLHttpRequest"
-            }
-        })
-        .then(async (res) => {
+        const formData = new FormData();
+        const csrfTokenEl = document.querySelector('input[name="csrf_token"]');
+        if (csrfTokenEl) {
+            formData.append("csrf_token", csrfTokenEl.value);
+        }
+        formData.append("is_ajax", "1");
+        formData.append("full_name", fullName);
+        formData.append("phone", phone);
+        formData.append("session_type", sessionType);
+        formData.append("date", date);
+        formData.append("time", time);
+        formData.append("receipt", fileToSend || rawFile, "receipt.jpg");
+
+        try {
+            const res = await fetch("/booking", {
+                method: "POST",
+                body: formData,
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            });
+
             const data = await res.json().catch(() => null);
+
             if (res.ok && data && data.success) {
                 cardBody.innerHTML = `
                     <div class="text-center py-4">
@@ -303,11 +344,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 showAlert(errorMsg, "danger");
                 resetSubmitButton();
             }
-        })
-        .catch(() => {
-            showAlert("خطا در برقراری ارتباط با سرور. لطفاً اتصال اینترنت خود را بررسی کرده و مجدداً تلاش فرمایید.", "danger");
+        } catch (fetchErr) {
+            console.error("Booking submission network error:", fetchErr);
+            showAlert("خطا در برقراری ارتباط با سرور (" + (fetchErr.message || "Network Error") + "). لطفاً وضعیت اینترنت را بررسی فرمایید.", "danger");
             resetSubmitButton();
-        });
+        }
     });
 });
 </script>
