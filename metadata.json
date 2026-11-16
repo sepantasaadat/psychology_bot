@@ -1,0 +1,38 @@
+{
+  "cli_version": "0.13.1",
+  "checkpoint_id": "01M7K8CWW3ERSX5E0MQ7RB745A",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 2,
+  "files_touched": [
+    "templates/about.html",
+    "templates/admin_dashboard.html",
+    "templates/admin_login.html",
+    "templates/base.html",
+    "templates/booking.html",
+    "templates/index.html",
+    "tests/test_web_routes.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "redaction": {
+    "replacements": 352,
+    "layers": {
+      "betterleaks": 56,
+      "connection_string": 0,
+      "credential_key": 0,
+      "credential_value": 119,
+      "credentialed_uri": 0,
+      "entropy": 179,
+      "key_context": 0,
+      "provider_token": 0,
+      "shell_stdin": 0
+    }
+  }
+}
