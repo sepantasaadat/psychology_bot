@@ -1,0 +1,19 @@
+[Unit]
+Description=Psychology Clinic Gunicorn Web Service (Root Deployment)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/root/psychology_bot
+EnvironmentFile=/root/psychology_bot/.env
+ExecStart=/root/psychology_bot/venv/bin/gunicorn --workers 3 --bind 127.0.0.1:5000 app:app
+Restart=on-failure
+RestartSec=5s
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

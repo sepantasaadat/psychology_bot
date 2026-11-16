@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from werkzeug.utils import secure_filename
+from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_wtf.csrf import CSRFProtect
 import sqlite3
 import jdatetime
@@ -23,6 +24,7 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN", config.BOT_TOKEN)
 ADMIN_IDS = config.ADMIN_IDS
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY') or getattr(config, 'FLASK_SECRET_KEY', None) or os.urandom(32).hex()
 app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB upload limit
 app.config.setdefault('WTF_CSRF_ENABLED', True)
