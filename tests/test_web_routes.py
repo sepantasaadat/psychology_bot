@@ -53,7 +53,7 @@ class TestWebRoutes(unittest.TestCase):
             # Content checks
             html = response.data.decode('utf-8')
             self.assertIn("همراه شما در مسیر آرامش", html)
-            self.assertNotIn("درباره کلینیک دکتر شفایی", html)
+            self.assertNotIn("درباره کلینیک دکتر شفائی", html)
 
     def test_about_route_renders_about_html(self):
         """GET /about must return HTTP 200 and render about.html."""
@@ -66,7 +66,7 @@ class TestWebRoutes(unittest.TestCase):
 
             # Content checks
             html = response.data.decode('utf-8')
-            self.assertIn("درباره کلینیک دکتر شفایی", html)
+            self.assertIn("درباره کلینیک دکتر شفائی", html)
             self.assertNotIn("همراه شما در مسیر آرامش", html)
 
     def test_booking_route_renders_booking_html(self):
@@ -166,7 +166,7 @@ class TestWebRoutes(unittest.TestCase):
         # Authenticated access to /admin succeeds
         res_dash = self.client.get('/admin')
         self.assertEqual(res_dash.status_code, 200)
-        self.assertIn("پنل مدیریت کلینیک دکتر شفایی", res_dash.data.decode('utf-8'))
+        self.assertIn("پنل مدیریت کلینیک دکتر شفائی", res_dash.data.decode('utf-8'))
 
         # Logout clears session
         res_logout = self.client.get('/logout')
