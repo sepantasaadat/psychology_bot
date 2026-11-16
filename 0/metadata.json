@@ -1,0 +1,39 @@
+{
+  "cli_version": "0.13.1",
+  "checkpoint_id": "01M7HWH4JM87NPEZ7JFVPHBGES",
+  "session_id": "bc33b0c6-57c3-4b45-897d-6a4a3b990b80",
+  "strategy": "manual-commit",
+  "created_at": "2026-11-16T09:55:37.1410245Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "app.py",
+    "deploy/nginx/drshafaeiclinic.ir.conf",
+    "deploy/systemd/psychobot-web-root.service",
+    "graphify-out/GRAPH_REPORT.md",
+    "graphify-out/graph.html",
+    "graphify-out/graph.json"
+  ],
+  "agent": "Antigravity",
+  "model": "",
+  "turn_id": "bf2ff82c8374",
+  "checkpoint_transcript_start": 2447,
+  "transcript_lines_at_start": 2447,
+  "redaction": {
+    "replacements": 317,
+    "layers": {
+      "betterleaks": 47,
+      "connection_string": 0,
+      "credential_key": 0,
+      "credential_value": 93,
+      "credentialed_uri": 0,
+      "entropy": 179,
+      "key_context": 0,
+      "provider_token": 0,
+      "shell_stdin": 0
+    }
+  },
+  "session_metrics": {
+    "turn_count": 47
+  }
+}
