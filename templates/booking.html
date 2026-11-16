@@ -5,13 +5,13 @@
 {% block content %}
 <div class="row justify-content-center mt-4">
     <div class="col-md-8">
-        <div class="card">
+        <div class="card shadow-sm border-0">
             <div class="card-header border-0 text-center py-4" style="background-color: var(--light-green);">
                 <h4 class="mb-0 fw-bold" style="color: var(--primary-green);">
                     <i class="bi bi-calendar-plus me-2"></i>فرم رزرو آنلاین نوبت
                 </h4>
             </div>
-            <div class="card-body p-5">
+            <div class="card-body p-4 p-md-5">
 
                 {% with messages = get_flashed_messages(with_categories=true) %}
                   {% if messages %}
@@ -24,8 +24,9 @@
                   {% endif %}
                 {% endwith %}
 
-                <form method="POST" action="/booking" enctype="multipart/form-data">
+                <form id="bookingForm" method="POST" action="/booking" enctype="multipart/form-data">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    
                     <div class="mb-4">
                         <label for="full_name" class="form-label text-muted small fw-bold">نام و نام خانوادگی مراجع:</label>
                         <input type="text" class="form-control form-control-lg bg-light border-0" id="full_name" name="full_name" required placeholder="مثال: علی رضایی">
@@ -59,30 +60,163 @@
                         <div class="col-md-6 mb-4">
                             <label for="time" class="form-label text-muted small fw-bold">انتخاب ساعت:</label>
                             <select class="form-select form-select-lg bg-light border-0" id="time" name="time" required>
-                                <option value="" disabled selected>یک ساعت را انتخاب کنید...</option>
-                                <option value="17:00">17:00 تا 18:00</option>
-                                <option value="18:00">18:00 تا 19:00</option>
-                                <option value="19:00">19:00 تا 20:00</option>
-                                <option value="20:00">20:00 تا 21:00</option>
-                                <option value="21:00">21:00 تا 22:00</option>
+                                <option value="" disabled selected>ابتدا تاریخ را انتخاب کنید...</option>
                             </select>
+                            <div id="timeLoading" class="small text-muted mt-1 d-none">
+                                <span class="spinner-border spinner-border-sm me-1" role="status"></span> در حال بررسی ساعت‌های خالی...
+                            </div>
                         </div>
                     </div>
 
-                    <div class="mb-5 p-4 rounded-4" style="background-color: #fafafa; border: 1px dashed #ccc;">
-                        <label for="receipt" class="form-label fw-bold d-block mb-3" style="color: var(--primary-green);">
+                    <div class="mb-4 p-4 rounded-4" style="background-color: #fafafa; border: 1px dashed #ccc;">
+                        <label for="receipt" class="form-label fw-bold d-block mb-2" style="color: var(--primary-green);">
                             <i class="bi bi-receipt me-2"></i>آپلود تصویر رسید پرداخت
                         </label>
-                        <p class="small text-muted mb-3 lh-lg">لطفاً مبلغ ویزیت را به شماره کارت <b class="text-dark">XXXX-XXXX-XXXX-XXXX</b> واریز نموده و عکس رسید را در کادر زیر انتخاب کنید.</p>
+                        <p class="small text-muted mb-3 lh-lg">
+                            لطفاً مبلغ بیعانه را به شماره کارت 
+                            <span class="badge bg-light text-dark fs-6 border px-3 py-2 fw-bold font-monospace d-inline-block my-1" dir="ltr">{{ card_number or '۶۰۳۷-۹۹۷۵-۱۲۳۴-۵۶۷۸' }}</span>
+                            واریز نموده و عکس رسید را بارگذاری فرمایید.
+                        </p>
+                        
                         <input type="file" class="form-control border-0 bg-white shadow-sm" id="receipt" name="receipt" accept="image/*" required>
+                        
+                        <div id="compressionStatus" class="small text-success mt-2 d-none">
+                            <i class="bi bi-check2-circle me-1"></i> <span id="compressionMsg">تصویر با موفقیت بهینه‌سازی شد.</span>
+                        </div>
+
+                        <div id="previewContainer" class="mt-3 text-center d-none">
+                            <img id="receiptPreview" src="" alt="پیش‌نمایش رسید" class="img-thumbnail rounded-3 shadow-sm" style="max-height: 220px; object-fit: contain;">
+                        </div>
                     </div>
 
                     <div class="d-grid mt-4">
-                        <button type="submit" class="btn btn-primary btn-lg rounded-3 fw-bold">ثبت نوبت و ارسال فیش</button>
+                        <button type="submit" id="submitBtn" class="btn btn-primary btn-lg rounded-3 fw-bold py-3">
+                            <span id="btnText"><i class="bi bi-check-circle me-2"></i>ثبت نوبت و ارسال فیش</span>
+                            <span id="btnSpinner" class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true"></span>
+                        </button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const dateSelect = document.getElementById("date");
+    const timeSelect = document.getElementById("time");
+    const timeLoading = document.getElementById("timeLoading");
+    const receiptInput = document.getElementById("receipt");
+    const compressionStatus = document.getElementById("compressionStatus");
+    const compressionMsg = document.getElementById("compressionMsg");
+    const previewContainer = document.getElementById("previewContainer");
+    const receiptPreview = document.getElementById("receiptPreview");
+    const bookingForm = document.getElementById("bookingForm");
+    const submitBtn = document.getElementById("submitBtn");
+    const btnText = document.getElementById("btnText");
+    const btnSpinner = document.getElementById("btnSpinner");
+
+    // Dynamic available hours loader
+    dateSelect.addEventListener("change", function () {
+        const selectedDate = this.value;
+        if (!selectedDate) return;
+
+        timeSelect.innerHTML = '<option value="" disabled selected>در حال بارگذاری...</option>';
+        timeLoading.classList.remove("d-none");
+
+        fetch("/api/available-times/" + encodeURIComponent(selectedDate))
+            .then(res => res.json())
+            .then(data => {
+                timeLoading.classList.add("d-none");
+                timeSelect.innerHTML = "";
+                if (data.available_times && data.available_times.length > 0) {
+                    timeSelect.innerHTML = '<option value="" disabled selected>یک ساعت را انتخاب کنید...</option>';
+                    data.available_times.forEach(t => {
+                        const opt = document.createElement("option");
+                        opt.value = t;
+                        opt.textContent = t + " تا " + (parseInt(t.split(":")[0]) + 1) + ":00";
+                        timeSelect.appendChild(opt);
+                    });
+                } else {
+                    timeSelect.innerHTML = '<option value="" disabled selected>ظرفیت نوبت‌های این تاریخ تکمیل است</option>';
+                }
+            })
+            .catch(err => {
+                timeLoading.classList.add("d-none");
+                timeSelect.innerHTML = '<option value="" disabled selected>خطا در دریافت ساعات. مجدداً انتخاب کنید.</option>';
+            });
+    });
+
+    // Client-side image compression for mobile phones (HTML5 Canvas)
+    receiptInput.addEventListener("change", function () {
+        const file = this.files[0];
+        if (!file || !file.type.startsWith("image/")) {
+            previewContainer.classList.add("d-none");
+            compressionStatus.classList.add("d-none");
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            const img = new Image();
+            img.onload = function () {
+                const maxDim = 1600;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > maxDim || height > maxDim) {
+                    if (width > height) {
+                        height = Math.round((height * maxDim) / width);
+                        width = maxDim;
+                    } else {
+                        width = Math.round((width * maxDim) / height);
+                        height = maxDim;
+                    }
+                }
+
+                const canvas = document.createElement("canvas");
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0, width, height);
+
+                canvas.toBlob(function (blob) {
+                    if (!blob) return;
+
+                    // Replace input files using DataTransfer
+                    const compressedFile = new File(
+                        [blob],
+                        file.name.replace(/\.[^/.]+$/, "") + ".jpg",
+                        { type: "image/jpeg", lastModified: Date.now() }
+                    );
+
+                    try {
+                        const dataTransfer = new DataTransfer();
+                        dataTransfer.items.add(compressedFile);
+                        receiptInput.files = dataTransfer.files;
+                    } catch (e) {
+                        // DataTransfer not supported on some older browsers; raw file remains
+                    }
+
+                    // Display preview & size info
+                    const kbSize = Math.round(blob.size / 1024);
+                    receiptPreview.src = canvas.toDataURL("image/jpeg", 0.85);
+                    previewContainer.classList.remove("d-none");
+                    compressionMsg.textContent = "تصویر فیش آماده شد (" + kbSize + " کیلوبایت)";
+                    compressionStatus.classList.remove("d-none");
+                }, "image/jpeg", 0.82);
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // Form submit feedback
+    bookingForm.addEventListener("submit", function () {
+        submitBtn.disabled = true;
+        btnSpinner.classList.remove("d-none");
+        btnText.textContent = "در حال ثبت نوبت و ارسال رسید...";
+    });
+});
+</script>
 {% endblock %}

@@ -1,7 +1,8 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file, abort
 from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_wtf.csrf import CSRFProtect
+from functools import wraps
 import sqlite3
 import jdatetime
 import os
@@ -26,7 +27,7 @@ ADMIN_IDS = config.ADMIN_IDS
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY') or getattr(config, 'FLASK_SECRET_KEY', None) or os.urandom(32).hex()
-app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB upload limit
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB upload limit
 app.config.setdefault('WTF_CSRF_ENABLED', True)
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
@@ -106,6 +107,9 @@ def get_available_hours(selected_date):
 
 # Send appointment notification and inline buttons to admins via Telegram
 def send_receipt_to_telegram(app_id, name_with_phone, date, time, session_type, filepath):
+    token = os.environ.get("BOT_TOKEN") or getattr(config, "BOT_TOKEN", "") or "dummy_token"
+
+    admin_ids = config.ADMIN_IDS
     caption = (
         "🌐 درخواست جدید وقت مشاوره از وب‌سایت:\n\n"
         f"👤 نام و تماس مراجع: {name_with_phone}\n"
@@ -124,9 +128,11 @@ def send_receipt_to_telegram(app_id, name_with_phone, date, time, session_type, 
         ]
     }
     
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
-    
-    for admin in ADMIN_IDS:
+    photo_url = f"https://api.telegram.org/bot{token}/sendPhoto"
+    msg_url = f"https://api.telegram.org/bot{token}/sendMessage"
+
+    for admin in admin_ids:
+        photo_sent = False
         try:
             with open(filepath, 'rb') as photo:
                 payload = {
@@ -134,14 +140,38 @@ def send_receipt_to_telegram(app_id, name_with_phone, date, time, session_type, 
                     "caption": caption,
                     "reply_markup": json.dumps(reply_markup)
                 }
-                res = requests.post(url, data=payload, files={"photo": photo}, timeout=10)
+                res = requests.post(photo_url, data=payload, files={"photo": photo}, timeout=10)
                 if res.status_code == 200:
                     res_data = res.json()
                     msg_id = res_data.get("result", {}).get("message_id")
                     if msg_id:
                         database.save_admin_receipt_message(app_id, admin, msg_id)
+                    photo_sent = True
+                    logger.info(f"Telegram receipt photo sent successfully to admin {admin} for app_id={app_id}")
+                else:
+                    logger.warning(f"Telegram sendPhoto returned HTTP {res.status_code} for admin {admin}: {res.text}")
         except Exception as e:
-            logger.error(f"Error sending receipt notification to admin {admin}: {e}")
+            logger.error(f"Error sending receipt photo to admin {admin}: {e}")
+
+        # Fallback to plain text message if photo failed
+        if not photo_sent:
+            try:
+                fallback_payload = {
+                    "chat_id": admin,
+                    "text": f"{caption}\n\n⚠️ تصویر فیش در سرور ذخیره شد اما ارسال مستقیم عکس به تلگرام ناموفق بود. لطفاً از پنل مدیریت وب یا ربات اقدام فرمایید.",
+                    "reply_markup": json.dumps(reply_markup)
+                }
+                res_msg = requests.post(msg_url, json=fallback_payload, timeout=10)
+                if res_msg.status_code == 200:
+                    res_data = res_msg.json()
+                    msg_id = res_data.get("result", {}).get("message_id")
+                    if msg_id:
+                        database.save_admin_receipt_message(app_id, admin, msg_id)
+                    logger.info(f"Fallback text receipt sent to admin {admin} for app_id={app_id}")
+                else:
+                    logger.error(f"Telegram sendMessage fallback returned HTTP {res_msg.status_code} for admin {admin}: {res_msg.text}")
+            except Exception as e_msg:
+                logger.error(f"Error sending fallback text to admin {admin}: {e_msg}")
 
 @app.route('/')
 def home():
@@ -167,14 +197,14 @@ def get_available_times_api(date):
 def booking():
     if request.method == 'GET':
         days = get_1405_working_days()
-        return render_template('booking.html', days=days)
+        return render_template('booking.html', days=days, card_number=config.CARD_NUMBER)
     
     if request.method == 'POST':
         client_ip = request.headers.get("X-Forwarded-For", request.remote_addr or "127.0.0.1").split(",")[0].strip()
         if not app.config.get('TESTING') and is_booking_rate_limited(client_ip, max_requests=10, window_seconds=60):
             logger.warning(f"Rate limit exceeded for booking requests from client_ip={client_ip}")
             flash("تعداد درخواست‌های ارسالی شما بیش از حد مجاز است. لطفاً چند دقیقه دیگر مجدداً تلاش فرمایید.", "danger")
-            return render_template('booking.html', days=get_1405_working_days()), 429
+            return render_template('booking.html', days=get_1405_working_days(), card_number=config.CARD_NUMBER), 429
 
         selected_date = request.form.get('date')
         selected_time = request.form.get('time')
@@ -202,7 +232,7 @@ def booking():
             }
             msg = error_messages.get(error_code, "اطلاعات ارسالی نامعتبر است.")
             flash(msg, "danger")
-            return render_template('booking.html', days=get_1405_working_days()), 400
+            return render_template('booking.html', days=get_1405_working_days(), card_number=config.CARD_NUMBER), 400
 
         # Digits normalization
         selected_date = config.normalize_digits(selected_date).strip()
@@ -213,19 +243,19 @@ def booking():
         available_hours = get_available_hours(selected_date)
         if selected_time not in available_hours:
             flash(f"متاسفانه ساعت {selected_time} در تاریخ {selected_date} پر شده است.", "danger")
-            return render_template('booking.html', days=get_1405_working_days()), 400
+            return render_template('booking.html', days=get_1405_working_days(), card_number=config.CARD_NUMBER), 400
             
         receipt_file = request.files.get('receipt')
         if not receipt_file or receipt_file.filename == '':
             flash("آپلود عکس رسید پرداخت الزامی است.", "danger")
-            return render_template('booking.html', days=get_1405_working_days()), 400
+            return render_template('booking.html', days=get_1405_working_days(), card_number=config.CARD_NUMBER), 400
             
         try:
             filepath = process_and_save_receipt(receipt_file, dest_dir=PRIVATE_UPLOADS_FOLDER)
         except ValueError as e:
             logger.warning(f"Rejected invalid receipt upload: {e}")
             flash("فایل ارسال شده نامعتبر یا فاقد فرمت تصویری مجاز است. لطفاً یک تصویر معتبر (JPG، PNG، WEBP) ارسال فرمایید.", "danger")
-            return render_template('booking.html', days=get_1405_working_days()), 400
+            return render_template('booking.html', days=get_1405_working_days(), card_number=config.CARD_NUMBER), 400
         
         name_with_phone = f"{full_name} | {phone}"
         
@@ -241,13 +271,132 @@ def booking():
         except (database.SlotAlreadyBookedError, sqlite3.IntegrityError):
             logger.warning(f"Concurrent double booking prevented on web for slot {selected_date} {selected_time}")
             flash(f"متاسفانه ساعت {selected_time} در تاریخ {selected_date} لحظاتی پیش توسط مراجع دیگری رزرو شد.", "danger")
-            return render_template('booking.html', days=get_1405_working_days()), 409
+            return render_template('booking.html', days=get_1405_working_days(), card_number=config.CARD_NUMBER), 409
         
         logger.info(f"Web booking submitted successfully: appointment_id={app_id}")
-        send_receipt_to_telegram(app_id, name_with_phone, selected_date, selected_time, session_type, filepath)
+        if app.config.get('TESTING'):
+            send_receipt_to_telegram(app_id, name_with_phone, selected_date, selected_time, session_type, filepath)
+        else:
+            threading.Thread(
+                target=send_receipt_to_telegram,
+                args=(app_id, name_with_phone, selected_date, selected_time, session_type, filepath),
+                daemon=True
+            ).start()
         
         flash("✅ رسید شما با موفقیت ثبت و برای بررسی ارسال شد. نتیجه از طریق تماس یا پیامک به شما اطلاع داده خواهد شد.", "success")
         return redirect(url_for('booking'))
+
+# Thread-safe in-memory rate limiting for admin login attempts
+_login_rate_limit_lock = threading.Lock()
+_login_rate_limit_records = defaultdict(list)
+
+def is_login_rate_limited(ip_address: str, max_attempts: int = 5, window_seconds: int = 300) -> bool:
+    """Thread-safe sliding window rate limiter per IP address for login attempts."""
+    now = time.time()
+    with _login_rate_limit_lock:
+        timestamps = _login_rate_limit_records[ip_address]
+        valid_timestamps = [t for t in timestamps if now - t < window_seconds]
+        if len(valid_timestamps) >= max_attempts:
+            _login_rate_limit_records[ip_address] = valid_timestamps
+            return True
+        valid_timestamps.append(now)
+        _login_rate_limit_records[ip_address] = valid_timestamps
+        return False
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('admin_logged_in'):
+            return redirect(url_for('admin_login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route('/login', methods=['GET', 'POST'], endpoint='admin_login')
+@app.route('/admin/login', methods=['GET', 'POST'], endpoint='admin_login_alias')
+def admin_login():
+    if session.get('admin_logged_in'):
+        return redirect(url_for('admin_dashboard'))
+
+    if request.method == 'POST':
+        client_ip = request.headers.get("X-Forwarded-For", request.remote_addr or "127.0.0.1").split(",")[0].strip()
+        if not app.config.get('TESTING') and is_login_rate_limited(client_ip):
+            flash("تعداد دفعات ورود ناموفق بیش از حد مجاز است. لطفاً ۵ دقیقه بعد مجدداً تلاش فرمایید.", "danger")
+            return render_template('admin_login.html'), 429
+
+        password = request.form.get('password', '')
+        admin_pwd = getattr(config, 'ADMIN_PASSWORD', 'admin123')
+        if password and password == admin_pwd:
+            session['admin_logged_in'] = True
+            session.permanent = False
+            flash("با موفقیت وارد پنل مدیریت شدید.", "success")
+            return redirect(url_for('admin_dashboard'))
+        else:
+            flash("رمز عبور مدیر کلینیک نادرست است.", "danger")
+            return render_template('admin_login.html'), 401
+
+    return render_template('admin_login.html')
+
+@app.route('/logout', endpoint='admin_logout')
+def admin_logout():
+    session.pop('admin_logged_in', None)
+    flash("از پنل مدیریت خارج شدید.", "info")
+    return redirect(url_for('admin_login'))
+
+@app.route('/admin', endpoint='admin_dashboard')
+@app.route('/admin/dashboard', endpoint='admin_dashboard_alias')
+@admin_required
+def admin_dashboard():
+    pending_appointments = database.get_all_pending_appointments()
+    confirmed_appointments = database.get_all_confirmed_appointments()
+    return render_template(
+        'admin_dashboard.html',
+        pending=pending_appointments,
+        confirmed=confirmed_appointments
+    )
+
+@app.route('/admin/receipt/<int:appointment_id>', endpoint='admin_view_receipt')
+@admin_required
+def admin_view_receipt(appointment_id):
+    conn = database.get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT receipt_file_id FROM appointments WHERE id = ?", (appointment_id,))
+    row = cursor.fetchone()
+    conn.close()
+
+    if not row or not row[0]:
+        abort(404)
+
+    receipt_path = row[0]
+    if not os.path.isabs(receipt_path):
+        receipt_path = os.path.join(PRIVATE_UPLOADS_FOLDER, os.path.basename(receipt_path))
+
+    real_folder = os.path.realpath(PRIVATE_UPLOADS_FOLDER)
+    real_file = os.path.realpath(receipt_path)
+    if not real_file.startswith(real_folder) or not os.path.isfile(real_file):
+        abort(404)
+
+    return send_file(real_file)
+
+@app.route('/admin/approve/<int:appointment_id>', methods=['POST'], endpoint='admin_approve')
+@admin_required
+def admin_approve(appointment_id):
+    database.update_appointment_status(appointment_id, 'confirmed')
+    flash(f"نوبت شماره #{appointment_id} با موفقیت تایید و قطعی گردید.", "success")
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/reject/<int:appointment_id>', methods=['POST'], endpoint='admin_reject')
+@admin_required
+def admin_reject(appointment_id):
+    database.update_appointment_status(appointment_id, 'rejected')
+    flash(f"نوبت شماره #{appointment_id} رد شد و زمان آن مجدداً آزاد گردید.", "warning")
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/cancel/<int:appointment_id>', methods=['POST'], endpoint='admin_cancel')
+@admin_required
+def admin_cancel(appointment_id):
+    database.delete_appointment(appointment_id)
+    flash(f"نوبت شماره #{appointment_id} لغو و حذف گردید.", "info")
+    return redirect(url_for('admin_dashboard'))
 
 if __name__ == '__main__':
     debug_mode = os.environ.get("FLASK_DEBUG", "0") == "1"

@@ -59,6 +59,7 @@ CARD_NUMBER = os.environ.get("CARD_NUMBER", "6037997512345678")
 
 # Bot & Web Application Credentials
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123")
 _configured_secret = os.environ.get("FLASK_SECRET_KEY")
 if _configured_secret:
     FLASK_SECRET_KEY = _configured_secret

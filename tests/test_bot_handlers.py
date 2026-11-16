@@ -264,6 +264,54 @@ class TestBotModularHandlers(unittest.IsolatedAsyncioTestCase):
         query.answer.assert_awaited_with("⛔ شما دسترسی مدیریت به این عملیات را ندارید.", show_alert=True)
         query.edit_message_text.assert_not_called()
 
+    async def test_admin_panel_hub_and_pending_review_flow(self):
+        """Admin panel presents hub menu, lists pending appointments, and displays review details."""
+        # Insert a pending appointment
+        conn = database.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id)
+            VALUES (0, '1405/01/25', '18:00', 'حضوری', 'تست وب | 09120001122', 'pending', 'fake_file.jpg')
+        ''')
+        app_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
+        # 1. Test admin_panel_callback for admin
+        update = MagicMock()
+        query = MagicMock()
+        query.data = "admin_panel"
+        query.answer = AsyncMock()
+        query.edit_message_text = AsyncMock()
+        update.callback_query = query
+        update.effective_user.id = main.MAIN_ADMIN_ID
+
+        context = MagicMock()
+        context.user_data = {}
+
+        await main.admin_panel_callback(update, context)
+        query.edit_message_text.assert_awaited_once()
+        panel_text = query.edit_message_text.call_args[0][0]
+        self.assertIn("پنل مدیریت جامع کلینیک", panel_text)
+        self.assertIn("نوبت‌های در انتظار تایید", panel_text)
+
+        # 2. Test admin_pending_list_callback
+        query.edit_message_text.reset_mock()
+        query.data = "admin_pending_list"
+        await main.admin_pending_list_callback(update, context)
+        query.edit_message_text.assert_awaited_once()
+        list_text = query.edit_message_text.call_args[0][0]
+        self.assertIn("فهرست نوبت‌های در انتظار", list_text)
+
+        # 3. Test admin_view_pending_callback
+        query.edit_message_text.reset_mock()
+        query.data = f"admin_view_pending_{app_id}"
+        await main.admin_view_pending_callback(update, context)
+        query.edit_message_text.assert_awaited_once()
+        view_text = query.edit_message_text.call_args[0][0]
+        self.assertIn(f"مشخصات نوبت در انتظار #{app_id}", view_text)
+        self.assertIn("تست وب", view_text)
+
     async def test_book_appointment_callback_behavior(self):
         """book_appointment_callback presents upcoming available days."""
         update = MagicMock()

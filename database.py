@@ -286,6 +286,20 @@ def get_all_confirmed_appointments():
     conn.close()
     return rows
 
+def get_all_pending_appointments():
+    """Returns all pending appointments awaiting admin review."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT id, date, time, full_name, session_type, receipt_file_id, user_id, created_at
+        FROM appointments 
+        WHERE status = 'pending' 
+        ORDER BY date, time, created_at
+    ''')
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
 # دریافت نوبت‌های تایید شده برای بازه زمانی مشخص (مانند ۷ روز آینده)
 def get_upcoming_week_confirmed_appointments(start_date_str, end_date_str):
     conn = get_connection()

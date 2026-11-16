@@ -141,6 +141,83 @@ class TestWebRoutes(unittest.TestCase):
         # 6th request should be rate-limited
         self.assertTrue(flask_app.is_booking_rate_limited(ip, max_requests=5, window_seconds=60))
 
+    def test_admin_login_flow_and_dashboard_protection(self):
+        """Admin dashboard must require login, and valid credentials grant access."""
+        # Unauthenticated access to /admin redirects to login
+        res = self.client.get('/admin')
+        self.assertEqual(res.status_code, 302)
+        self.assertIn('/login', res.headers.get('Location', ''))
+
+        # GET /login renders login form
+        res_login_page = self.client.get('/login')
+        self.assertEqual(res_login_page.status_code, 200)
+        self.assertIn("ورود به پنل مدیریت", res_login_page.data.decode('utf-8'))
+
+        # Invalid password returns 401
+        res_bad_pw = self.client.post('/login', data={'password': 'wrong_password'})
+        self.assertEqual(res_bad_pw.status_code, 401)
+
+        # Valid password logs in and redirects to /admin
+        admin_pw = getattr(flask_app.config, 'ADMIN_PASSWORD', 'admin123')
+        res_login = self.client.post('/login', data={'password': admin_pw})
+        self.assertEqual(res_login.status_code, 302)
+        self.assertIn('/admin', res_login.headers.get('Location', ''))
+
+        # Authenticated access to /admin succeeds
+        res_dash = self.client.get('/admin')
+        self.assertEqual(res_dash.status_code, 200)
+        self.assertIn("پنل مدیریت کلینیک دکتر شفایی", res_dash.data.decode('utf-8'))
+
+        # Logout clears session
+        res_logout = self.client.get('/logout')
+        self.assertEqual(res_logout.status_code, 302)
+        res_dash_after = self.client.get('/admin')
+        self.assertEqual(res_dash_after.status_code, 302)
+
+    def test_admin_approve_and_reject_workflow(self):
+        """Admin can approve and reject pending appointments from the dashboard."""
+        # Insert a pending appointment
+        conn = database.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id)
+            VALUES (0, '1405/01/20', '18:00', 'حضوری', 'کاربر وب | 09121112233', 'pending', 'fake_receipt.jpg')
+        ''')
+        app_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
+        # Log in as admin
+        with self.client.session_transaction() as sess:
+            sess['admin_logged_in'] = True
+
+        # Check pending is in dashboard
+        res_dash = self.client.get('/admin')
+        self.assertEqual(res_dash.status_code, 200)
+        self.assertIn(f"#{app_id}", res_dash.data.decode('utf-8'))
+
+        # Approve appointment
+        res_approve = self.client.post(f'/admin/approve/{app_id}')
+        self.assertEqual(res_approve.status_code, 302)
+        app_info = database.get_appointment(app_id)
+        self.assertEqual(app_info[5], 'confirmed')
+
+        # Insert second pending appointment and reject it
+        conn = database.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id)
+            VALUES (0, '1405/01/21', '19:00', 'آنلاین', 'کاربر دیگر | 09123334455', 'pending', 'fake_receipt2.jpg')
+        ''')
+        app_id_2 = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
+        res_reject = self.client.post(f'/admin/reject/{app_id_2}')
+        self.assertEqual(res_reject.status_code, 302)
+        app_info_2 = database.get_appointment(app_id_2, include_cancelled=True)
+        self.assertEqual(app_info_2[5], 'rejected')
+
 
 if __name__ == '__main__':
     unittest.main()

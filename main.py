@@ -304,26 +304,187 @@ async def admin_panel_callback(update: Update, context: ContextTypes.DEFAULT_TYP
         await query.answer("⛔ شما دسترسی مدیریت به این عملیات را ندارید.", show_alert=True)
         return
 
-    appointments = database.get_all_confirmed_appointments()
-    if not appointments:
-        keyboard = [[InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data="main_menu")]]
+    pending_list = database.get_all_pending_appointments()
+    confirmed_list = database.get_all_confirmed_appointments()
+    pending_count = len(pending_list)
+    confirmed_count = len(confirmed_list)
+
+    keyboard = [
+        [InlineKeyboardButton(f"⏳ نوبت‌های در انتظار تایید ({pending_count})", callback_data="admin_pending_list")],
+        [InlineKeyboardButton(f"📋 نوبت‌های قطعی و تایید‌شده ({confirmed_count})", callback_data="admin_confirmed_list")],
+        [InlineKeyboardButton("📅 برنامه هفتگی کلینیک", callback_data="admin_weekly_schedule")],
+        [InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data="main_menu")]
+    ]
+    menu_text = (
+        "⚙️ پنل مدیریت جامع کلینیک روان‌شناسی دکتر شفائی:\n\n"
+        f"⏳ نوبت‌های در انتظار تایید: {pending_count} مورد\n"
+        f"✅ نوبت‌های قطعی و فعال: {confirmed_count} مورد\n\n"
+        "لطفاً بخش مورد نظر خود را جهت بررسی و اقدام انتخاب فرمایید:"
+    )
+    await query.edit_message_text(
+        menu_text,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+async def admin_pending_list_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    user_id = update.effective_user.id
+    logger.info(f"Callback query '{query.data}' in admin_pending_list_callback from user_id={user_id}")
+    await query.answer()
+
+    if user_id not in ADMIN_IDS:
+        await query.answer("⛔ شما دسترسی مدیریت به این عملیات را ندارید.", show_alert=True)
+        return
+
+    pending_list = database.get_all_pending_appointments()
+    if not pending_list:
+        keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل مدیریت", callback_data="admin_panel")]]
         await query.edit_message_text(
-            "در حال حاضر هیچ نوبت قطعی و تایید‌شده‌ای در سامانه ثبت نشده است. 📋", 
+            "در حال حاضر هیچ نوبت در انتظار تاییدی در سامانه وجود ندارد. ✨",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
         return
-        
+
+    keyboard = []
+    for appt in pending_list:
+        # appt: (id, date, time, full_name, session_type, receipt_file_id, user_id, created_at)
+        app_id, d, t, name, stype, receipt_id, client_id, created_at = appt
+        client_name = name.split("|")[0].strip() if "|" in name else name
+        source_label = "🌐 وب" if client_id == 0 else "🤖 ربات"
+        btn_text = f"⏳ {d} | {t} | {client_name} ({source_label})"
+        keyboard.append([InlineKeyboardButton(btn_text, callback_data=f"admin_view_pending_{app_id}")])
+
+    keyboard.append([InlineKeyboardButton("🔙 بازگشت به پنل مدیریت", callback_data="admin_panel")])
+    await query.edit_message_text(
+        "⏳ فهرست نوبت‌های در انتظار بررسی و تایید فیش:\n\n"
+        "روی نوبت مورد نظر کلیک کنید تا تصویر فیش و دکمه‌های تایید یا رد برای شما نمایش داده شود:",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+async def admin_view_pending_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    user_id = update.effective_user.id
+    logger.info(f"Callback query '{query.data}' in admin_view_pending_callback from user_id={user_id}")
+    await query.answer()
+
+    if user_id not in ADMIN_IDS:
+        await query.answer("⛔ شما دسترسی مدیریت به این عملیات را ندارید.", show_alert=True)
+        return
+
+    app_id = int(query.data.split("_")[-1])
+    app_info = database.get_appointment(app_id, include_cancelled=True)
+    if not app_info:
+        keyboard = [[InlineKeyboardButton("🔙 بازگشت به لیست درخواست‌ها", callback_data="admin_pending_list")]]
+        await query.edit_message_text(
+            "⚠️ این نوبت یافت نشد.",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+        return
+
+    client_id, d, t, stype, name, status = app_info
+    if status != "pending":
+        keyboard = [[InlineKeyboardButton("🔙 بازگشت به لیست درخواست‌ها", callback_data="admin_pending_list")]]
+        await query.edit_message_text(
+            f"⚠️ وضعیت این نوبت قبلاً به «{status}» تعیین تکلیف شده است.",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+        return
+
+    conn = database.get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT receipt_file_id FROM appointments WHERE id = ?", (app_id,))
+    row = cursor.fetchone()
+    conn.close()
+    receipt_file = row[0] if row else None
+
+    source_desc = "وب‌سایت (نیازمند تماس تلفنی پس از تایید)" if client_id == 0 else "ربات تلگرام"
+    details_caption = (
+        f"📋 مشخصات نوبت در انتظار #{app_id}:\n\n"
+        f"👤 نام و مشخصات مراجع: {name}\n"
+        f"📅 تاریخ جلسه: {d}\n"
+        f"⏰ ساعت جلسه: {t}\n"
+        f"🩺 نوع جلسه: {stype}\n"
+        f"🌐 منبع درخواست: {source_desc}\n\n"
+        "لطفاً جهت تایید قطعی یا رد رسید، یکی از گزینه‌های زیر را انتخاب فرمایید:"
+    )
+
+    review_keyboard = [
+        [
+            InlineKeyboardButton("✅ تایید نوبت", callback_data=f"approve_{app_id}"),
+            InlineKeyboardButton("❌ رد رسید", callback_data=f"reject_{app_id}")
+        ],
+        [InlineKeyboardButton("🔙 بازگشت به لیست درخواست‌ها", callback_data="admin_pending_list")]
+    ]
+
+    if receipt_file and os.path.exists(receipt_file):
+        try:
+            with open(receipt_file, "rb") as photo_f:
+                await context.bot.send_photo(
+                    chat_id=user_id,
+                    photo=photo_f,
+                    caption=details_caption,
+                    reply_markup=InlineKeyboardMarkup(review_keyboard)
+                )
+            try:
+                await query.delete_message()
+            except Exception:
+                pass
+            return
+        except Exception as e:
+            logger.error(f"Error sending photo in admin_view_pending_callback: {e}")
+
+    await query.edit_message_text(
+        details_caption,
+        reply_markup=InlineKeyboardMarkup(review_keyboard)
+    )
+
+async def admin_confirmed_list_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    user_id = update.effective_user.id
+    logger.info(f"Callback query '{query.data}' in admin_confirmed_list_callback from user_id={user_id}")
+    await query.answer()
+
+    if user_id not in ADMIN_IDS:
+        await query.answer("⛔ شما دسترسی مدیریت به این عملیات را ندارید.", show_alert=True)
+        return
+
+    appointments = database.get_all_confirmed_appointments()
+    if not appointments:
+        keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل مدیریت", callback_data="admin_panel")]]
+        await query.edit_message_text(
+            "در حال حاضر هیچ نوبت قطعی و تایید‌شده‌ای در سامانه ثبت نشده است. 📋",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+        return
+
     keyboard = []
     for appt in appointments:
-        # appt: (id, date, time, full_name, session_type)
         app_id, d, t, name, stype = appt
-        btn_text = f"❌ لغو: {d} | ساعت {t} | {name}"
+        client_name = name.split("|")[0].strip() if "|" in name else name
+        btn_text = f"❌ لغو: {d} | {t} | {client_name}"
         keyboard.append([InlineKeyboardButton(btn_text, callback_data=f"del_{app_id}")])
-        
-    keyboard.append([InlineKeyboardButton("🔙 بازگشت به منوی اصلی", callback_data="main_menu")])
+
+    keyboard.append([InlineKeyboardButton("🔙 بازگشت به پنل مدیریت", callback_data="admin_panel")])
     await query.edit_message_text(
-        "📋 فهرست نوبت‌های قطعی و تایید‌شده:\n\n"
-        "جهت لغو نوبت و آزادسازی مجدد زمان مشاوره برای مراجعین، روی نوبت مورد نظر کلیک فرمایید:", 
+        "📋 فهرست نوبت‌های قطعی و فعال کلینیک:\n\n"
+        "جهت لغو نوبت و آزادسازی مجدد زمان مشاوره برای مراجعین، روی نوبت مورد نظر کلیک فرمایید:",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+async def admin_weekly_schedule_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    user_id = update.effective_user.id
+    logger.info(f"Callback query '{query.data}' in admin_weekly_schedule_callback from user_id={user_id}")
+    await query.answer()
+
+    if user_id not in ADMIN_IDS:
+        await query.answer("⛔ شما دسترسی مدیریت به این عملیات را ندارید.", show_alert=True)
+        return
+
+    weekly_text = format_upcoming_week_appointments()
+    keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل مدیریت", callback_data="admin_panel")]]
+    await query.edit_message_text(
+        weekly_text,
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
@@ -703,6 +864,14 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await emergency_contact_callback(update, context)
     elif data == "admin_panel":
         await admin_panel_callback(update, context)
+    elif data == "admin_pending_list":
+        await admin_pending_list_callback(update, context)
+    elif data == "admin_confirmed_list":
+        await admin_confirmed_list_callback(update, context)
+    elif data == "admin_weekly_schedule":
+        await admin_weekly_schedule_callback(update, context)
+    elif data.startswith("admin_view_pending_"):
+        await admin_view_pending_callback(update, context)
     elif data.startswith("del_"):
         await admin_delete_callback(update, context)
     elif data == "book_appointment":
@@ -959,6 +1128,10 @@ def main():
     app.add_handler(CallbackQueryHandler(menu_callback, pattern=r"^main_menu$"))
     app.add_handler(CallbackQueryHandler(emergency_contact_callback, pattern=r"^emergency_contact$"))
     app.add_handler(CallbackQueryHandler(admin_panel_callback, pattern=r"^admin_panel$"))
+    app.add_handler(CallbackQueryHandler(admin_pending_list_callback, pattern=r"^admin_pending_list$"))
+    app.add_handler(CallbackQueryHandler(admin_confirmed_list_callback, pattern=r"^admin_confirmed_list$"))
+    app.add_handler(CallbackQueryHandler(admin_weekly_schedule_callback, pattern=r"^admin_weekly_schedule$"))
+    app.add_handler(CallbackQueryHandler(admin_view_pending_callback, pattern=r"^admin_view_pending_\d+$"))
     app.add_handler(CallbackQueryHandler(admin_delete_callback, pattern=r"^del_\d+$"))
     app.add_handler(CallbackQueryHandler(book_appointment_callback, pattern=r"^book_appointment$"))
     app.add_handler(CallbackQueryHandler(date_callback, pattern=r"^date_"))
