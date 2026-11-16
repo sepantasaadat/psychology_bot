@@ -11,21 +11,24 @@
                     <i class="bi bi-calendar-plus me-2"></i>فرم رزرو آنلاین نوبت
                 </h4>
             </div>
-            <div class="card-body p-4 p-md-5">
+            <div class="card-body p-4 p-md-5" id="bookingCardBody">
 
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                  {% if messages %}
-                    {% for category, message in messages %}
-                      <div class="alert alert-{{ category if category != 'danger' else 'warning' }} alert-dismissible fade show rounded-3" role="alert">
-                        <i class="bi bi-info-circle me-2"></i> {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                      </div>
-                    {% endfor %}
-                  {% endif %}
-                {% endwith %}
+                <div id="dynamicAlertContainer">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                      {% if messages %}
+                        {% for category, message in messages %}
+                          <div class="alert alert-{{ category if category != 'danger' else 'warning' }} alert-dismissible fade show rounded-3" role="alert">
+                            <i class="bi bi-info-circle me-2"></i> {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                          </div>
+                        {% endfor %}
+                      {% endif %}
+                    {% endwith %}
+                </div>
 
                 <form id="bookingForm" method="POST" action="/booking" enctype="multipart/form-data">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="is_ajax" id="isAjaxField" value="1">
                     
                     <div class="mb-4">
                         <label for="full_name" class="form-label text-muted small fw-bold">نام و نام خانوادگی مراجع:</label>
@@ -81,7 +84,7 @@
                         <input type="file" class="form-control border-0 bg-white shadow-sm" id="receipt" name="receipt" accept="image/*" required>
                         
                         <div id="compressionStatus" class="small text-success mt-2 d-none">
-                            <i class="bi bi-check2-circle me-1"></i> <span id="compressionMsg">تصویر با موفقیت بهینه‌سازی شد.</span>
+                            <i class="bi bi-check2-circle me-1"></i> <span id="compressionMsg">تصویر با موفقیت آماده شد.</span>
                         </div>
 
                         <div id="previewContainer" class="mt-3 text-center d-none">
@@ -115,6 +118,26 @@ document.addEventListener("DOMContentLoaded", function () {
     const submitBtn = document.getElementById("submitBtn");
     const btnText = document.getElementById("btnText");
     const btnSpinner = document.getElementById("btnSpinner");
+    const alertContainer = document.getElementById("dynamicAlertContainer");
+    const cardBody = document.getElementById("bookingCardBody");
+
+    let compressedReceiptBlob = null;
+
+    function showAlert(message, type) {
+        alertContainer.innerHTML = `
+            <div class="alert alert-${type === 'danger' ? 'warning' : type} alert-dismissible fade show rounded-3" role="alert">
+                <i class="bi bi-exclamation-triangle me-2"></i> ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        `;
+        window.scrollTo({ top: alertContainer.offsetTop - 20, behavior: "smooth" });
+    }
+
+    function resetSubmitButton() {
+        submitBtn.disabled = false;
+        btnSpinner.classList.add("d-none");
+        btnText.innerHTML = '<i class="bi bi-check-circle me-2"></i>ثبت نوبت و ارسال فیش';
+    }
 
     // Dynamic available hours loader
     dateSelect.addEventListener("change", function () {
@@ -141,16 +164,17 @@ document.addEventListener("DOMContentLoaded", function () {
                     timeSelect.innerHTML = '<option value="" disabled selected>ظرفیت نوبت‌های این تاریخ تکمیل است</option>';
                 }
             })
-            .catch(err => {
+            .catch(() => {
                 timeLoading.classList.add("d-none");
                 timeSelect.innerHTML = '<option value="" disabled selected>خطا در دریافت ساعات. مجدداً انتخاب کنید.</option>';
             });
     });
 
-    // Client-side image compression for mobile phones (HTML5 Canvas)
+    // Client-side image compression (HTML5 Canvas)
     receiptInput.addEventListener("change", function () {
         const file = this.files[0];
         if (!file || !file.type.startsWith("image/")) {
+            compressedReceiptBlob = null;
             previewContainer.classList.add("d-none");
             compressionStatus.classList.add("d-none");
             return;
@@ -181,29 +205,16 @@ document.addEventListener("DOMContentLoaded", function () {
                 ctx.drawImage(img, 0, 0, width, height);
 
                 canvas.toBlob(function (blob) {
-                    if (!blob) return;
-
-                    // Replace input files using DataTransfer
-                    const compressedFile = new File(
-                        [blob],
-                        file.name.replace(/\.[^/.]+$/, "") + ".jpg",
-                        { type: "image/jpeg", lastModified: Date.now() }
-                    );
-
-                    try {
-                        const dataTransfer = new DataTransfer();
-                        dataTransfer.items.add(compressedFile);
-                        receiptInput.files = dataTransfer.files;
-                    } catch (e) {
-                        // DataTransfer not supported on some older browsers; raw file remains
+                    if (blob) {
+                        compressedReceiptBlob = blob;
+                        const kbSize = Math.round(blob.size / 1024);
+                        receiptPreview.src = canvas.toDataURL("image/jpeg", 0.85);
+                        previewContainer.classList.remove("d-none");
+                        compressionMsg.textContent = "تصویر فیش آماده شد (" + kbSize + " کیلوبایت)";
+                        compressionStatus.classList.remove("d-none");
+                    } else {
+                        compressedReceiptBlob = file;
                     }
-
-                    // Display preview & size info
-                    const kbSize = Math.round(blob.size / 1024);
-                    receiptPreview.src = canvas.toDataURL("image/jpeg", 0.85);
-                    previewContainer.classList.remove("d-none");
-                    compressionMsg.textContent = "تصویر فیش آماده شد (" + kbSize + " کیلوبایت)";
-                    compressionStatus.classList.remove("d-none");
                 }, "image/jpeg", 0.82);
             };
             img.src = e.target.result;
@@ -211,11 +222,92 @@ document.addEventListener("DOMContentLoaded", function () {
         reader.readAsDataURL(file);
     });
 
-    // Form submit feedback
-    bookingForm.addEventListener("submit", function () {
+    // AJAX Form submission to prevent navigation / redirect issues
+    bookingForm.addEventListener("submit", function (e) {
+        e.preventDefault();
+
+        const fullName = document.getElementById("full_name").value.trim();
+        const phone = document.getElementById("phone").value.trim();
+        const sessionType = document.getElementById("session_type").value;
+        const date = document.getElementById("date").value;
+        const time = document.getElementById("time").value;
+
+        if (!fullName || !phone || !sessionType || !date || !time) {
+            showAlert("لطفاً تمام فیلدهای مشخصات، تاریخ و ساعت را انتخاب فرمایید.", "danger");
+            return;
+        }
+
+        const rawFile = receiptInput.files ? receiptInput.files[0] : null;
+        if (!compressedReceiptBlob && !rawFile) {
+            showAlert("لطفاً تصویر فیش پرداخت را انتخاب فرمایید.", "danger");
+            return;
+        }
+
         submitBtn.disabled = true;
         btnSpinner.classList.remove("d-none");
         btnText.textContent = "در حال ثبت نوبت و ارسال رسید...";
+
+        const formData = new FormData(bookingForm);
+        formData.set("is_ajax", "1");
+        if (compressedReceiptBlob) {
+            formData.set("receipt", compressedReceiptBlob, "receipt.jpg");
+        }
+
+        fetch("/booking", {
+            method: "POST",
+            body: formData,
+            headers: {
+                "X-Requested-With": "XMLHttpRequest"
+            }
+        })
+        .then(async (res) => {
+            const data = await res.json().catch(() => null);
+            if (res.ok && data && data.success) {
+                cardBody.innerHTML = `
+                    <div class="text-center py-4">
+                        <div class="mb-3">
+                            <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
+                        </div>
+                        <h3 class="fw-bold text-success mb-3">نوبت مشاوره با موفقیت ثبت شد</h3>
+                        <p class="text-muted fs-5 mb-4">کد پیگیری شما: <span class="badge bg-light text-dark border fs-5 font-monospace">#${data.appointment_id}</span></p>
+                        
+                        <div class="p-3 rounded-4 bg-light text-dark mb-4 text-start mx-auto" style="max-width: 450px;">
+                            <div class="d-flex justify-content-between border-bottom py-2">
+                                <span class="text-muted">نام مراجع:</span>
+                                <span class="fw-bold">${data.full_name || fullName}</span>
+                            </div>
+                            <div class="d-flex justify-content-between border-bottom py-2">
+                                <span class="text-muted">تاریخ جلسه:</span>
+                                <span class="fw-bold">${data.date}</span>
+                            </div>
+                            <div class="d-flex justify-content-between py-2">
+                                <span class="text-muted">ساعت جلسه:</span>
+                                <span class="fw-bold">${data.time}</span>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info rounded-3 small mx-auto" style="max-width: 500px;">
+                            <i class="bi bi-info-circle me-1"></i>
+                            رسید پرداخت شما با موفقیت برای پذیرش کلینیک ارسال شد. پس از بررسی فیش، جهت هماهنگی نهایی با شما تماس حاصل خواهد شد.
+                        </div>
+
+                        <div class="d-flex justify-content-center gap-2 mt-4">
+                            <a href="/" class="btn btn-primary rounded-3 px-4">صفحه اصلی</a>
+                            <a href="/booking" class="btn btn-outline-secondary rounded-3 px-4">ثبت نوبت جدید</a>
+                        </div>
+                    </div>
+                `;
+                window.scrollTo({ top: 0, behavior: "smooth" });
+            } else {
+                const errorMsg = (data && data.error) ? data.error : "متاسفانه در ثبت نوبت خطایی رخ داد. لطفاً مجدداً تلاش فرمایید.";
+                showAlert(errorMsg, "danger");
+                resetSubmitButton();
+            }
+        })
+        .catch(() => {
+            showAlert("خطا در برقراری ارتباط با سرور. لطفاً اتصال اینترنت خود را بررسی کرده و مجدداً تلاش فرمایید.", "danger");
+            resetSubmitButton();
+        });
     });
 });
 </script>

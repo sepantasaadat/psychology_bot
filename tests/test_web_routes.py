@@ -218,6 +218,51 @@ class TestWebRoutes(unittest.TestCase):
         app_info_2 = database.get_appointment(app_id_2, include_cancelled=True)
         self.assertEqual(app_info_2[5], 'rejected')
 
+    def test_booking_ajax_flow(self):
+        """AJAX POST /booking returns JSON with success and appointment_id."""
+        import io
+        from PIL import Image
+
+        # 1. Invalid input returns JSON 400
+        res_bad = self.client.post(
+            '/booking',
+            data={'phone': 'invalid_num', 'is_ajax': '1'},
+            headers={'X-Requested-With': 'XMLHttpRequest'}
+        )
+        self.assertEqual(res_bad.status_code, 400)
+        data_bad = res_bad.get_json()
+        self.assertFalse(data_bad['success'])
+        self.assertIn('error', data_bad)
+
+        # 2. Valid booking returns JSON 200
+        bio = io.BytesIO()
+        img = Image.new('RGB', (60, 60), color='green')
+        img.save(bio, format='JPEG')
+        bio.seek(0)
+
+        upcoming_days = flask_app.config.get_upcoming_working_days(5, is_admin=False)
+        target_date = upcoming_days[2]
+
+        with patch.object(flask_app, 'send_receipt_to_telegram'):
+            res_good = self.client.post(
+                '/booking',
+                data={
+                    'full_name': 'سروش رضایی',
+                    'phone': '09121234567',
+                    'session_type': 'حضوری',
+                    'date': target_date,
+                    'time': '17:00',
+                    'receipt': (bio, 'receipt.jpg'),
+                    'is_ajax': '1'
+                },
+                headers={'X-Requested-With': 'XMLHttpRequest'}
+            )
+            self.assertEqual(res_good.status_code, 200)
+            data_good = res_good.get_json()
+            self.assertTrue(data_good['success'])
+            self.assertIn('appointment_id', data_good)
+            self.assertEqual(data_good['time'], '17:00')
+
 
 if __name__ == '__main__':
     unittest.main()

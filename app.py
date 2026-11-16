@@ -27,6 +27,7 @@ ADMIN_IDS = config.ADMIN_IDS
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY') or getattr(config, 'FLASK_SECRET_KEY', None) or os.urandom(32).hex()
+app.config['PREFERRED_URL_SCHEME'] = 'https'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB upload limit
 app.config.setdefault('WTF_CSRF_ENABLED', True)
 app.config['SESSION_COOKIE_HTTPONLY'] = True
@@ -200,10 +201,18 @@ def booking():
         return render_template('booking.html', days=days, card_number=config.CARD_NUMBER)
     
     if request.method == 'POST':
+        is_ajax = (
+            request.headers.get("X-Requested-With") == "XMLHttpRequest" or
+            request.form.get("is_ajax") == "1" or
+            request.accept_mimetypes.best == "application/json"
+        )
         client_ip = request.headers.get("X-Forwarded-For", request.remote_addr or "127.0.0.1").split(",")[0].strip()
         if not app.config.get('TESTING') and is_booking_rate_limited(client_ip, max_requests=10, window_seconds=60):
             logger.warning(f"Rate limit exceeded for booking requests from client_ip={client_ip}")
-            flash("تعداد درخواست‌های ارسالی شما بیش از حد مجاز است. لطفاً چند دقیقه دیگر مجدداً تلاش فرمایید.", "danger")
+            error_msg = "تعداد درخواست‌های ارسالی شما بیش از حد مجاز است. لطفاً چند دقیقه دیگر مجدداً تلاش فرمایید."
+            if is_ajax:
+                return {"success": False, "error": error_msg}, 429
+            flash(error_msg, "danger")
             return render_template('booking.html', days=get_1405_working_days(), card_number=config.CARD_NUMBER), 429
 
         selected_date = request.form.get('date')
@@ -231,6 +240,8 @@ def booking():
                 "invalid_name": "لطفاً نام و نام خانوادگی کامل مراجع (حداقل ۳ حرف) را وارد فرمایید."
             }
             msg = error_messages.get(error_code, "اطلاعات ارسالی نامعتبر است.")
+            if is_ajax:
+                return {"success": False, "error": msg}, 400
             flash(msg, "danger")
             return render_template('booking.html', days=get_1405_working_days(), card_number=config.CARD_NUMBER), 400
 
@@ -242,19 +253,28 @@ def booking():
 
         available_hours = get_available_hours(selected_date)
         if selected_time not in available_hours:
-            flash(f"متاسفانه ساعت {selected_time} در تاریخ {selected_date} پر شده است.", "danger")
+            msg = f"متاسفانه ساعت {selected_time} در تاریخ {selected_date} پر شده است."
+            if is_ajax:
+                return {"success": False, "error": msg}, 400
+            flash(msg, "danger")
             return render_template('booking.html', days=get_1405_working_days(), card_number=config.CARD_NUMBER), 400
             
         receipt_file = request.files.get('receipt')
         if not receipt_file or receipt_file.filename == '':
-            flash("آپلود عکس رسید پرداخت الزامی است.", "danger")
+            msg = "آپلود عکس رسید پرداخت الزامی است."
+            if is_ajax:
+                return {"success": False, "error": msg}, 400
+            flash(msg, "danger")
             return render_template('booking.html', days=get_1405_working_days(), card_number=config.CARD_NUMBER), 400
             
         try:
             filepath = process_and_save_receipt(receipt_file, dest_dir=PRIVATE_UPLOADS_FOLDER)
         except ValueError as e:
             logger.warning(f"Rejected invalid receipt upload: {e}")
-            flash("فایل ارسال شده نامعتبر یا فاقد فرمت تصویری مجاز است. لطفاً یک تصویر معتبر (JPG، PNG، WEBP) ارسال فرمایید.", "danger")
+            msg = "فایل ارسال شده نامعتبر یا فاقد فرمت تصویری مجاز است. لطفاً یک تصویر معتبر (JPG، PNG، WEBP) ارسال فرمایید."
+            if is_ajax:
+                return {"success": False, "error": msg}, 400
+            flash(msg, "danger")
             return render_template('booking.html', days=get_1405_working_days(), card_number=config.CARD_NUMBER), 400
         
         name_with_phone = f"{full_name} | {phone}"
@@ -270,7 +290,10 @@ def booking():
             )
         except (database.SlotAlreadyBookedError, sqlite3.IntegrityError):
             logger.warning(f"Concurrent double booking prevented on web for slot {selected_date} {selected_time}")
-            flash(f"متاسفانه ساعت {selected_time} در تاریخ {selected_date} لحظاتی پیش توسط مراجع دیگری رزرو شد.", "danger")
+            msg = f"متاسفانه ساعت {selected_time} در تاریخ {selected_date} لحظاتی پیش توسط مراجع دیگری رزرو شد."
+            if is_ajax:
+                return {"success": False, "error": msg}, 409
+            flash(msg, "danger")
             return render_template('booking.html', days=get_1405_working_days(), card_number=config.CARD_NUMBER), 409
         
         logger.info(f"Web booking submitted successfully: appointment_id={app_id}")
@@ -283,8 +306,20 @@ def booking():
                 daemon=True
             ).start()
         
-        flash("✅ رسید شما با موفقیت ثبت و برای بررسی ارسال شد. نتیجه از طریق تماس یا پیامک به شما اطلاع داده خواهد شد.", "success")
-        return redirect(url_for('booking'))
+        success_msg = "رسید شما با موفقیت ثبت و برای بررسی ارسال شد. نتیجه از طریق تماس یا پیامک به شما اطلاع داده خواهد شد."
+        if is_ajax:
+            return {
+                "success": True,
+                "message": success_msg,
+                "appointment_id": app_id,
+                "date": selected_date,
+                "time": selected_time,
+                "full_name": full_name,
+                "session_type": session_type
+            }, 200
+
+        flash(f"✅ {success_msg}", "success")
+        return redirect(url_for('booking', _external=True, _scheme='https'))
 
 # Thread-safe in-memory rate limiting for admin login attempts
 _login_rate_limit_lock = threading.Lock()
