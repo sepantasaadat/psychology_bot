@@ -1,24 +1,28 @@
 {% extends 'base.html' %}
 
-{% block title %}ورود مدیریت - کلینیک دکتر شفایی{% endblock %}
+{% block title %}ورود به پنل مدیریت - کلینیک دکتر شفایی{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center mt-5">
-    <div class="col-md-5 col-lg-4">
-        <div class="card shadow-sm border-0">
-            <div class="card-header border-0 text-center py-4" style="background-color: var(--light-green);">
+<div class="row justify-content-center mt-4 mb-5">
+    <div class="col-md-6 col-lg-5 col-xl-4">
+        <div class="card shadow-sm border-0 rounded-4 overflow-hidden" style="border: 1px solid var(--subtle-border) !important;">
+            
+            <div class="card-header border-0 text-center py-4 px-4" style="background-color: var(--light-green);">
                 <div class="mb-2">
-                    <i class="bi bi-shield-lock-fill fs-1" style="color: var(--primary-green);"></i>
+                    <span class="brand-icon mx-auto" style="width: 48px; height: 48px; font-size: 1.5rem;">
+                        <i class="bi bi-shield-lock-fill"></i>
+                    </span>
                 </div>
-                <h4 class="mb-0 fw-bold" style="color: var(--primary-green);">ورود به پنل مدیریت</h4>
-                <p class="small text-muted mb-0 mt-1">مدیریت نوبت‌ها و مراجعین کلینیک</p>
+                <h4 class="mb-1 fw-bold" style="color: var(--primary-green);">ورود به پنل مدیریت</h4>
+                <p class="small text-muted mb-0">مدیریت مراجعین و بررسی فیش‌های واریزی</p>
             </div>
-            <div class="card-body p-4">
+
+            <div class="card-body p-4 p-md-5">
 
                 {% with messages = get_flashed_messages(with_categories=true) %}
                   {% if messages %}
                     {% for category, message in messages %}
-                      <div class="alert alert-{{ category if category != 'danger' else 'danger' }} alert-dismissible fade show rounded-3 small" role="alert">
+                      <div class="alert alert-{{ category if category != 'danger' else 'warning' }} alert-dismissible fade show rounded-3 small" role="alert">
                         <i class="bi bi-info-circle me-1"></i> {{ message }}
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                       </div>
@@ -30,22 +34,25 @@
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                     <div class="mb-4">
-                        <label for="password" class="form-label text-muted small fw-bold">رمز عبور مدیر کلینیک:</label>
+                        <label for="password" class="form-label text-dark small fw-bold">رمز عبور امن مدیریت:</label>
                         <div class="input-group">
                             <span class="input-group-text bg-light border-0"><i class="bi bi-key text-muted"></i></span>
-                            <input type="password" class="form-control bg-light border-0" id="password" name="password" required placeholder="رمز عبور را وارد کنید" autofocus>
+                            <input type="password" class="form-control form-control-lg bg-light border-0" id="password" name="password" required placeholder="رمز عبور را وارد کنید" autofocus>
                         </div>
                     </div>
 
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary rounded-3 fw-bold py-2">
-                            <i class="bi bi-box-arrow-in-right me-1"></i> ورود به پنل
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-primary rounded-pill fw-bold py-2 shadow-sm">
+                            <i class="bi bi-box-arrow-in-right me-1"></i> ورود به سامانه
                         </button>
                     </div>
                 </form>
             </div>
-            <div class="card-footer bg-white border-0 text-center pb-3">
-                <a href="/" class="small text-muted text-decoration-none"><i class="bi bi-arrow-right me-1"></i> بازگشت به صفحه اصلی سایت</a>
+
+            <div class="card-footer bg-white border-0 text-center pb-4 pt-0">
+                <a href="/" class="small text-muted text-decoration-none">
+                    <i class="bi bi-arrow-right me-1"></i> بازگشت به صفحه اصلی کلینیک
+                </a>
             </div>
         </div>
     </div>

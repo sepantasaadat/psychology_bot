@@ -1,76 +1,137 @@
 {% extends 'base.html' %}
 
-{% block title %}درباره ما - کلینیک دکتر شفایی{% endblock %}
+{% block title %}درباره کلینیک دکتر شفایی - رویکردها و اطلاعات تماس{% endblock %}
 
 {% block content %}
-<div class="row mt-4">
+<div class="row g-4 mt-2">
+    <!-- بخش معرفی و رویکرد درمانی -->
     <div class="col-lg-7 mb-4">
-        <div class="bg-white p-5 rounded-4 h-100 shadow-sm border-0">
+        <div class="bg-white p-4 p-md-5 rounded-4 h-100" style="box-shadow: var(--card-shadow); border: 1px solid var(--subtle-border);">
+            <span class="badge-soft mb-3">شناسنامه و رویکرد علمی</span>
             <h2 class="fw-bold mb-4" style="color: var(--primary-green);">درباره کلینیک دکتر شفایی</h2>
             
-            <p class="text-muted fs-6 lh-lg text-justify mb-4">
-                در دنیای پرهیاهوی امروز، داشتن پناهگاهی امن برای واکاوی درون و رسیدن به آرامش ذهنی، بیش از پیش احساس می‌شود. کلینیک روانشناسی دکتر شفایی با تکیه بر سال‌ها تجربه بالینی و بهره‌گیری از رویکردهای علمی و اثبات‌شده روان‌درمانی، فضایی امن، پذیرا و کاملاً بدون قضاوت را برای شما فراهم کرده است.
+            <p class="text-muted fs-6 lh-lg mb-4 text-start">
+                کلینیک روانشناسی دکتر شفایی مرکزی تخصصی در زمینه خدمات روان‌درمانی، ارزیابی بالینی و مداخلات روانشناختی است. هدف بنیادین این مجموعه، فراهم‌سازی بستری امن، مبتنی بر شواهد علمی و بدون داوری برای افرادی است که در جست‌وجوی بهبود کیفیت زندگی، مدیریت بحران‌های عاطفی و بازسازی طرح‌واره‌های ناسازگار خود هستند.
             </p>
             
-            <p class="text-muted fs-6 lh-lg text-justify mb-4">
-                رسالت اصلی ما، کمک به شما در مسیر شناخت بهتر خود، عبور از بحران‌های روحی، بهبود روابط میان‌فردی و ارتقای کیفیت زندگی است. ما باور داریم که هر انسانی ظرفیت التیام و رشد را در درون خود دارد و نقش درمانگر، روشن کردن مسیر و همراهی همدلانه در این سفر درونی است.
+            <p class="text-muted fs-6 lh-lg mb-4 text-start">
+                رویکرد اصلی درمان در این کلینیک بر پایه ترکیب درمان شناختی‌رفتاری (CBT) و طرح‌واره‌درمانی (Schema Therapy) استوار است. این چارچوب بالینی به مراجعین امکان می‌دهد نه تنها نشانه‌های ظاهری اضطراب، نشخوار ذهنی یا تعارضات ارتباطی را تسکین دهند، بلکه ریشه‌های عمیق الگوهای آموخته‌شده در کودکی را شناسایی کرده و شیوه‌های سالمی برای مواجهه با چالش‌ها پایه‌گذاری نمایند.
             </p>
 
-            <div class="d-flex align-items-center mt-5 p-4 rounded-3" style="background-color: var(--light-green);">
-                <i class="bi bi-quote fs-1 me-3 opacity-50" style="color: var(--primary-green);"></i>
-                <h5 class="mb-0 fw-bold" style="color: var(--primary-green); line-height: 1.8;">
-                    سلامت روان مقصد نیست، بلکه نحوه سفر کردن در مسیر زندگی است.
-                </h5>
+            <!-- رزومه درمانگر -->
+            <div class="p-4 rounded-4 my-4" style="background-color: var(--light-green); border: 1px solid rgba(74, 124, 89, 0.2);">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="rounded-circle bg-white d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px; color: var(--primary-green);">
+                        <i class="bi bi-award fs-3"></i>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold mb-0" style="color: var(--primary-green);">دکتر شفایی</h5>
+                        <small class="text-muted">روانشناس بالینی و عضو سازمان نظام روانشناسی و مشاوره جمهوری اسلامی ایران</small>
+                    </div>
+                </div>
+                <ul class="list-unstyled mb-0 small text-muted lh-lg">
+                    <li><i class="bi bi-check2 me-1 text-success"></i> سال‌ها تجربه بالینی در مشاوره فردی و زوج‌درمانی</li>
+                    <li><i class="bi bi-check2 me-1 text-success"></i> تخصص در طرح‌واره‌درمانی و درمان‌های شناختی‌رفتاری اضطراب</li>
+                    <li><i class="bi bi-check2 me-1 text-success"></i> برگزاری کارگاه‌های تخصصی خودآگاهی، مدیریت استرس و تاب‌آوری</li>
+                </ul>
+            </div>
+
+            <!-- منشور اخلاقی -->
+            <h5 class="fw-bold mb-3" style="color: var(--primary-green);">اصول بنیادین اتاق درمان</h5>
+            <div class="row g-3">
+                <div class="col-sm-6">
+                    <div class="p-3 rounded-3 bg-light h-100">
+                        <h6 class="fw-bold text-dark mb-1"><i class="bi bi-lock me-1" style="color: var(--primary-green);"></i> رازداری حرفه‌ای</h6>
+                        <p class="text-muted small mb-0 lh-base">حفاظت از جزئیات جلسات و اطلاعات هویتی مراجع طبق سوگندنامه اخلاق حرفه‌ای.</p>
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="p-3 rounded-3 bg-light h-100">
+                        <h6 class="fw-bold text-dark mb-1"><i class="bi bi-heart me-1" style="color: var(--primary-green);"></i> پذیرش نامشروط</h6>
+                        <p class="text-muted small mb-0 lh-base">فضایی عاری از داوری‌های اخلاقی، دینی یا جنسیتی برای بیان صادقانه رنج‌ها.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 pt-2">
+                <a href="/booking" class="btn btn-primary rounded-pill px-4">
+                    <i class="bi bi-calendar2-check me-2"></i> تنظیم وقت جلسه
+                </a>
             </div>
         </div>
     </div>
 
+    <!-- بخش اطلاعات ارتباطی و موقعیت -->
     <div class="col-lg-5 mb-4">
-        <div class="bg-white p-5 rounded-4 h-100 shadow-sm border-0">
-            <h4 class="fw-bold mb-5" style="color: var(--primary-green);">ارتباط با کلینیک</h4>
+        <div class="bg-white p-4 p-md-5 rounded-4 h-100" style="box-shadow: var(--card-shadow); border: 1px solid var(--subtle-border);">
+            <span class="badge-soft mb-3">اطلاعات پذیرش و حضور</span>
+            <h4 class="fw-bold mb-4" style="color: var(--primary-green);">راه‌های ارتباط با کلینیک</h4>
             
+            <!-- آدرس فیزیکی -->
             <div class="d-flex mb-4 align-items-start">
-                <div class="rounded-circle bg-light p-3 me-3 d-flex align-items-center justify-content-center" style="width: 55px; height: 55px;">
-                    <i class="bi bi-geo-alt fs-4" style="color: var(--primary-green);"></i>
+                <div class="rounded-3 p-3 me-3 d-flex align-items-center justify-content-center" style="width: 52px; height: 52px; background-color: var(--light-green); color: var(--primary-green);">
+                    <i class="bi bi-geo-alt fs-4"></i>
                 </div>
                 <div>
-                    <h6 class="fw-bold mb-1">آدرس</h6>
-                    <p class="text-muted small mb-0 lh-lg">بابل - بلوار بابانیا - فارابی ۱۱ - پلاک ۳۳</p>
+                    <h6 class="fw-bold mb-1">نشانی کلینیک جهت جلسات حضوری</h6>
+                    <p class="text-muted small mb-0 lh-lg">مازندران، بابل، بلوار بابانیا، فارابی ۱۱، پلاک ۳۳</p>
+                </div>
+            </div>
+
+            <!-- ساعات کاری -->
+            <div class="d-flex mb-4 align-items-start">
+                <div class="rounded-3 p-3 me-3 d-flex align-items-center justify-content-center" style="width: 52px; height: 52px; background-color: var(--light-green); color: var(--primary-green);">
+                    <i class="bi bi-clock-history fs-4"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold mb-1">روزها و ساعات کاری پذیرش</h6>
+                    <p class="text-muted small mb-0 lh-lg">شنبه تا چهارشنبه: از ساعت ۱۶:۰۰ الی ۲۰:۰۰</p>
+                    <small class="text-muted">(پذیرش صرفاً با تعیین وقت قبلی صورت می‌پذیرد)</small>
+                </div>
+            </div>
+
+            <!-- شماره تماس مستقیم -->
+            <div class="d-flex mb-4 align-items-start">
+                <div class="rounded-3 p-3 me-3 d-flex align-items-center justify-content-center" style="width: 52px; height: 52px; background-color: var(--light-green); color: var(--primary-green);">
+                    <i class="bi bi-telephone fs-4"></i>
+                </div>
+                <div>
+                    <h6 class="fw-bold mb-1">شماره تماس پذیرش</h6>
+                    <a href="tel:09213689461" class="text-decoration-none text-muted font-monospace fs-6 fw-bold" dir="ltr">0921 368 9461</a>
+                    <div class="text-muted small">پاسخگویی در ساعات کاری کلینیک</div>
                 </div>
             </div>
 
             <hr class="text-muted opacity-25 my-4">
 
-            <div class="d-flex mb-4 align-items-start">
-                <div class="rounded-circle bg-light p-3 me-3 d-flex align-items-center justify-content-center" style="width: 55px; height: 55px;">
-                    <i class="bi bi-telephone fs-4" style="color: var(--primary-green);"></i>
+            <!-- کانال و شبکه‌های اطلاع‌رسانی -->
+            <h6 class="fw-bold mb-3" style="color: var(--primary-green);">شبکه‌های پیام‌رسان و نوبت‌دهی</h6>
+
+            <div class="d-flex align-items-start mb-3">
+                <div class="rounded-3 p-3 me-3 d-flex align-items-center justify-content-center" style="width: 52px; height: 52px; background-color: var(--light-green); color: var(--primary-green);">
+                    <i class="bi bi-telegram fs-4"></i>
                 </div>
                 <div>
-                    <h6 class="fw-bold mb-1">شماره تماس</h6>
-                    <p class="text-muted small mb-0 font-monospace fs-6" dir="ltr">0921 368 9461</p>
+                    <h6 class="fw-bold mb-1">کانال تلگرام رسمی</h6>
+                    <p class="text-muted small mb-1">مطالب آموزشی سلامت روان و اخبار کارگاه‌ها</p>
+                    <a href="https://t.me/DrShafaei_Psychological_Ciniic" target="_blank" class="text-decoration-none text-success small font-monospace" dir="ltr">@DrShafaei_Psychological_Ciniic</a>
                 </div>
             </div>
-
-            <hr class="text-muted opacity-25 my-4">
 
             <div class="d-flex align-items-start">
-                <div class="rounded-circle bg-light p-3 me-3 d-flex align-items-center justify-content-center" style="width: 55px; height: 55px;">
-                    <i class="bi bi-telegram fs-4" style="color: var(--primary-green);"></i>
+                <div class="rounded-3 p-3 me-3 d-flex align-items-center justify-content-center" style="width: 52px; height: 52px; background-color: var(--light-green); color: var(--primary-green);">
+                    <i class="bi bi-robot fs-4"></i>
                 </div>
                 <div>
-                    <h6 class="fw-bold mb-1">کانال تلگرام</h6>
-                    <a href="https://t.me/DrShafaei_Psychological_Ciniic" target="_blank" class="text-decoration-none text-muted small mb-0 font-monospace" dir="ltr">@DrShafaei_Psychological_Ciniic</a>
+                    <h6 class="fw-bold mb-1">ربات تلگرامی رزرو نوبت</h6>
+                    <p class="text-muted small mb-1">ثبت و مدیریت مستقیم نوبت‌ها در بستر تلگرام</p>
+                    <a href="https://t.me/Drshafaeiclinic_bot" target="_blank" class="text-decoration-none text-success small font-monospace" dir="ltr">@Drshafaeiclinic_bot</a>
                 </div>
             </div>
 
-            <div class="d-flex align-items-start mt-3">
-                <div class="rounded-circle bg-light p-3 me-3 d-flex align-items-center justify-content-center" style="width: 55px; height: 55px;">
-                    <i class="bi bi-robot fs-4" style="color: var(--primary-green);"></i>
-                </div>
-                <div>
-                    <h6 class="fw-bold mb-1">ربات تلگرام نوبت‌دهی</h6>
-                    <a href="https://t.me/Drshafaeiclinic_bot" target="_blank" class="text-decoration-none text-muted small mb-0 font-monospace" dir="ltr">@Drshafaeiclinic_bot</a>
-                </div>
+            <div class="alert alert-light border small mt-4 mb-0 rounded-3 text-muted lh-base">
+                <i class="bi bi-info-circle me-1" style="color: var(--primary-green);"></i>
+                مراجعین محترم آنلاین قبل از شروع جلسه، لینک اتاق اختصاصی مشاوره را از طریق پیام‌رسان دریافت خواهند نمود.
             </div>
 
         </div>

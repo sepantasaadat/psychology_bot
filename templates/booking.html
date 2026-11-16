@@ -3,14 +3,49 @@
 {% block title %}رزرو نوبت - کلینیک دکتر شفایی{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center mt-4">
-    <div class="col-md-8">
-        <div class="card shadow-sm border-0">
-            <div class="card-header border-0 text-center py-4" style="background-color: var(--light-green);">
-                <h4 class="mb-0 fw-bold" style="color: var(--primary-green);">
-                    <i class="bi bi-calendar-plus me-2"></i>فرم رزرو آنلاین نوبت
-                </h4>
+<div class="row justify-content-center mt-3">
+    <div class="col-lg-9 col-xl-8">
+        
+        <!-- راهنمای گام‌های ثبت نوبت -->
+        <div class="bg-white p-3 p-md-4 rounded-4 mb-4" style="box-shadow: var(--card-shadow); border: 1px solid var(--subtle-border);">
+            <div class="row text-center g-2">
+                <div class="col-4">
+                    <div class="d-flex flex-column align-items-center">
+                        <span class="rounded-circle d-flex align-items-center justify-content-center mb-1" style="width: 34px; height: 34px; background-color: var(--light-green); color: var(--primary-green); font-weight: bold; font-size: 0.9rem;">۱</span>
+                        <span class="small fw-semibold text-dark">مشخصات فردی</span>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="d-flex flex-column align-items-center">
+                        <span class="rounded-circle d-flex align-items-center justify-content-center mb-1" style="width: 34px; height: 34px; background-color: var(--light-green); color: var(--primary-green); font-weight: bold; font-size: 0.9rem;">۲</span>
+                        <span class="small fw-semibold text-dark">انتخاب زمان</span>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="d-flex flex-column align-items-center">
+                        <span class="rounded-circle d-flex align-items-center justify-content-center mb-1" style="width: 34px; height: 34px; background-color: var(--light-green); color: var(--primary-green); font-weight: bold; font-size: 0.9rem;">۳</span>
+                        <span class="small fw-semibold text-dark">فیش بیعانه</span>
+                    </div>
+                </div>
             </div>
+        </div>
+
+        <div class="card shadow-sm border-0 rounded-4 overflow-hidden" style="border: 1px solid var(--subtle-border) !important;">
+            
+            <div class="card-header border-0 text-center py-4 px-4" style="background-color: var(--light-green);">
+                <div class="mb-2">
+                    <span class="brand-icon mx-auto" style="width: 44px; height: 44px;">
+                        <i class="bi bi-calendar-check fs-4"></i>
+                    </span>
+                </div>
+                <h3 class="mb-1 fw-bold" style="color: var(--primary-green);">
+                    فرم رزرو آنلاین نوبت
+                </h3>
+                <p class="text-muted small mb-0 prose-readable">
+                    اطلاعات شما با نهایت احترام به حریم خصوصی نزد کلینیک محفوظ خواهد بود.
+                </p>
+            </div>
+
             <div class="card-body p-4 p-md-5" id="bookingCardBody">
 
                 <div id="dynamicAlertContainer">
@@ -30,58 +65,92 @@
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="is_ajax" id="isAjaxField" value="1">
                     
+                    <!-- بخش اول: اطلاعات شناسایی -->
                     <div class="mb-4">
-                        <label for="full_name" class="form-label text-muted small fw-bold">نام و نام خانوادگی مراجع:</label>
-                        <input type="text" class="form-control form-control-lg bg-light border-0" id="full_name" name="full_name" required placeholder="مثال: علی رضایی">
+                        <label for="full_name" class="form-label text-dark small fw-bold">نام و نام خانوادگی مراجع:</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-0"><i class="bi bi-person text-muted"></i></span>
+                            <input type="text" class="form-control form-control-lg bg-light border-0" id="full_name" name="full_name" required placeholder="مثال: علی رضایی">
+                        </div>
                     </div>
 
                     <div class="mb-4">
-                        <label for="phone" class="form-label text-muted small fw-bold">شماره موبایل (جهت پیگیری):</label>
-                        <input type="tel" class="form-control form-control-lg bg-light border-0" id="phone" name="phone" required placeholder="09123456789" dir="ltr">
+                        <label for="phone" class="form-label text-dark small fw-bold">شماره تلفن همراه (جهت هماهنگی و پیامک تایید):</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-0"><i class="bi bi-phone text-muted"></i></span>
+                            <input type="tel" class="form-control form-control-lg bg-light border-0" id="phone" name="phone" required placeholder="۰۹۱۲۳۴۵۶۷۸۹" dir="ltr">
+                        </div>
+                        <div class="form-text text-muted small mt-1">شماره تماس فقط برای پذیرش کلینیک قابل مشاهده است.</div>
                     </div>
 
+                    <!-- بخش دوم: نوع و زمان جلسه -->
                     <div class="mb-4">
-                        <label for="session_type" class="form-label text-muted small fw-bold">نوع جلسه:</label>
-                        <select class="form-select form-select-lg bg-light border-0" id="session_type" name="session_type" required>
-                            <option value="" disabled selected>انتخاب کنید...</option>
-                            <option value="حضوری">حضوری (در کلینیک)</option>
-                            <option value="آنلاین">آنلاین (غیرحضوری)</option>
-                        </select>
+                        <label for="session_type" class="form-label text-dark small fw-bold">نوع برگزاری جلسه:</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-0"><i class="bi bi-geo-alt text-muted"></i></span>
+                            <select class="form-select form-select-lg bg-light border-0" id="session_type" name="session_type" required>
+                                <option value="" disabled selected>انتخاب فرمت جلسه...</option>
+                                <option value="حضوری">جلسه حضوری (در محل کلینیک)</option>
+                                <option value="آنلاین">جلسه آنلاین (ارتباط تصویری/صوتی امن)</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div class="row">
                         <div class="col-md-6 mb-4">
-                            <label for="date" class="form-label text-muted small fw-bold">انتخاب تاریخ:</label>
-                            <select class="form-select form-select-lg bg-light border-0" id="date" name="date" required>
-                                <option value="" disabled selected>یک روز را انتخاب کنید...</option>
-                                {% for day in days %}
-                                    <option value="{{ day }}">{{ day }}</option>
-                                {% endfor %}
-                            </select>
+                            <label for="date" class="form-label text-dark small fw-bold">تاریخ مدنظر:</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-0"><i class="bi bi-calendar-event text-muted"></i></span>
+                                <select class="form-select form-select-lg bg-light border-0" id="date" name="date" required>
+                                    <option value="" disabled selected>انتخاب روز...</option>
+                                    {% for day in days %}
+                                        <option value="{{ day }}">{{ day }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
                         </div>
 
                         <div class="col-md-6 mb-4">
-                            <label for="time" class="form-label text-muted small fw-bold">انتخاب ساعت:</label>
-                            <select class="form-select form-select-lg bg-light border-0" id="time" name="time" required>
-                                <option value="" disabled selected>ابتدا تاریخ را انتخاب کنید...</option>
-                            </select>
-                            <div id="timeLoading" class="small text-muted mt-1 d-none">
-                                <span class="spinner-border spinner-border-sm me-1" role="status"></span> در حال بررسی ساعت‌های خالی...
+                            <label for="time" class="form-label text-dark small fw-bold">ساعت جلسه:</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light border-0"><i class="bi bi-clock text-muted"></i></span>
+                                <select class="form-select form-select-lg bg-light border-0" id="time" name="time" required>
+                                    <option value="" disabled selected>ابتدا تاریخ را انتخاب کنید...</option>
+                                </select>
+                            </div>
+                            <div id="timeLoading" class="small text-muted mt-2 d-none">
+                                <span class="spinner-border spinner-border-sm me-1 text-success" role="status"></span> در حال استعلام ساعات خالی...
                             </div>
                         </div>
                     </div>
 
-                    <div class="mb-4 p-4 rounded-4" style="background-color: #fafafa; border: 1px dashed #ccc;">
+                    <!-- بخش سوم: واریز بیعانه و آپلود فیش -->
+                    <div class="mb-4 p-4 rounded-4" style="background-color: var(--cream-bg); border: 1px dashed rgba(74, 124, 89, 0.35);">
                         <label for="receipt" class="form-label fw-bold d-block mb-2" style="color: var(--primary-green);">
-                            <i class="bi bi-receipt me-2"></i>آپلود تصویر رسید پرداخت
+                            <i class="bi bi-receipt me-2"></i>تسویه بیعانه و ارسال تصویر فیش
                         </label>
-                        <p class="small text-muted mb-3 lh-lg">
-                            لطفاً مبلغ بیعانه را به شماره کارت 
-                            <span class="badge bg-light text-dark fs-6 border px-3 py-2 fw-bold font-monospace d-inline-block my-1" dir="ltr">{{ card_number or '۶۰۳۷-۹۹۷۵-۱۲۳۴-۵۶۷۸' }}</span>
-                            واریز نموده و عکس رسید را بارگذاری فرمایید.
-                        </p>
                         
-                        <input type="file" class="form-control border-0 bg-white shadow-sm" id="receipt" name="receipt" accept="image/jpeg,image/png,image/webp,image/*" required>
+                        <p class="small text-muted mb-3 lh-lg">
+                            جهت قطعی شدن رزرو نوبت و رزرو وقت درمانگر، لطفاً مبلغ بیعانه را به شماره کارت زیر واریز فرمایید:
+                        </p>
+
+                        <!-- کارت بانکی زیبا با دکمه کپی -->
+                        <div class="p-3 bg-white rounded-3 border d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-credit-card-2-front fs-3 me-2" style="color: var(--primary-green);"></i>
+                                <div>
+                                    <span class="text-muted small d-block">شماره کارت کلینیک:</span>
+                                    <span id="cardNumberText" class="fw-bold font-monospace fs-5 text-dark" dir="ltr">{{ card_number or '۶۰۳۷-۹۹۷۵-۱۲۳۴-۵۶۷۸' }}</span>
+                                </div>
+                            </div>
+                            <button type="button" id="copyCardBtn" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                                <i class="bi bi-copy me-1"></i> <span id="copyBtnLabel">کپی شماره کارت</span>
+                            </button>
+                        </div>
+                        
+                        <div class="mb-2">
+                            <input type="file" class="form-control border-0 bg-white shadow-sm" id="receipt" name="receipt" accept="image/jpeg,image/png,image/webp,image/*" required>
+                        </div>
                         
                         <div id="compressionStatus" class="small text-success mt-2 d-none">
                             <i class="bi bi-check2-circle me-1"></i> <span id="compressionMsg">تصویر با موفقیت آماده شد.</span>
@@ -92,11 +161,16 @@
                         </div>
                     </div>
 
+                    <!-- دکمه ارسال نهایی -->
                     <div class="d-grid mt-4">
-                        <button type="submit" id="submitBtn" class="btn btn-primary btn-lg rounded-3 fw-bold py-3">
-                            <span id="btnText"><i class="bi bi-check-circle me-2"></i>ثبت نوبت و ارسال فیش</span>
+                        <button type="submit" id="submitBtn" class="btn btn-primary btn-lg rounded-pill fw-bold py-3 shadow">
+                            <span id="btnText"><i class="bi bi-check2-circle me-2"></i>ثبت نوبت و ارسال فیش</span>
                             <span id="btnSpinner" class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true"></span>
                         </button>
+                    </div>
+
+                    <div class="text-center mt-3 text-muted small">
+                        <i class="bi bi-lock me-1"></i> ارتباط شما امن بوده و کلیه اطلاعات طبق استانداردهای رازداری پزشکی ثبت می‌گردد.
                     </div>
                 </form>
             </div>
@@ -120,8 +194,26 @@ document.addEventListener("DOMContentLoaded", function () {
     const btnSpinner = document.getElementById("btnSpinner");
     const alertContainer = document.getElementById("dynamicAlertContainer");
     const cardBody = document.getElementById("bookingCardBody");
+    const copyCardBtn = document.getElementById("copyCardBtn");
+    const cardNumberText = document.getElementById("cardNumberText");
+    const copyBtnLabel = document.getElementById("copyBtnLabel");
 
     let compressedReceiptFile = null;
+
+    // کپی آسان شماره کارت با کلیک
+    if (copyCardBtn && cardNumberText) {
+        copyCardBtn.addEventListener("click", function () {
+            const rawText = cardNumberText.innerText.replace(/-/g, "").replace(/\s/g, "");
+            navigator.clipboard.writeText(rawText).then(() => {
+                copyBtnLabel.textContent = "کپی شد!";
+                setTimeout(() => {
+                    copyBtnLabel.textContent = "کپی شماره کارت";
+                }, 2000);
+            }).catch(() => {
+                copyBtnLabel.textContent = "کپی ناموفق";
+            });
+        });
+    }
 
     function showAlert(message, type) {
         alertContainer.innerHTML = `
@@ -136,10 +228,10 @@ document.addEventListener("DOMContentLoaded", function () {
     function resetSubmitButton() {
         submitBtn.disabled = false;
         btnSpinner.classList.add("d-none");
-        btnText.innerHTML = '<i class="bi bi-check-circle me-2"></i>ثبت نوبت و ارسال فیش';
+        btnText.innerHTML = '<i class="bi bi-check2-circle me-2"></i>ثبت نوبت و ارسال فیش';
     }
 
-    // High performance image compression (max 1000px, quality 0.70 -> ~40KB-70KB)
+    // فشرده‌سازی تصویر در سمت کلاینت با حفظ حداکثر رزولوشن ۱۰۰۰ پیکسل
     function compressImageFile(file) {
         return new Promise((resolve) => {
             if (!file) return resolve(null);
@@ -191,12 +283,12 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // Dynamic available hours loader
+    // بارگذاری پویای ساعات خالی پس از انتخاب تاریخ
     dateSelect.addEventListener("change", function () {
         const selectedDate = this.value;
         if (!selectedDate) return;
 
-        timeSelect.innerHTML = '<option value="" disabled selected>در حال بارگذاری...</option>';
+        timeSelect.innerHTML = '<option value="" disabled selected>در حال استعلام...</option>';
         timeLoading.classList.remove("d-none");
 
         fetch("/api/available-times/" + encodeURIComponent(selectedDate))
@@ -222,7 +314,7 @@ document.addEventListener("DOMContentLoaded", function () {
             });
     });
 
-    // Preview and background compression on file select
+    // آماده‌سازی و پیش‌نمایش تصویر رسید
     receiptInput.addEventListener("change", async function () {
         const file = this.files && this.files[0];
         if (!file) {
@@ -246,7 +338,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     });
 
-    // AJAX Form submission
+    // ثبت فرم به شیوه ایجکس برای جلوگیری از قطعی اینترنت
     bookingForm.addEventListener("submit", async function (e) {
         e.preventDefault();
 
@@ -271,7 +363,7 @@ document.addEventListener("DOMContentLoaded", function () {
         btnSpinner.classList.remove("d-none");
         btnText.textContent = "در حال ارسال و ثبت نوبت...";
 
-        // Ensure compression has completed
+        // اطمینان از پایان فشرده‌سازی
         let fileToSend = compressedReceiptFile;
         if (!fileToSend && rawFile) {
             btnText.textContent = "در حال بهینه‌سازی فیش...";
@@ -307,34 +399,40 @@ document.addEventListener("DOMContentLoaded", function () {
                 cardBody.innerHTML = `
                     <div class="text-center py-4">
                         <div class="mb-3">
-                            <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
+                            <span class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width: 80px; height: 80px; background-color: var(--light-green); color: var(--primary-green); font-size: 2.8rem;">
+                                <i class="bi bi-check2"></i>
+                            </span>
                         </div>
-                        <h3 class="fw-bold text-success mb-3">نوبت مشاوره با موفقیت ثبت شد</h3>
-                        <p class="text-muted fs-5 mb-4">کد پیگیری شما: <span class="badge bg-light text-dark border fs-5 font-monospace">#${data.appointment_id}</span></p>
+                        <h3 class="fw-bold mb-3" style="color: var(--primary-green);">درخواست نوبت شما با موفقیت ثبت شد</h3>
+                        <p class="text-muted fs-5 mb-4">کد پیگیری نوبت: <span class="badge bg-light text-dark border fs-5 font-monospace">#${data.appointment_id}</span></p>
                         
-                        <div class="p-3 rounded-4 bg-light text-dark mb-4 text-start mx-auto" style="max-width: 450px;">
+                        <div class="p-4 rounded-4 bg-light text-dark mb-4 text-start mx-auto" style="max-width: 480px; border: 1px solid var(--subtle-border);">
                             <div class="d-flex justify-content-between border-bottom py-2">
-                                <span class="text-muted">نام مراجع:</span>
+                                <span class="text-muted">مراجع محترم:</span>
                                 <span class="fw-bold">${data.full_name || fullName}</span>
                             </div>
                             <div class="d-flex justify-content-between border-bottom py-2">
                                 <span class="text-muted">تاریخ جلسه:</span>
                                 <span class="fw-bold">${data.date}</span>
                             </div>
-                            <div class="d-flex justify-content-between py-2">
+                            <div class="d-flex justify-content-between border-bottom py-2">
                                 <span class="text-muted">ساعت جلسه:</span>
                                 <span class="fw-bold">${data.time}</span>
                             </div>
+                            <div class="d-flex justify-content-between py-2">
+                                <span class="text-muted">نوع جلسه:</span>
+                                <span class="fw-bold">${data.session_type || sessionType}</span>
+                            </div>
                         </div>
 
-                        <div class="alert alert-info rounded-3 small mx-auto" style="max-width: 500px;">
-                            <i class="bi bi-info-circle me-1"></i>
-                            رسید پرداخت شما با موفقیت برای پذیرش کلینیک ارسال شد. پس از بررسی فیش، جهت هماهنگی نهایی با شما تماس حاصل خواهد شد.
+                        <div class="alert alert-light border small mx-auto text-muted lh-lg" style="max-width: 520px; background-color: var(--cream-bg);">
+                            <i class="bi bi-info-circle me-1" style="color: var(--primary-green);"></i>
+                            رسید پرداخت شما برای واحد پذیرش کلینیک ارسال گردید. پس از بازبینی فیش توسط منشی، جهت هماهنگی نهایی با شماره تماس شما ارتباط برقرار خواهد شد.
                         </div>
 
-                        <div class="d-flex justify-content-center gap-2 mt-4">
-                            <a href="/" class="btn btn-primary rounded-3 px-4">صفحه اصلی</a>
-                            <a href="/booking" class="btn btn-outline-secondary rounded-3 px-4">ثبت نوبت جدید</a>
+                        <div class="d-flex justify-content-center gap-3 mt-4">
+                            <a href="/" class="btn btn-primary rounded-pill px-4">صفحه اصلی کلینیک</a>
+                            <a href="/booking" class="btn btn-outline-primary rounded-pill px-4">ثبت نوبت دیگر</a>
                         </div>
                     </div>
                 `;
