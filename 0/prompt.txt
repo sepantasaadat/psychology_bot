@@ -1,0 +1,33 @@
+@[plugin:superpowers] Act as a Senior UI/UX Designer, Frontend Architect, and Clinical Psychology Copywriter. I want you to completely elevate the visual styling, typography, layout structure, and textual content of my existing Psychology Clinic website codebase.
+
+### 1. STRICT VISUAL & COLOR CONSTRAINTS (NON-NEGOTIABLE)
+- **Preserve Existing Color Palette:** You MUST strictly keep and use the exact color palette, hex codes, CSS variables, gradients, and background/accent colors currently defined in my project. **DO NOT introduce new brand colors or alter the existing color scheme.**
+- **Smart Color Application:** While keeping the colors identical, optimize how they are applied (e.g., adjusting opacity, subtle shadows, border tints, contrast ratios for WCAG accessibility, and whitespace balance) to create a serene, trustworthy, and calming atmosphere appropriate for mental health care.
+
+### 2. TYPOGRAPHY & READABILITY ENHANCEMENTS
+- **Font Selection:** Select and configure a clean, warm, and highly legible font pairing suitable for a modern psychology clinic (e.g., a refined humanist sans-serif like *Plus Jakarta Sans*, *Inter*, or *DM Sans* for UI/body text paired with an empathetic, editorial serif like *Lora* or *Merriweather* for headings—or the best equivalent if the site is in another language like Persian/Arabic, such as *Vazirmatn* or *IRANYekanX*).
+- **Typographic Hierarchy:** Establish clear, soothing typographic scales with generous line-height (`1.6` to `1.8` for body copy), balanced letter-spacing, and comfortable reading widths (`max-width: 65ch` to `75ch` for paragraphs) to reduce cognitive load for visitors seeking emotional support.
+
+### 3. UI/UX STYLING & LAYOUT REFINEMENT
+- **Clinical & Calming Aesthetic:** Refactor the CSS/styling (keeping my current framework/setup intact) to feel welcoming, safe, non-judgmental, and professional.
+- **Spacing & Whitespace:** Increase breathing room (padding and margins) between sections and cards so the interface feels uncluttered, peaceful, and grounded.
+- **Refined Components:**
+  - Soften harsh edges with subtle, consistent `border-radius` (e.g., `12px`–`16px` for cards, `8px` or pill-shaped for buttons).
+  - Replace heavy borders or harsh drop shadows with soft, diffused, low-opacity shadows that harmonize with the existing background colors.
+  - Ensure smooth, gentle micro-interactions and hover transitions (`transition: all 0.3s ease`)—avoid jarring or overly fast animations.
+  - Ensure 100% responsive design across mobile, tablet, and desktop viewports.
+
+### 4. CLINICAL COPYWRITING & CONTENT TONE
+- **Rewrite & Elevate All Text:** Review and rewrite all placeholder or rough text across the site (Hero section, About Us, Services/Therapies, Therapist Bios, FAQ, Testimonials, and Contact/Booking CTAs) so it reads like an authentic, empathetic, and ethical psychology clinic.
+- **Tone of Voice:** Use compassionate, warm, grounded, stigma-free, and reassuring language. Balance clinical credibility and professionalism with genuine human warmth.
+- **Clear Calls to Action (CTAs):** Replace generic buttons (like "Submit" or "Click Here") with gentle, supportive, action-oriented microcopy (e.g., *"Book a Consultation"*, *"Start Your Healing Journey"*, *"Schedule a Confidential Session"*).
+- **Language Match:** Maintain the exact language currently used in my project files (if the existing content is in Persian, write all refined copy in natural, fluent, professional Persian; if in English, use natural English).
+
+### 5. TECHNICAL & CODE INTEGRITY
+- Do not break any existing JavaScript functionality, routing, backend endpoints, form submissions, or HTML IDs/classes tied to logic.
+- Keep the code clean, modular, well-commented, and maintainable.
+
+### EXECUTION INSTRUCTIONS
+1. First, analyze my existing project files to extract the exact color palette/CSS variables and understand the current structure and language.
+2. Briefly summarize the extracted color tokens and the font pairing you selected before modifying the code.
+3. Apply the styling, layout, and copywriting upgrades systematically across the files.

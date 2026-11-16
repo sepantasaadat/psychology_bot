@@ -1,0 +1,39 @@
+{
+  "cli_version": "0.13.1",
+  "checkpoint_id": "01M7K3S00NQPFKVZ1CBDSZ3J4J",
+  "session_id": "bc33b0c6-57c3-4b45-897d-6a4a3b990b80",
+  "strategy": "manual-commit",
+  "created_at": "2026-11-16T21:21:28.997801Z",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "templates/about.html",
+    "templates/admin_dashboard.html",
+    "templates/admin_login.html",
+    "templates/base.html",
+    "templates/booking.html",
+    "templates/index.html"
+  ],
+  "agent": "Antigravity",
+  "model": "",
+  "turn_id": "db6583aba850",
+  "checkpoint_transcript_start": 2749,
+  "transcript_lines_at_start": 2749,
+  "redaction": {
+    "replacements": 351,
+    "layers": {
+      "betterleaks": 56,
+      "connection_string": 0,
+      "credential_key": 0,
+      "credential_value": 118,
+      "credentialed_uri": 0,
+      "entropy": 179,
+      "key_context": 0,
+      "provider_token": 0,
+      "shell_stdin": 0
+    }
+  },
+  "session_metrics": {
+    "turn_count": 53
+  }
+}
