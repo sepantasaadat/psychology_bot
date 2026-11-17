@@ -1,0 +1,12 @@
+@[plugin:superpowers] Conduct a thorough logical review of the bot's buttons and workflows:
+
+1. Scope of Inspection:
+- Analyze every single button and its exact functionality from a logical perspective across all possible scenarios and cases.
+- Check for any infinite/pointless loops or illogical dead ends in the bot that require fixing, modification, or logical improvement.
+
+2. Reporting Requirement:
+- Report all identified cases in complete detail so I can review them and specify whether each item needs to be fixed or not.
+
+---
+
+@[plugin:superpowers] fix all of above errors (12 errors) precisely and completly and at the end test project work correctly.
