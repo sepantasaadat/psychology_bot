@@ -1,13 +1,16 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, send_file, abort
 from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
+from werkzeug.security import check_password_hash
 from flask_wtf.csrf import CSRFProtect
 from functools import wraps
+from pathlib import Path
 import sqlite3
 import jdatetime
 import os
 import time
 import threading
+import hmac
 from collections import defaultdict
 import requests
 import json
@@ -32,8 +35,8 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB upload limit
 app.config.setdefault('WTF_CSRF_ENABLED', True)
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
-if os.environ.get("FLASK_ENV") == "production" or os.environ.get("SESSION_COOKIE_SECURE", "0") == "1":
-    app.config['SESSION_COOKIE_SECURE'] = True
+is_testing = app.config.get('TESTING', False) or os.environ.get("FLASK_DEBUG") == "1"
+app.config['SESSION_COOKIE_SECURE'] = not is_testing
 csrf = CSRFProtect(app)
 DATABASE = database.DB_PATH
 
@@ -45,6 +48,10 @@ def is_booking_rate_limited(ip_address: str, max_requests: int = 5, window_secon
     """Thread-safe sliding window rate limiter per IP address for booking submissions."""
     now = time.time()
     with _booking_rate_limit_lock:
+        if len(_booking_rate_limit_records) > 5000:
+            stale = [ip for ip, ts in _booking_rate_limit_records.items() if not ts or now - ts[-1] > window_seconds]
+            for ip in stale:
+                del _booking_rate_limit_records[ip]
         timestamps = _booking_rate_limit_records[ip_address]
         valid_timestamps = [t for t in timestamps if now - t < window_seconds]
         if len(valid_timestamps) >= max_requests:
@@ -61,15 +68,18 @@ def apply_security_headers(response):
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
     response.headers['Permissions-Policy'] = 'camera=(), microphone=(), geolocation=()'
     csp = (
-        "default-src 'self' https:; "
-        "script-src 'self' https: 'unsafe-inline'; "
-        "style-src 'self' https: 'unsafe-inline'; "
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+        "font-src 'self' https://cdn.jsdelivr.net data:; "
         "img-src 'self' data: https:; "
-        "font-src 'self' https:; "
-        "frame-ancestors 'self';"
+        "connect-src 'self'; "
+        "frame-ancestors 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self';"
     )
     response.headers['Content-Security-Policy'] = csp
-    if os.environ.get("FLASK_ENV") == "production" or os.environ.get("ENABLE_HSTS", "0") == "1":
+    if not app.config.get('TESTING') and (os.environ.get("FLASK_ENV") == "production" or os.environ.get("ENABLE_HSTS", "1") == "1"):
         response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
     return response
 
@@ -206,7 +216,7 @@ def booking():
             request.form.get("is_ajax") == "1" or
             request.accept_mimetypes.best == "application/json"
         )
-        client_ip = request.headers.get("X-Forwarded-For", request.remote_addr or "127.0.0.1").split(",")[0].strip()
+        client_ip = request.remote_addr or "127.0.0.1"
         if not app.config.get('TESTING') and is_booking_rate_limited(client_ip, max_requests=10, window_seconds=60):
             logger.warning(f"Rate limit exceeded for booking requests from client_ip={client_ip}")
             error_msg = "تعداد درخواست‌های ارسالی شما بیش از حد مجاز است. لطفاً چند دقیقه دیگر مجدداً تلاش فرمایید."
@@ -329,6 +339,10 @@ def is_login_rate_limited(ip_address: str, max_attempts: int = 5, window_seconds
     """Thread-safe sliding window rate limiter per IP address for login attempts."""
     now = time.time()
     with _login_rate_limit_lock:
+        if len(_login_rate_limit_records) > 5000:
+            stale = [ip for ip, ts in _login_rate_limit_records.items() if not ts or now - ts[-1] > window_seconds]
+            for ip in stale:
+                del _login_rate_limit_records[ip]
         timestamps = _login_rate_limit_records[ip_address]
         valid_timestamps = [t for t in timestamps if now - t < window_seconds]
         if len(valid_timestamps) >= max_attempts:
@@ -353,14 +367,22 @@ def admin_login():
         return redirect(url_for('admin_dashboard'))
 
     if request.method == 'POST':
-        client_ip = request.headers.get("X-Forwarded-For", request.remote_addr or "127.0.0.1").split(",")[0].strip()
+        client_ip = request.remote_addr or "127.0.0.1"
         if not app.config.get('TESTING') and is_login_rate_limited(client_ip):
             flash("تعداد دفعات ورود ناموفق بیش از حد مجاز است. لطفاً ۵ دقیقه بعد مجدداً تلاش فرمایید.", "danger")
             return render_template('admin_login.html'), 429
 
         password = request.form.get('password', '')
-        admin_pwd = getattr(config, 'ADMIN_PASSWORD', 'admin123')
-        if password and password == admin_pwd:
+        admin_pwd = getattr(config, 'ADMIN_PASSWORD', '')
+        admin_hash = getattr(config, 'ADMIN_PASSWORD_HASH', '')
+
+        authenticated = False
+        if admin_hash and admin_hash.startswith(('pbkdf2:', 'scrypt:')):
+            authenticated = check_password_hash(admin_hash, password)
+        elif admin_pwd:
+            authenticated = hmac.compare_digest(password, admin_pwd)
+
+        if authenticated:
             session['admin_logged_in'] = True
             session.permanent = False
             flash("با موفقیت وارد پنل مدیریت شدید.", "success")
@@ -405,12 +427,17 @@ def admin_view_receipt(appointment_id):
     if not os.path.isabs(receipt_path):
         receipt_path = os.path.join(PRIVATE_UPLOADS_FOLDER, os.path.basename(receipt_path))
 
-    real_folder = os.path.realpath(PRIVATE_UPLOADS_FOLDER)
-    real_file = os.path.realpath(receipt_path)
-    if not real_file.startswith(real_folder) or not os.path.isfile(real_file):
-        abort(404)
+    real_folder = Path(PRIVATE_UPLOADS_FOLDER).resolve()
+    real_file = Path(receipt_path).resolve()
 
-    return send_file(real_file)
+    try:
+        if not real_file.is_relative_to(real_folder) or not real_file.is_file():
+            abort(404)
+    except AttributeError:
+        if os.path.commonpath([str(real_folder)]) != os.path.commonpath([str(real_folder), str(real_file)]) or not real_file.is_file():
+            abort(404)
+
+    return send_file(str(real_file))
 
 @app.route('/admin/approve/<int:appointment_id>', methods=['POST'], endpoint='admin_approve')
 @admin_required

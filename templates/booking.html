@@ -215,10 +215,21 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
+    // تابعی برای ایمن‌سازی متون در برابر XSS
+    function escapeHTML(str) {
+        if (!str) return "";
+        return String(str)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
     function showAlert(message, type) {
         alertContainer.innerHTML = `
             <div class="alert alert-${type === 'danger' ? 'warning' : type} alert-dismissible fade show rounded-3" role="alert">
-                <i class="bi bi-exclamation-triangle me-2"></i> ${message}
+                <i class="bi bi-exclamation-triangle me-2"></i> ${escapeHTML(message)}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         `;
@@ -396,6 +407,12 @@ document.addEventListener("DOMContentLoaded", function () {
             const data = await res.json().catch(() => null);
 
             if (res.ok && data && data.success) {
+                const safeName = escapeHTML(data.full_name || fullName);
+                const safeDate = escapeHTML(data.date);
+                const safeTime = escapeHTML(data.time);
+                const safeType = escapeHTML(data.session_type || sessionType);
+                const safeId = escapeHTML(data.appointment_id);
+
                 cardBody.innerHTML = `
                     <div class="text-center py-4">
                         <div class="mb-3">
@@ -404,24 +421,24 @@ document.addEventListener("DOMContentLoaded", function () {
                             </span>
                         </div>
                         <h3 class="fw-bold mb-3" style="color: var(--primary-green);">درخواست نوبت شما با موفقیت ثبت شد</h3>
-                        <p class="text-muted fs-5 mb-4">کد پیگیری نوبت: <span class="badge bg-light text-dark border fs-5 font-monospace">#${data.appointment_id}</span></p>
+                        <p class="text-muted fs-5 mb-4">کد پیگیری نوبت: <span class="badge bg-light text-dark border fs-5 font-monospace">#${safeId}</span></p>
                         
                         <div class="p-4 rounded-4 bg-light text-dark mb-4 text-start mx-auto" style="max-width: 480px; border: 1px solid var(--subtle-border);">
                             <div class="d-flex justify-content-between border-bottom py-2">
                                 <span class="text-muted">مراجع محترم:</span>
-                                <span class="fw-bold">${data.full_name || fullName}</span>
+                                <span class="fw-bold">${safeName}</span>
                             </div>
                             <div class="d-flex justify-content-between border-bottom py-2">
                                 <span class="text-muted">تاریخ جلسه:</span>
-                                <span class="fw-bold">${data.date}</span>
+                                <span class="fw-bold">${safeDate}</span>
                             </div>
                             <div class="d-flex justify-content-between border-bottom py-2">
                                 <span class="text-muted">ساعت جلسه:</span>
-                                <span class="fw-bold">${data.time}</span>
+                                <span class="fw-bold">${safeTime}</span>
                             </div>
                             <div class="d-flex justify-content-between py-2">
                                 <span class="text-muted">نوع جلسه:</span>
-                                <span class="fw-bold">${data.session_type || sessionType}</span>
+                                <span class="fw-bold">${safeType}</span>
                             </div>
                         </div>
 

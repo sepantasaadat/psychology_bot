@@ -186,5 +186,53 @@ class TestSecuritySecretsAndPII(unittest.IsolatedAsyncioTestCase):
         self.assertGreaterEqual(telegram_level, logging.WARNING)
         self.assertGreaterEqual(werkzeug_level, logging.WARNING)
 
+    def test_flask_secret_persistence_and_generation(self):
+        import config
+        self.assertTrue(hasattr(config, "FLASK_SECRET_KEY"))
+        self.assertGreaterEqual(len(config.FLASK_SECRET_KEY), 32)
+
+    def test_admin_password_hash_authentication(self):
+        from werkzeug.security import generate_password_hash
+        import app as flask_app
+        import config
+
+        test_client = flask_app.app.test_client()
+        # Test hashed password support
+        sample_pwd = "StrongSecPass#2026"
+        sample_hash = generate_password_hash(sample_pwd)
+
+        with patch.object(config, "ADMIN_PASSWORD_HASH", sample_hash):
+            res_bad = test_client.post('/login', data={'password': 'wrong_password'})
+            self.assertEqual(res_bad.status_code, 401)
+
+            res_good = test_client.post('/login', data={'password': sample_pwd})
+            self.assertEqual(res_good.status_code, 302)
+
+    def test_csp_restricts_global_https(self):
+        import app as flask_app
+        test_client = flask_app.app.test_client()
+        res = test_client.get('/')
+        csp = res.headers.get('Content-Security-Policy', '')
+        self.assertIn("default-src 'self'", csp)
+        self.assertIn("https://cdn.jsdelivr.net", csp)
+        self.assertNotIn("default-src 'self' https:", csp)
+
+    def test_rate_limiter_stale_eviction(self):
+        import time
+        import app as flask_app
+        now = time.time()
+        with flask_app._booking_rate_limit_lock:
+            # Seed 5001 stale IPs
+            for i in range(5005):
+                flask_app._booking_rate_limit_records[f"10.0.0.{i}"] = [now - 120]
+        
+        # Trigger rate limit check
+        flask_app.is_booking_rate_limited("10.0.0.9999", max_requests=5, window_seconds=60)
+        
+        # Verify stale records were pruned
+        with flask_app._booking_rate_limit_lock:
+            self.assertLess(len(flask_app._booking_rate_limit_records), 5000)
+            flask_app._booking_rate_limit_records.clear()
+
 if __name__ == "__main__":
     unittest.main()

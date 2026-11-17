@@ -12,6 +12,10 @@ ExecStart=/root/psychology_bot/venv/bin/gunicorn --workers 3 --bind 127.0.0.1:50
 Restart=on-failure
 RestartSec=5s
 
+# Security sandboxing
+NoNewPrivileges=true
+PrivateTmp=true
+
 StandardOutput=journal
 StandardError=journal
 

@@ -60,12 +60,29 @@ CARD_NUMBER = os.environ.get("CARD_NUMBER", "6037997512345678")
 # Bot & Web Application Credentials
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123")
+ADMIN_PASSWORD_HASH = os.environ.get("ADMIN_PASSWORD_HASH", "")
+
+_secret_file = BASE_DIR / ".flask_secret"
 _configured_secret = os.environ.get("FLASK_SECRET_KEY")
 if _configured_secret:
     FLASK_SECRET_KEY = _configured_secret
+elif _secret_file.exists():
+    try:
+        FLASK_SECRET_KEY = _secret_file.read_text(encoding="utf-8").strip()
+    except Exception:
+        import secrets
+        FLASK_SECRET_KEY = secrets.token_hex(32)
 else:
     import secrets
     FLASK_SECRET_KEY = secrets.token_hex(32)
+    try:
+        _secret_file.write_text(FLASK_SECRET_KEY, encoding="utf-8")
+        try:
+            os.chmod(str(_secret_file), 0o600)
+        except Exception:
+            pass
+    except Exception:
+        pass
 DB_PATH = os.environ.get("DB_PATH", str(BASE_DIR / "clinic.db"))
 UPLOAD_FOLDER = str(PRIVATE_UPLOADS_DIR)
 
