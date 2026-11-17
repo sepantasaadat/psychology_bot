@@ -1,0 +1,24 @@
+[Unit]
+Description=Psychology Clinic Telegram Bot Service (Root Deployment)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/root/psychology_bot
+EnvironmentFile=-/root/psychology_bot/.env
+ExecStart=/root/psychology_bot/venv/bin/python main.py
+Restart=on-failure
+RestartSec=5s
+
+# Security sandboxing
+NoNewPrivileges=true
+PrivateTmp=true
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+Alias=psychology_bot.service
