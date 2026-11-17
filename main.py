@@ -457,8 +457,40 @@ async def admin_confirmed_list_callback(update: Update, context: ContextTypes.DE
         )
         return
 
-    keyboard = []
+    upcoming_appointments = []
+    past_appointments = []
     for appt in appointments:
+        app_id, d, t, name, stype = appt
+        if config.is_appointment_past(d, t):
+            past_appointments.append(appt)
+        else:
+            upcoming_appointments.append(appt)
+
+    lines = ["📋 فهرست نوبت‌های تایید‌شده کلینیک:\n"]
+
+    if upcoming_appointments:
+        lines.append("🔹 نوبت‌های پیش‌رو:")
+        for appt in upcoming_appointments:
+            app_id, d, t, name, stype = appt
+            client_name = name.split("|")[0].strip() if "|" in name else name
+            lines.append(f"• {d} | ساعت {t} | {client_name} ({stype})")
+        lines.append("")
+
+    if past_appointments:
+        lines.append("🔸 نوبت‌های برگزارشده (غیرقابل لغو):")
+        for appt in past_appointments:
+            app_id, d, t, name, stype = appt
+            client_name = name.split("|")[0].strip() if "|" in name else name
+            lines.append(f"• {d} | ساعت {t} | {client_name} ({stype}) [برگزارشده]")
+        lines.append("")
+
+    if upcoming_appointments:
+        lines.append("جهت لغو نوبت‌های پیش‌رو و آزادسازی مجدد زمان مشاوره، روی نوبت مورد نظر کلیک فرمایید:")
+    else:
+        lines.append("کلیه نوبت‌های ثبت‌شده سپری شده‌اند و نوبت پیش‌رویی برای لغو وجود ندارد.")
+
+    keyboard = []
+    for appt in upcoming_appointments:
         app_id, d, t, name, stype = appt
         client_name = name.split("|")[0].strip() if "|" in name else name
         btn_text = f"❌ لغو: {d} | {t} | {client_name}"
@@ -466,8 +498,7 @@ async def admin_confirmed_list_callback(update: Update, context: ContextTypes.DE
 
     keyboard.append([InlineKeyboardButton("🔙 بازگشت به پنل مدیریت", callback_data="admin_panel")])
     await query.edit_message_text(
-        "📋 فهرست نوبت‌های قطعی و فعال کلینیک:\n\n"
-        "جهت لغو نوبت و آزادسازی مجدد زمان مشاوره برای مراجعین، روی نوبت مورد نظر کلیک فرمایید:",
+        "\n".join(lines),
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
@@ -500,6 +531,19 @@ async def admin_delete_callback(update: Update, context: ContextTypes.DEFAULT_TY
         return
 
     app_id = query.data.split("_")[1]
+    appt = database.get_appointment(app_id)
+    if not appt:
+        keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل مدیریت", callback_data="admin_panel")]]
+        await query.edit_message_text(
+            "⚠️ نوبت مورد نظر یافت نشد یا پیش‌تر حذف شده است.",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+        return
+
+    if config.is_appointment_past(appt[1], appt[2]):
+        await query.answer("امکان لغو نوبت‌های برگزارشده (سپری‌شده) وجود ندارد.", show_alert=True)
+        return
+
     database.delete_appointment(app_id)
     keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل مدیریت", callback_data="admin_panel")]]
     await query.edit_message_text(

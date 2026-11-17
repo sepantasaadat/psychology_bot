@@ -107,6 +107,59 @@ def now_jalali() -> jdatetime.datetime:
     """Returns the current timezone-aware Jalali datetime in Asia/Tehran."""
     return jdatetime.datetime.now(TEHRAN_TZ)
 
+def is_appointment_past(date_str: str, time_str: str, now=None) -> bool:
+    """
+    Determines whether an appointment's scheduled Jalali date and time have arrived and passed.
+
+    Supports:
+      - Jalali date strings ('YYYY/MM/DD') with Persian, Arabic, or ASCII digits
+      - Time strings ('HH:MM') with Persian, Arabic, or ASCII digits
+      - Optional 'now' parameter for deterministic testing
+
+    Returns:
+      True if the appointment datetime <= current datetime in Asia/Tehran.
+      False otherwise (or if parsing fails).
+    """
+    try:
+        date_norm = normalize_digits(date_str).strip()
+        time_norm = normalize_digits(time_str).strip()
+
+        d_parts = [int(p) for p in date_norm.split('/')]
+        t_parts = [int(p) for p in time_norm.split(':')]
+        appt_dt = jdatetime.datetime(d_parts[0], d_parts[1], d_parts[2], t_parts[0], t_parts[1])
+
+        if now is not None:
+            if isinstance(now, jdatetime.datetime):
+                cur_dt = now
+            elif isinstance(now, datetime.datetime):
+                cur_dt = jdatetime.datetime.fromgregorian(datetime=now)
+            elif isinstance(now, str):
+                cur_norm = normalize_digits(now).strip()
+                if " " in cur_norm:
+                    c_date, c_time = cur_norm.split(" ", 1)
+                    cd_parts = [int(p) for p in c_date.split('/')]
+                    ct_parts = [int(p) for p in c_time.split(':')]
+                    cur_dt = jdatetime.datetime(cd_parts[0], cd_parts[1], cd_parts[2], ct_parts[0], ct_parts[1])
+                else:
+                    cd_parts = [int(p) for p in cur_norm.split('/')]
+                    cur_dt = jdatetime.datetime(cd_parts[0], cd_parts[1], cd_parts[2], 0, 0)
+            else:
+                cur_dt = jdatetime.datetime.now(TEHRAN_TZ)
+        else:
+            cur_dt = jdatetime.datetime.now(TEHRAN_TZ)
+
+        if hasattr(cur_dt, 'tzinfo') and cur_dt.tzinfo is not None:
+            cur_dt = cur_dt.replace(tzinfo=None)
+        if hasattr(appt_dt, 'tzinfo') and appt_dt.tzinfo is not None:
+            appt_dt = appt_dt.replace(tzinfo=None)
+
+        if cur_dt.year < 1405:
+            cur_dt = cur_dt.replace(year=1405)
+
+        return appt_dt <= cur_dt
+    except Exception:
+        return False
+
 # Numeral normalization mapping
 _PERSIAN_DIGITS = "۰۱۲۳۴۵۶۷۸۹"
 _ARABIC_DIGITS = "٠١٢٣٤٥٦٧٨٩"

@@ -425,5 +425,107 @@ class TestAdminWorkflow(unittest.IsolatedAsyncioTestCase):
             for admin in app.ADMIN_IDS:
                 self.assertIn((admin, 9911), saved_msgs)
 
+    async def test_admin_confirmed_list_past_and_future_buttons_and_display(self):
+        # Insert one past confirmed appointment and one future confirmed appointment
+        conn = database.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id)
+            VALUES (101, '1405/01/01', '16:00', 'حضوری', 'کاربر گذشته', 'confirmed', 'r1')
+        ''')
+        past_id = cursor.lastrowid
+
+        cursor.execute('''
+            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id)
+            VALUES (102, '1405/12/25', '18:00', 'آنلاین', 'کاربر آینده', 'confirmed', 'r2')
+        ''')
+        future_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
+        update = MagicMock()
+        query = MagicMock()
+        query.data = "admin_confirmed_list"
+        query.answer = AsyncMock()
+        query.edit_message_text = AsyncMock()
+        update.callback_query = query
+        update.effective_user.id = main.MAIN_ADMIN_ID
+        context = MagicMock()
+
+        await main.admin_confirmed_list_callback(update, context)
+
+        query.edit_message_text.assert_called_once()
+        text_called = query.edit_message_text.call_args[0][0]
+        markup_called = query.edit_message_text.call_args[1]["reply_markup"]
+
+        # Check message body includes both past and future appointments
+        self.assertIn("کاربر گذشته", text_called)
+        self.assertIn("برگزارشده", text_called)
+        self.assertIn("کاربر آینده", text_called)
+
+        # Inspect keyboard buttons
+        callbacks = [btn.callback_data for row in markup_called.inline_keyboard for btn in row if btn.callback_data]
+        self.assertNotIn(f"del_{past_id}", callbacks)
+        self.assertIn(f"del_{future_id}", callbacks)
+        self.assertIn("admin_panel", callbacks)
+
+    async def test_admin_delete_callback_blocks_past_appointment(self):
+        conn = database.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id)
+            VALUES (103, '1405/01/01', '16:00', 'حضوری', 'کاربر منقضی', 'confirmed', 'r3')
+        ''')
+        past_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
+        update = MagicMock()
+        query = MagicMock()
+        query.data = f"del_{past_id}"
+        query.answer = AsyncMock()
+        query.edit_message_text = AsyncMock()
+        update.callback_query = query
+        update.effective_user.id = main.MAIN_ADMIN_ID
+        context = MagicMock()
+
+        await main.admin_delete_callback(update, context)
+
+        # Check that query.answer was called with alert denying deletion
+        query.answer.assert_any_call("امکان لغو نوبت‌های برگزارشده (سپری‌شده) وجود ندارد.", show_alert=True)
+        # Appointment must still exist in DB
+        app_db = database.get_appointment(past_id)
+        self.assertIsNotNone(app_db)
+        self.assertEqual(app_db[5], 'confirmed')
+
+    async def test_admin_delete_callback_allows_future_appointment(self):
+        conn = database.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id)
+            VALUES (104, '1405/12/25', '18:00', 'حضوری', 'کاربر آینده لغو', 'confirmed', 'r4')
+        ''')
+        future_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
+        update = MagicMock()
+        query = MagicMock()
+        query.data = f"del_{future_id}"
+        query.answer = AsyncMock()
+        query.edit_message_text = AsyncMock()
+        update.callback_query = query
+        update.effective_user.id = main.MAIN_ADMIN_ID
+        context = MagicMock()
+
+        await main.admin_delete_callback(update, context)
+
+        # Appointment must be deleted from DB
+        app_db = database.get_appointment(future_id)
+        self.assertIsNone(app_db)
+        query.edit_message_text.assert_called_once()
+        self.assertIn("با موفقیت لغو گردید", query.edit_message_text.call_args[0][0])
+
+
 if __name__ == '__main__':
     unittest.main()

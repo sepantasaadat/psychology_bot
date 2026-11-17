@@ -211,6 +211,33 @@ class TestStaleAppointmentExpiration(unittest.TestCase):
         new_app = database.get_appointment(new_app_id)
         self.assertEqual(new_app[5], "pending")
 
+    def test_is_appointment_past_scenarios(self):
+        ref_now = jdatetime.datetime(1405, 5, 10, 17, 30)
+
+        # 1. Past date -> True
+        self.assertTrue(config.is_appointment_past("1405/05/09", "18:00", now=ref_now))
+
+        # 2. Same day, earlier hour -> True
+        self.assertTrue(config.is_appointment_past("1405/05/10", "16:00", now=ref_now))
+
+        # 3. Same day, exact minute -> True (arrived)
+        self.assertTrue(config.is_appointment_past("1405/05/10", "17:30", now=ref_now))
+
+        # 4. Same day, later hour -> False
+        self.assertFalse(config.is_appointment_past("1405/05/10", "18:00", now=ref_now))
+
+        # 5. Future date -> False
+        self.assertFalse(config.is_appointment_past("1405/05/11", "16:00", now=ref_now))
+
+        # 6. Persian/Arabic numerals normalized safely -> True
+        self.assertTrue(config.is_appointment_past("۱۴۰۵/۰۵/۰۹", "۱۸:۰۰", now=ref_now))
+        self.assertFalse(config.is_appointment_past("۱۴۰۵/۰۵/۱۱", "۱۶:۰۰", now=ref_now))
+
+        # 7. Malformed inputs return False safely without raising exceptions
+        self.assertFalse(config.is_appointment_past("invalid-date", "18:00", now=ref_now))
+        self.assertFalse(config.is_appointment_past("1405/05/10", "bad-time", now=ref_now))
+        self.assertFalse(config.is_appointment_past(None, None, now=ref_now))
+
 
 if __name__ == "__main__":
     unittest.main()

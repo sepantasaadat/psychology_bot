@@ -203,12 +203,18 @@
                                                 <span class="badge" style="background-color: var(--light-green); color: var(--primary-green);">{{ appt[4] }}</span>
                                             </td>
                                             <td class="text-center">
-                                                <form method="POST" action="/admin/cancel/{{ appt[0] }}" onsubmit="return confirm('آیا از لغو این نوبت قطعی اطمینان دارید؟ زمان آن مجدداً برای مراجعین آزاد خواهد شد.');">
-                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3">
-                                                        <i class="bi bi-trash me-1"></i> لغو نوبت
-                                                    </button>
-                                                </form>
+                                                {% if (appt|length > 5 and appt[5]) or (is_appointment_past is defined and is_appointment_past(appt[1], appt[2])) %}
+                                                    <span class="badge bg-secondary bg-opacity-10 text-muted border px-3 py-2">
+                                                        <i class="bi bi-check2-all me-1"></i>برگزارشده
+                                                    </span>
+                                                {% else %}
+                                                    <form method="POST" action="/admin/cancel/{{ appt[0] }}" onsubmit="return confirm('آیا از لغو این نوبت قطعی اطمینان دارید؟ زمان آن مجدداً برای مراجعین آزاد خواهد شد.');">
+                                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3">
+                                                            <i class="bi bi-trash me-1"></i> لغو نوبت
+                                                        </button>
+                                                    </form>
+                                                {% endif %}
                                             </td>
                                         </tr>
                                         {% endfor %}

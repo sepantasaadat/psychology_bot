@@ -399,16 +399,32 @@ def admin_logout():
     flash("از پنل مدیریت خارج شدید.", "info")
     return redirect(url_for('admin_login'))
 
+@app.context_processor
+def inject_admin_helpers():
+    return {
+        'is_appointment_past': config.is_appointment_past
+    }
+
+@app.template_filter('is_past')
+def is_past_filter(appt):
+    if len(appt) > 5:
+        return bool(appt[5])
+    return config.is_appointment_past(appt[1], appt[2])
+
 @app.route('/admin', endpoint='admin_dashboard')
 @app.route('/admin/dashboard', endpoint='admin_dashboard_alias')
 @admin_required
 def admin_dashboard():
     pending_appointments = database.get_all_pending_appointments()
     confirmed_appointments = database.get_all_confirmed_appointments()
+    confirmed_with_past_flag = [
+        (*appt, config.is_appointment_past(appt[1], appt[2]))
+        for appt in confirmed_appointments
+    ]
     return render_template(
         'admin_dashboard.html',
         pending=pending_appointments,
-        confirmed=confirmed_appointments
+        confirmed=confirmed_with_past_flag
     )
 
 @app.route('/admin/receipt/<int:appointment_id>', endpoint='admin_view_receipt')
@@ -456,6 +472,16 @@ def admin_reject(appointment_id):
 @app.route('/admin/cancel/<int:appointment_id>', methods=['POST'], endpoint='admin_cancel')
 @admin_required
 def admin_cancel(appointment_id):
+    appt = database.get_appointment(appointment_id)
+    if not appt:
+        flash("نوبت مورد نظر یافت نشد.", "warning")
+        return redirect(url_for('admin_dashboard'))
+
+    # appt is (user_id, date, time, session_type, full_name, status)
+    if config.is_appointment_past(appt[1], appt[2]):
+        flash("امکان لغو نوبت‌های برگزارشده (سپری‌شده) وجود ندارد.", "warning")
+        return redirect(url_for('admin_dashboard'))
+
     database.delete_appointment(appointment_id)
     flash(f"نوبت شماره #{appointment_id} لغو و حذف گردید.", "info")
     return redirect(url_for('admin_dashboard'))

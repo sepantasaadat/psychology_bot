@@ -263,6 +263,61 @@ class TestWebRoutes(unittest.TestCase):
             self.assertIn('appointment_id', data_good)
             self.assertEqual(data_good['time'], '17:00')
 
+    def test_admin_dashboard_past_and_future_appointments_view_and_cancel_restrictions(self):
+        """Admin dashboard hides cancel button for past sessions and prevents their deletion."""
+        # Insert one past confirmed appointment and one future confirmed appointment
+        conn = database.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id)
+            VALUES (10, '1405/01/01', '16:00', 'حضوری', 'کاربر قدیمی | 09121111111', 'confirmed', 'r_past.jpg')
+        ''')
+        past_id = cursor.lastrowid
+
+        cursor.execute('''
+            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id)
+            VALUES (11, '1405/12/25', '18:00', 'آنلاین', 'کاربر آینده | 09122222222', 'confirmed', 'r_future.jpg')
+        ''')
+        future_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
+        # Log in as admin
+        with self.client.session_transaction() as sess:
+            sess['admin_logged_in'] = True
+
+        # View dashboard
+        res = self.client.get('/admin')
+        self.assertEqual(res.status_code, 200)
+        html = res.data.decode('utf-8')
+
+        # Both appointments must be displayed in confirmed list
+        self.assertIn(f"#{past_id}", html)
+        self.assertIn(f"#{future_id}", html)
+        self.assertIn("کاربر قدیمی", html)
+        self.assertIn("کاربر آینده", html)
+
+        # Past appointment must show 'برگزارشده' badge and NO cancel button form
+        self.assertIn("برگزارشده", html)
+        self.assertNotIn(f'action="/admin/cancel/{past_id}"', html)
+
+        # Future appointment must show cancel button form
+        self.assertIn(f'action="/admin/cancel/{future_id}"', html)
+
+        # Attempt to cancel past appointment directly via POST -> Rejected, stays in DB
+        res_cancel_past = self.client.post(f'/admin/cancel/{past_id}', follow_redirects=True)
+        self.assertEqual(res_cancel_past.status_code, 200)
+        past_app_db = database.get_appointment(past_id)
+        self.assertIsNotNone(past_app_db)
+        self.assertEqual(past_app_db[5], 'confirmed')
+        self.assertIn("امکان لغو نوبت‌های برگزارشده", res_cancel_past.data.decode('utf-8'))
+
+        # Cancel future appointment -> Allowed, deleted from DB
+        res_cancel_future = self.client.post(f'/admin/cancel/{future_id}', follow_redirects=True)
+        self.assertEqual(res_cancel_future.status_code, 200)
+        future_app_db = database.get_appointment(future_id)
+        self.assertIsNone(future_app_db)
+
 
 if __name__ == '__main__':
     unittest.main()
