@@ -1,0 +1,37 @@
+{
+  "cli_version": "0.13.1",
+  "checkpoint_id": "01M7NM3AVEQCCCS1FR7YAW49AD",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "deploy/setup_root_services.sh",
+    "deploy/systemd/psychobot-bot-root.service",
+    "deploy/systemd/psychobot-web-root.service",
+    "graphify-out/GRAPH_REPORT.md",
+    "graphify-out/graph.html",
+    "graphify-out/graph.json"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "redaction": {
+    "replacements": 405,
+    "layers": {
+      "betterleaks": 72,
+      "connection_string": 0,
+      "credential_key": 0,
+      "credential_value": 155,
+      "credentialed_uri": 0,
+      "entropy": 181,
+      "key_context": 0,
+      "provider_token": 0,
+      "shell_stdin": 0
+    }
+  }
+}
