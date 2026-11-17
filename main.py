@@ -1,7 +1,8 @@
 import os
+import re
 import datetime
 import jdatetime
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 import database  
 
@@ -246,13 +247,56 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=get_main_menu_keyboard(user_id)
     )
 
+async def none_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Answers the placeholder button when all appointment slots for a date are full."""
+    query = update.callback_query
+    await query.answer("⚠️ تمامی ساعت‌های این روز کاری تکمیل است. لطفاً روز دیگری را انتخاب فرمایید.", show_alert=True)
+
+async def safe_edit_message(query: CallbackQuery, text: str, reply_markup=None):
+    """
+    Safely edits a message. If editing as text fails (e.g. on photo/media messages where Telegram
+    raises 'There is no text in the message to edit'), deletes the media message and sends text.
+    """
+    try:
+        return await query.edit_message_text(text, reply_markup=reply_markup)
+    except Exception as e:
+        err_msg = str(e).lower()
+        if "there is no text in the message to edit" in err_msg or "message to edit not found" in err_msg:
+            try:
+                await query.delete_message()
+            except Exception:
+                pass
+            if query.message and hasattr(query.message, "reply_text"):
+                res = query.message.reply_text(text, reply_markup=reply_markup)
+                if hasattr(res, "__await__"):
+                    return await res
+                return res
+        raise
+
+async def safe_edit_review_caption(query: CallbackQuery, additional_text: str):
+    """
+    Safely edits caption or text for an admin review action (approve/reject).
+    """
+    try:
+        base_caption = getattr(query.message, "caption", "") or ""
+        caption = f"{base_caption}\n\n{additional_text}".strip()
+        return await query.edit_message_caption(caption=caption, reply_markup=None)
+    except Exception as e:
+        err_msg = str(e).lower()
+        if "message has no caption to edit" in err_msg or "there is no caption" in err_msg:
+            base_text = getattr(query.message, "text", "") or ""
+            text = f"{base_text}\n\n{additional_text}".strip()
+            return await query.edit_message_text(text=text, reply_markup=None)
+        raise
+
 # تابع کمکی اتمام فرآیند بررسی ادمین: ریست نشست، ارسال برنامه هفتگی نوبت‌ها و بازگشت به منوی اصلی
 async def complete_admin_review_session(query, context, user_id):
     context.user_data.clear()
     weekly_schedule = format_upcoming_week_appointments()
-    await context.bot.send_message(chat_id=query.message.chat_id, text=weekly_schedule)
+    chat_id = query.message.chat_id if query.message else user_id
+    await context.bot.send_message(chat_id=chat_id, text=weekly_schedule)
     await context.bot.send_message(
-        chat_id=query.message.chat_id,
+        chat_id=chat_id,
         text="منوی اصلی پذیرش و مدیریت کلینیک: 🌿",
         reply_markup=get_main_menu_keyboard(user_id)
     )
@@ -339,7 +383,8 @@ async def admin_pending_list_callback(update: Update, context: ContextTypes.DEFA
     pending_list = database.get_all_pending_appointments()
     if not pending_list:
         keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل مدیریت", callback_data="admin_panel")]]
-        await query.edit_message_text(
+        await safe_edit_message(
+            query,
             "در حال حاضر هیچ نوبت در انتظار تاییدی در سامانه وجود ندارد. ✨",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
@@ -355,7 +400,8 @@ async def admin_pending_list_callback(update: Update, context: ContextTypes.DEFA
         keyboard.append([InlineKeyboardButton(btn_text, callback_data=f"admin_view_pending_{app_id}")])
 
     keyboard.append([InlineKeyboardButton("🔙 بازگشت به پنل مدیریت", callback_data="admin_panel")])
-    await query.edit_message_text(
+    await safe_edit_message(
+        query,
         "⏳ فهرست نوبت‌های در انتظار بررسی و تایید فیش:\n\n"
         "روی نوبت مورد نظر کلیک کنید تا تصویر فیش و دکمه‌های تایید یا رد برای شما نمایش داده شود:",
         reply_markup=InlineKeyboardMarkup(keyboard)
@@ -375,7 +421,8 @@ async def admin_view_pending_callback(update: Update, context: ContextTypes.DEFA
     app_info = database.get_appointment(app_id, include_cancelled=True)
     if not app_info:
         keyboard = [[InlineKeyboardButton("🔙 بازگشت به لیست درخواست‌ها", callback_data="admin_pending_list")]]
-        await query.edit_message_text(
+        await safe_edit_message(
+            query,
             "⚠️ این نوبت یافت نشد.",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
@@ -384,7 +431,8 @@ async def admin_view_pending_callback(update: Update, context: ContextTypes.DEFA
     client_id, d, t, stype, name, status = app_info
     if status != "pending":
         keyboard = [[InlineKeyboardButton("🔙 بازگشت به لیست درخواست‌ها", callback_data="admin_pending_list")]]
-        await query.edit_message_text(
+        await safe_edit_message(
+            query,
             f"⚠️ وضعیت این نوبت قبلاً به «{status}» تعیین تکلیف شده است.",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
@@ -416,24 +464,59 @@ async def admin_view_pending_callback(update: Update, context: ContextTypes.DEFA
         [InlineKeyboardButton("🔙 بازگشت به لیست درخواست‌ها", callback_data="admin_pending_list")]
     ]
 
-    if receipt_file and os.path.exists(receipt_file):
-        try:
-            with open(receipt_file, "rb") as photo_f:
-                await context.bot.send_photo(
-                    chat_id=user_id,
-                    photo=photo_f,
-                    caption=details_caption,
-                    reply_markup=InlineKeyboardMarkup(review_keyboard)
-                )
-            try:
-                await query.delete_message()
-            except Exception:
-                pass
-            return
-        except Exception as e:
-            logger.error(f"Error sending photo in admin_view_pending_callback: {e}")
+    if receipt_file:
+        local_path = None
+        if os.path.isabs(receipt_file) and os.path.exists(receipt_file):
+            local_path = receipt_file
+        elif os.path.exists(os.path.join(config.UPLOAD_FOLDER, os.path.basename(receipt_file))):
+            local_path = os.path.join(config.UPLOAD_FOLDER, os.path.basename(receipt_file))
 
-    await query.edit_message_text(
+        if local_path:
+            try:
+                is_pdf = local_path.lower().endswith('.pdf')
+                with open(local_path, "rb") as f:
+                    if is_pdf:
+                        await context.bot.send_document(
+                            chat_id=user_id,
+                            document=f,
+                            caption=details_caption,
+                            reply_markup=InlineKeyboardMarkup(review_keyboard)
+                        )
+                    else:
+                        await context.bot.send_photo(
+                            chat_id=user_id,
+                            photo=f,
+                            caption=details_caption,
+                            reply_markup=InlineKeyboardMarkup(review_keyboard)
+                        )
+                try:
+                    await query.delete_message()
+                except Exception:
+                    pass
+                return
+            except Exception as e:
+                logger.error(f"Error sending local receipt file in admin_view_pending_callback: {e}")
+        else:
+            # شناسه فیش تلگرامی نوبت‌های ثبت‌شده در ربات
+            is_local_filename = any(receipt_file.lower().endswith(ext) for ext in ['.jpg', '.jpeg', '.png', '.pdf'])
+            if not is_local_filename:
+                try:
+                    await context.bot.send_photo(
+                        chat_id=user_id,
+                        photo=receipt_file,
+                        caption=details_caption,
+                        reply_markup=InlineKeyboardMarkup(review_keyboard)
+                    )
+                    try:
+                        await query.delete_message()
+                    except Exception:
+                        pass
+                    return
+                except Exception as e:
+                    logger.warning(f"Could not send photo by file_id in admin_view_pending_callback: {e}")
+
+    await safe_edit_message(
+        query,
         details_caption,
         reply_markup=InlineKeyboardMarkup(review_keyboard)
     )
@@ -545,8 +628,12 @@ async def admin_delete_callback(update: Update, context: ContextTypes.DEFAULT_TY
         return
 
     database.delete_appointment(app_id)
-    keyboard = [[InlineKeyboardButton("🔙 بازگشت به پنل مدیریت", callback_data="admin_panel")]]
-    await query.edit_message_text(
+    keyboard = [
+        [InlineKeyboardButton("📋 بازگشت به لیست نوبت‌های تایید‌شده", callback_data="admin_confirmed_list")],
+        [InlineKeyboardButton("🔙 بازگشت به پنل مدیریت", callback_data="admin_panel")]
+    ]
+    await safe_edit_message(
+        query,
         "✅ نوبت مشاوره با موفقیت لغو گردید و زمان آن مجدداً برای رزرو مراجعین آزاد شد. 🌱", 
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
@@ -676,10 +763,13 @@ async def type_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     session_type = query.data.split("_")[1]
     context.user_data['session_type'] = session_type
-    
     context.user_data['state'] = 'awaiting_name'
+    selected_date = context.user_data.get('selected_date', '')
     
-    keyboard = [[InlineKeyboardButton("❌ انصراف و بازگشت", callback_data="main_menu")]]
+    keyboard = [
+        [InlineKeyboardButton("🔙 بازگشت به انتخاب ساعت", callback_data=f"date_{selected_date}")],
+        [InlineKeyboardButton("❌ انصراف و بازگشت", callback_data="main_menu")]
+    ]
     name_prompt_text = (
         f"🌿 شیوه جلسه: {session_type}\n\n"
         "👤 گام چهارم: مشخصات مراجع ارجمند\n\n"
@@ -745,7 +835,7 @@ async def user_cancel_callback(update: Update, context: ContextTypes.DEFAULT_TYP
         reply_markup=get_main_menu_keyboard(user_id)
     )
 
-    # ارسال پیام اطلاع‌رسانی لغو نوبت به تمام ادمین‌ها و بازگرداندن نشست ادمین به منوی اصلی
+    # ارسال پیام اطلاع‌رسانی لغو نوبت به تمام ادمین‌ها همراه با دکمه دسترسی سریع
     admin_alert_text = (
         "⚠️ گزارش لغو نوبت توسط مراجع:\n\n"
         f"👤 نام مراجع: {name}\n"
@@ -780,10 +870,7 @@ async def admin_review_callback(update: Update, context: ContextTypes.DEFAULT_TY
     
     app_info = database.get_appointment(appointment_id)
     if not app_info:
-        await query.edit_message_caption(
-            caption="⚠️ این نوبت در دیتابیس یافت نشد!",
-            reply_markup=None
-        )
+        await safe_edit_review_caption(query, "⚠️ این نوبت در دیتابیس یافت نشد!")
         await complete_admin_review_session(query, context, user_id)
         return
         
@@ -791,20 +878,13 @@ async def admin_review_callback(update: Update, context: ContextTypes.DEFAULT_TY
 
     # جلوگیری از تداخل دو ادمین: اگر قبلاً تایید/رد شده، دیگر کاری نکن
     if current_status != "pending":
-        base_caption = query.message.caption or ""
-        await query.edit_message_caption(
-            caption=f"{base_caption}\n\n⚠️ این نوبت قبلاً توسط ادمین دیگری تعیین تکلیف شده است.",
-            reply_markup=None
-        )
+        await safe_edit_review_caption(query, "⚠️ این نوبت قبلاً توسط ادمین دیگری تعیین تکلیف شده است.")
         await complete_admin_review_session(query, context, user_id)
         return
 
     if action == "approve":
         database.update_appointment_status(appointment_id, "confirmed")
-        await query.edit_message_caption(
-            caption=f"{query.message.caption}\n\n✅ توسط شما تایید قطعی شد.",
-            reply_markup=None
-        )
+        await safe_edit_review_caption(query, "✅ توسط شما تایید قطعی شد.")
         
         # ارسال تاییدیه قطعی به مراجع
         if client_id != 0:
@@ -869,10 +949,7 @@ async def admin_review_callback(update: Update, context: ContextTypes.DEFAULT_TY
 
     elif action == "reject":
         database.update_appointment_status(appointment_id, "rejected")
-        await query.edit_message_caption(
-            caption=f"{query.message.caption}\n\n❌ توسط شما رد شد.",
-            reply_markup=None
-        )
+        await safe_edit_review_caption(query, "❌ توسط شما رد شد.")
         
         if client_id != 0:
             client_reject_text = (
@@ -931,12 +1008,12 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data.startswith("approve_") or data.startswith("reject_"):
         await admin_review_callback(update, context)
     elif data == "none":
-        await query.answer()
+        await none_callback(update, context)
     else:
         logger.warning(f"Unhandled callback query data: {data}")
         await query.answer()
 
-# هندلر دریافت پیام‌های متنی (نام مراجع و پاسخ عمومی)
+# هندلر دریافت پیام‌های متنی (نام مراجع، شماره تلفن و پاسخ عمومی)
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_id = user.id
@@ -958,24 +1035,41 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
     if state == 'awaiting_name':
-        full_name = update.message.text.strip()
+        raw_text = update.message.text.strip()
         logger.info(f"Text message received in state=awaiting_name from user_id={user_id}, message_id={message_id}")
 
-        # در صورتی که رزروکننده یکی از ادمین‌های کلینیک باشد، مرحله ارسال فیش و تایید ادمین بایپس شده و نوبت مستقیماً ثبت قطعی می‌گردد
+        # اعتبارسنجی نام مراجع: حداقل ۳ کاراکتر و دارای حروف الفبا
+        if len(raw_text) < 3 or not any(c.isalpha() for c in raw_text):
+            await update.message.reply_text(
+                "⚠️ نام وارد شده نامعتبر است. لطفاً نام و نام خانوادگی خود را به صورت کامل وارد فرمایید (حداقل ۳ حرف):",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ انصراف و بازگشت", callback_data="main_menu")]])
+            )
+            return
+
+        # در صورتی که رزروکننده یکی از ادمین‌های کلینیک باشد، مرحله ارسال فیش بایپس شده و نوبت مستقیماً ثبت قطعی می‌گردد
         if user_id in ADMIN_IDS:
             date = context.user_data.get('selected_date')
             time = context.user_data.get('selected_time')
             session_type = context.user_data.get('session_type')
 
             database.add_user(user.id, user.first_name, user.username)
-            appointment_id = database.add_confirmed_appointment(
-                user_id=user.id,
-                date=date,
-                time=time,
-                session_type=session_type,
-                full_name=full_name,
-                receipt_file_id="admin_direct"
-            )
+            try:
+                appointment_id = database.add_confirmed_appointment(
+                    user_id=user.id,
+                    date=date,
+                    time=time,
+                    session_type=session_type,
+                    full_name=raw_text,
+                    receipt_file_id="admin_direct"
+                )
+            except database.SlotAlreadyBookedError:
+                context.user_data.clear()
+                cancel_checkout_timeout_job(context, user_id)
+                await update.message.reply_text(
+                    "⚠️ خطا در ثبت مستقیم: این ساعت قبلاً رزرو شده است و امکان ثبت نوبت جدید در آن وجود ندارد.",
+                    reply_markup=get_main_menu_keyboard(user_id)
+                )
+                return
 
             context.user_data.clear()
             cancel_checkout_timeout_job(context, user_id)
@@ -983,7 +1077,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             confirm_msg = (
                 "✅ وقت مشاوره با موفقیت به‌صورت مستقیم ثبت قطعی شد. 🌱\n\n"
                 "📋 مشخصات نوبت ثبت‌شده:\n"
-                f"👤 نام مراجع: {full_name}\n"
+                f"👤 نام مراجع: {raw_text}\n"
                 f"📅 تاریخ جلسه: {date}\n"
                 f"⏰ ساعت جلسه: {time}\n"
                 f"🩺 نوع جلسه: {session_type}\n"
@@ -1000,22 +1094,82 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-        context.user_data['full_name'] = full_name
-        
-        # تغییر وضعیت به انتظار برای دریافت فیش واریزی
+        # بررسی در صورتی که مراجع در همین پیام شماره موبایل خود را هم همراه با نام ارسال کرده باشد
+        phone_match = re.search(r"09\d{9}", config.normalize_digits(raw_text))
+        if phone_match:
+            phone_found = phone_match.group(0)
+            clean_name = raw_text.replace(phone_found, "").replace("|", "").strip()
+            context.user_data['phone'] = phone_found
+            context.user_data['full_name'] = f"{clean_name} | {phone_found}" if clean_name else raw_text
+        else:
+            context.user_data['full_name'] = raw_text
+
+        # انتقال به گام ارسال فیش واریزی
         context.user_data['state'] = 'awaiting_receipt'
-        
-        keyboard = [[InlineKeyboardButton("❌ انصراف و بازگشت", callback_data="main_menu")]]
+
+        keyboard = [
+            [InlineKeyboardButton("🔙 بازگشت به انتخاب ساعت", callback_data=f"date_{context.user_data.get('selected_date', '')}")],
+            [InlineKeyboardButton("❌ انصراف و بازگشت", callback_data="main_menu")]
+        ]
         receipt_request_text = (
-            f"سپاسگزاریم، مراجع گرامی جناب/سرکار {full_name} 🌸\n\n"
+            f"سپاسگزاریم، مراجع گرامی جناب/سرکار {context.user_data['full_name']} 🌸\n\n"
             "💳 گام نهایی: بارگذاری رسید پرداخت حق‌المشاوره\n\n"
-            "جهت نهایی‌سازی درخواست رزرو، لطفاً تصویر واضح فیش واریزی خود را در همین گفتگو ارسال فرمایید.\n\n"
-            "⏳ توجه: شما ۱ ساعت فرصت دارید تا اطلاعات خود را وارد کرده و تصویر فیش واریزی را ارسال نمایید؛ در غیر این صورت نوبت به صورت خودکار آزاد خواهد شد."
+            "جهت نهایی‌سازی درخواست رزرو، لطفاً تصویر یا فایل واضح فیش واریزی خود را در همین گفتگو ارسال فرمایید.\n\n"
+            "⏳ توجه: شما ۱ ساعت فرصت دارید تا اطلاعات خود را وارد کرده و فیش واریزی را ارسال نمایید؛ در غیر این صورت زمان رزرو آزاد خواهد شد."
         )
         await update.message.reply_text(
             receipt_request_text,
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
+        return
+
+    elif state == 'awaiting_phone':
+        raw_phone = update.message.text.strip()
+        phone_norm = config.normalize_digits(raw_phone).strip()
+        logger.info(f"Text message received in state=awaiting_phone from user_id={user_id}, message_id={message_id}")
+
+        if not re.match(r"^09\d{9}$", phone_norm):
+            keyboard = [[InlineKeyboardButton("❌ انصراف و بازگشت", callback_data="main_menu")]]
+            await update.message.reply_text(
+                "⚠️ شماره موبایل وارد شده معتبر نمی‌باشد.\nلطفاً یک شماره تلفن همراه معتبر ۱۱ رقمی ایرانی (مانند 09121234567) ارسال فرمایید:",
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+            return
+
+        context.user_data['phone'] = phone_norm
+        name_only = context.user_data.get('full_name', 'مراجع گرامی')
+        context.user_data['full_name'] = f"{name_only} | {phone_norm}"
+        context.user_data['state'] = 'awaiting_receipt'
+
+        keyboard = [[InlineKeyboardButton("❌ انصراف و بازگشت", callback_data="main_menu")]]
+        receipt_request_text = (
+            f"سپاسگزاریم، مراجع گرامی جناب/سرکار {name_only} 🌸\n"
+            f"📱 شماره تماس: {phone_norm}\n\n"
+            "💳 گام نهایی: بارگذاری رسید پرداخت حق‌المشاوره\n\n"
+            "جهت نهایی‌سازی درخواست رزرو، لطفاً تصویر یا فایل فیش واریزی خود را در همین گفتگو ارسال فرمایید.\n\n"
+            "⏳ توجه: شما ۱ ساعت فرصت دارید تا فیش واریزی را ارسال نمایید؛ در غیر این صورت زمان رزرو آزاد خواهد شد."
+        )
+        await update.message.reply_text(
+            receipt_request_text,
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+        return
+
+    elif state == 'awaiting_receipt':
+        logger.info(f"Text message received while in awaiting_receipt from user_id={user_id}, message_id={message_id}")
+        keyboard = [[InlineKeyboardButton("❌ انصراف و بازگشت", callback_data="main_menu")]]
+        receipt_reminder_text = (
+            "⚠️ مراجع گرامی؛\n"
+            "درخواست نوبت شما ثبت اولیه شده و سامانه منتظر دریافت تصویر یا فایل فیش واریزی شما می‌باشد.\n\n"
+            "لطفاً تصویر یا فایل رسید پرداخت را ارسال فرمایید.\n"
+            "در صورتی که مایل به انصراف و بازگشت به منوی اصلی هستید، روی دکمه زیر کلیک فرمایید: 🌱"
+        )
+        await update.message.reply_text(
+            receipt_reminder_text,
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+        return
+
     else:
         logger.info(f"Text message received outside booking from user_id={user_id}, message_id={message_id}")
         general_prompt_text = (
@@ -1028,10 +1182,9 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=get_main_menu_keyboard(user_id)
         )
 
-# تابع دریافت عکس فیش
+# تابع دریافت عکس یا فایل فیش واریزی
 async def handle_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.user_data.get('state') != 'awaiting_receipt':
-        # اگر کاربر در مرحله فیش نیست و عکسی فرستاد
         return
 
     user = update.effective_user
@@ -1050,19 +1203,45 @@ async def handle_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    photo_file_id = update.message.photo[-1].file_id
+    # پشتیبانی از ارسال به صورت Photo یا Document (سند / PDF / عکس بدون فشرده‌سازی)
+    photo_file_id = None
+    is_document = False
+    if update.message.photo:
+        photo_file_id = update.message.photo[-1].file_id
+    elif update.message.document:
+        photo_file_id = update.message.document.file_id
+        is_document = True
+    else:
+        return
+
     message_id = update.message.message_id
-    logger.info(f"Receipt photo received from user_id={user_id}, message_id={message_id}")
+    logger.info(f"Receipt media received from user_id={user_id}, message_id={message_id}, is_document={is_document}")
     
     date = context.user_data['selected_date']
     time = context.user_data['selected_time']
     session_type = context.user_data['session_type']
-    full_name = context.user_data['full_name']
+    full_name = context.user_data.get('full_name', '')
+    phone = context.user_data.get('phone', '')
+    if phone and phone not in full_name:
+        full_name = f"{full_name} | {phone}"
 
     database.add_user(user.id, user.first_name, user.username)
-    # [آپدیت ۷ و ۸]: ارسال دیتای جدید به دیتابیس
-    appointment_id = database.add_pending_appointment(user.id, date, time, session_type, full_name, photo_file_id)
-    logger.info(f"Pending appointment created: appointment_id={appointment_id}, user_id={user_id}")
+    try:
+        appointment_id = database.add_pending_appointment(user.id, date, time, session_type, full_name, photo_file_id)
+        logger.info(f"Pending appointment created: appointment_id={appointment_id}, user_id={user_id}")
+    except database.SlotAlreadyBookedError:
+        cancel_checkout_timeout_job(context, user_id)
+        context.user_data.clear()
+        conflict_text = (
+            "⚠️ مراجع گرامی؛\n"
+            "متأسفانه در فاصله تکمیل مراحل، این ساعت توسط مراجع دیگری رزرو گردید.\n"
+            "لطفاً جهت انتخاب زمان دیگری از تقویم کلینیک اقدام فرمایید یا با پذیرش تماس بگیرید. 🌱"
+        )
+        await update.message.reply_text(
+            conflict_text,
+            reply_markup=get_main_menu_keyboard(user_id)
+        )
+        return
 
     # لغو جاب انقضای فرآیند رزرو و پاک‌سازی حافظه نشست
     cancel_checkout_timeout_job(context, user_id)
@@ -1074,7 +1253,10 @@ async def handle_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "به محض بررسی و تایید، تاییدیه قطعی نوبت در همین گفتگو به اطلاع شما خواهد رسید.\n\n"
         "با سپاس از صبوری و همراهی ارزشمند شما 🌿"
     )
-    await update.message.reply_text(user_receipt_ack)
+    await update.message.reply_text(
+        user_receipt_ack,
+        reply_markup=get_main_menu_keyboard(user_id)
+    )
 
     # دکمه‌ها و مشخصات ارسالی برای ادمین‌های کلینیک (اندازه متناسب با صفحه نمایش)
     keyboard = [
@@ -1088,7 +1270,7 @@ async def handle_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_handle = f"@{user.username}" if user.username else "ندارد"
     caption = (
         "📋 درخواست جدید رزرو وقت مشاوره:\n\n"
-        f"👤 نام مراجع: {full_name}\n"
+        f"👤 نام و مشخصات مراجع: {full_name}\n"
         f"🔗 شناسه تلگرام: {user_handle}\n"
         f"📅 تاریخ جلسه: {date}\n"
         f"⏰ ساعت جلسه: {time}\n"
@@ -1096,15 +1278,22 @@ async def handle_receipt(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🆔 کد پیگیری: #{appointment_id}"
     )
     
-    # [آپدیت ۱]: ارسال پیام تایید به صورت حلقه‌ای برای تمام ادمین‌های لیست شده
     for admin in ADMIN_IDS:
         try:
-            sent_msg = await context.bot.send_photo(
-                chat_id=admin,
-                photo=photo_file_id,
-                caption=caption,
-                reply_markup=reply_markup
-            )
+            if is_document:
+                sent_msg = await context.bot.send_document(
+                    chat_id=admin,
+                    document=photo_file_id,
+                    caption=caption,
+                    reply_markup=reply_markup
+                )
+            else:
+                sent_msg = await context.bot.send_photo(
+                    chat_id=admin,
+                    photo=photo_file_id,
+                    caption=caption,
+                    reply_markup=reply_markup
+                )
             database.save_admin_receipt_message(appointment_id, admin, sent_msg.message_id)
         except Exception as e:
             logger.error(f"خطا در ارسال برای ادمین {admin}: {e}")
@@ -1181,10 +1370,11 @@ def main():
     app.add_handler(CallbackQueryHandler(date_callback, pattern=r"^date_"))
     app.add_handler(CallbackQueryHandler(time_callback, pattern=r"^time_"))
     app.add_handler(CallbackQueryHandler(type_callback, pattern=r"^type_"))
+    app.add_handler(CallbackQueryHandler(none_callback, pattern=r"^none$"))
     app.add_handler(CallbackQueryHandler(user_cancel_callback, pattern=r"^user_cancel_\d+$"))
     app.add_handler(CallbackQueryHandler(admin_review_callback, pattern=r"^(approve|reject)_\d+$"))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text)) # اضافه شدن هندلر متن برای دریافت نام و شروع
-    app.add_handler(MessageHandler(filters.PHOTO, handle_receipt))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text)) # اضافه شدن هندلر متن برای دریافت نام، تلفن و شروع
+    app.add_handler(MessageHandler(filters.PHOTO | filters.Document.ALL, handle_receipt))
     
     print(f"Bot {BOT_NAME} (@{BOT_USERNAME}) version 2.0 is running on VPS...")
     app.run_polling(drop_pending_updates=True)
