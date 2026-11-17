@@ -1,0 +1,40 @@
+{
+  "cli_version": "0.13.1",
+  "checkpoint_id": "01M7N12A23JVW1468JSBTE6WCH",
+  "strategy": "manual-commit",
+  "branch": "main",
+  "checkpoints_count": 2,
+  "files_touched": [
+    ".gitignore",
+    "app.py",
+    "config.py",
+    "deploy/nginx/drshafaeiclinic.ir.conf",
+    "deploy/systemd/psychobot-web-root.service",
+    "requirements.txt",
+    "templates/booking.html",
+    "tests/test_devops_deployment.py",
+    "tests/test_security.py"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "redaction": {
+    "replacements": 394,
+    "layers": {
+      "betterleaks": 68,
+      "connection_string": 0,
+      "credential_key": 0,
+      "credential_value": 148,
+      "credentialed_uri": 0,
+      "entropy": 181,
+      "key_context": 0,
+      "provider_token": 0,
+      "shell_stdin": 0
+    }
+  }
+}

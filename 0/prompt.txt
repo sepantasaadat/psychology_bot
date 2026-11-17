@@ -1,0 +1,51 @@
+@[plugin:superpowers] /authorized-security-audit Act as a Principal Application Security Engineer and Senior Web Security Auditor.
+
+Your task is to perform a comprehensive, defensive **Static Application Security Testing (SAST) and Architectural Security Audit** specifically targeting the **web application, API endpoints, frontend, and server configuration** components of this project workspace.
+
+### Phase 1: Web Attack Surface & Architecture Mapping
+Before listing vulnerabilities, inspect the web-related files in the workspace (routes, controllers, views/templates, middleware, authentication logic, database models, static assets, and server/deployment configs like Nginx, Docker, or `.env.example`) to map:
+1. **Entry Points:** All HTTP/HTTPS routes, REST/GraphQL API endpoints, form handlers, webhooks, and file upload/download endpoints.
+2. **Trust Boundaries & Auth Flows:** How users authenticate, how sessions/tokens are stored and validated, and how roles/permissions are enforced.
+3. **Data Sinks:** Database queries, template rendering engines, external HTTP requests, filesystem operations, and OS/shell calls.
+
+---
+
+### Phase 2: Deep Vulnerability Audit (Code-Level Trace)
+Audit the entire web codebase systematically across the following categories, tracing untrusted user inputs from **Source** to **Sink**:
+
+1. **Broken Access Control (A01):**
+   - Missing authentication checks or authorization decorators/middleware on sensitive routes or admin panels.
+   - Insecure Direct Object References (IDOR) where user-supplied IDs access or modify other users' resources without ownership verification.
+   - Path traversal vulnerabilities in file serving or upload handlers.
+2. **Injection & Cross-Site Scripting (A03):**
+   - SQL / NoSQL Injection via raw string concatenation or unparameterized queries.
+   - Cross-Site Scripting (Reflected, Stored, or DOM-based XSS) via unescaped template variables (`|safe`, `dangerouslySetInnerHTML`, `innerHTML`) or improper output encoding.
+   - Command Injection, Server-Side Template Injection (SSTI), or unsafe deserialization (`pickle`, `yaml.load`).
+3. **Authentication, Session & Cryptographic Failures (A02 & A07):**
+   - Weak password hashing, insecure token generation, or missing expiration/signature verification on JWTs/sessions.
+   - Session cookies missing `HttpOnly`, `Secure`, or `SameSite` flags.
+   - Missing rate-limiting or brute-force protection on login, OTP, password reset, or sensitive API endpoints.
+4. **Security Misconfigurations, CSRF & CORS (A05):**
+   - State-changing endpoints (`POST`, `PUT`, `DELETE`) lacking CSRF protection.
+   - Overly permissive CORS configurations (e.g., wildcard origins combined with credentials).
+   - Debug mode enabled in production configs, exposed stack traces, missing security headers (`CSP`, `HSTS`, `X-Frame-Options`, `X-Content-Type-Options`), or sensitive files/backups reachable inside the public web root.
+5. **Secrets Management & SSRF (A10):**
+   - Hardcoded API keys, database credentials, webhook secrets, or private keys in source code or client-side bundles.
+   - Server-Side Request Forgery (SSRF) where user-controlled URLs are fetched by the backend without allowlisting.
+6. **Vulnerable Dependencies (A06):**
+   - Inspect dependency manifests (`requirements.txt`, `package.json`, `composer.json`, etc.) for outdated or known-vulnerable web packages.
+
+---
+
+### Phase 3: Structured Audit Report & Defensive Remediation Plan
+Present your findings sorted by severity (**Critical → High → Medium → Low**). For **every** discovered vulnerability, provide:
+- **[Severity] Vulnerability Title & OWASP Category**
+- **Exact Location:** File path and line numbers (`path/to/file.ext:L10-L25`).
+- **Root Cause & Impact:** Clear technical explanation of why the code is vulnerable and what an attacker could compromise if exploited.
+- **Defensive Remediation (Exact Code Fix):** Provide the secure, drop-in replacement code snippet and any necessary configuration hardening.
+
+Conclude with a **Prioritized Security Hardening Checklist** ordered by highest risk reduction first. Do NOT modify any files yet—present the complete audit report first so I can review and approve the fixes.
+
+---
+
+@[plugin:superpowers] i approve these, fix all of them completley and precisely. at the end test all of project to work right T then push it to github
