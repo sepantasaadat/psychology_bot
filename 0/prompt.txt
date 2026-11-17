@@ -1,0 +1,12 @@
+ok i did it successfully
+
+---
+
+@[plugin:superpowers] Update the admin view for past/completed appointments:
+
+Trigger Condition:
+When a booked appointment's scheduled date and time have arrived and passed:
+
+Required Behavior for Admins:
+1. Remove the cancellation button associated with that session for admins, as there is no need for a cancel option once the session has taken place and its scheduled time has passed.
+2. Continue displaying the appointment solely within the confirmed appointments list (without a cancellation button) so admins can still view it when checking the appointments scheduled during the week.
