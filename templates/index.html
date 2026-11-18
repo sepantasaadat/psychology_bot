@@ -4,16 +4,16 @@
 
 {% block content %}
 <!-- بخش معرفی اصلی (Hero Section) -->
-<section class="hero-box p-4 p-md-5 mb-5" aria-labelledby="hero-heading">
+<section class="p-4 p-md-5 mb-5 bg-white rounded-4" style="box-shadow: var(--card-shadow); border: 1px solid var(--subtle-border);">
     <div class="row align-items-center g-4 py-3">
         <div class="col-lg-8 text-center text-lg-start">
             <div class="mb-3">
                 <span class="badge-soft">
-                    <i class="bi bi-shield-check me-1" aria-hidden="true"></i> فضای امن، پذیرا و کاملاً محرمانه
+                    <i class="bi bi-shield-check me-1"></i> فضای امن، پذیرا و کاملاً محرمانه
                 </span>
             </div>
             
-            <h1 id="hero-heading" class="display-5 fw-bold mb-4 text-clinic-primary" style="line-height: 1.35;">
+            <h1 class="display-5 fw-bold mb-4" style="color: var(--primary-green); line-height: 1.35;">
                 همراه شما در مسیر آرامش
             </h1>
             
@@ -22,36 +22,36 @@
             </p>
 
             <div class="d-flex flex-wrap gap-3 justify-content-center justify-content-lg-start pt-2">
-                <a href="/booking" class="btn btn-primary btn-lg px-4 rounded-pill shadow-sm btn-touch">
-                    <i class="bi bi-calendar2-check me-2" aria-hidden="true"></i> رزرو آنلاین نوبت
+                <a href="/booking" class="btn btn-primary btn-lg px-4 rounded-pill shadow-sm">
+                    <i class="bi bi-calendar2-check me-2"></i> رزرو آنلاین نوبت
                 </a>
-                <a href="/about" class="btn btn-outline-primary btn-lg px-4 rounded-pill btn-touch">
-                    <i class="bi bi-person-lines-fill me-2" aria-hidden="true"></i> رویکردها و سوابق درمانی
+                <a href="/about" class="btn btn-outline-primary btn-lg px-4 rounded-pill">
+                    <i class="bi bi-person-lines-fill me-2"></i> رویکردها و سوابق درمانی
                 </a>
             </div>
 
             <div class="d-flex flex-wrap gap-4 mt-4 pt-3 border-top border-light justify-content-center justify-content-lg-start text-muted small">
                 <div class="d-flex align-items-center">
-                    <i class="bi bi-check-circle-fill text-success me-2" aria-hidden="true"></i>
+                    <i class="bi bi-check-circle-fill text-success me-2"></i>
                     <span>رازداری کامل طبق سوگندنامه حرفه‌ای</span>
                 </div>
                 <div class="d-flex align-items-center">
-                    <i class="bi bi-check-circle-fill text-success me-2" aria-hidden="true"></i>
+                    <i class="bi bi-check-circle-fill text-success me-2"></i>
                     <span>جلسات حضوری در محیط کلینیک و آنلاین</span>
                 </div>
                 <div class="d-flex align-items-center">
-                    <i class="bi bi-check-circle-fill text-success me-2" aria-hidden="true"></i>
+                    <i class="bi bi-check-circle-fill text-success me-2"></i>
                     <span>رویکردهای شناختی‌رفتاری (CBT) و طرح‌واره</span>
                 </div>
             </div>
         </div>
 
         <div class="col-lg-4 d-none d-lg-block text-center">
-            <div class="p-4 rounded-4" style="background-color: var(--light-green); border: 1px solid var(--border-accent);">
-                <div class="display-1 mb-3 text-clinic-primary">
-                    <i class="bi bi-flower2" aria-hidden="true"></i>
+            <div class="p-4 rounded-4" style="background-color: var(--light-green); border: 1px solid rgba(74, 124, 89, 0.2);">
+                <div class="display-1 mb-3" style="color: var(--primary-green);">
+                    <i class="bi bi-flower2"></i>
                 </div>
-                <h2 class="h5 fw-bold mb-2 text-clinic-primary">پذیرش بدون قضاوت</h2>
+                <h5 class="fw-bold mb-2" style="color: var(--primary-green);">پذیرش بدون قضاوت</h5>
                 <p class="text-muted small lh-lg mb-0">
                     روان‌درمانی سفری از جنس همدلی و آگاهی است؛ جایی برای شنیده شدن احساسات و بازسازی الگوهای ناکارآمد زندگی.
                 </p>
@@ -61,10 +61,10 @@
 </section>
 
 <!-- بخش زمینه‌های تخصصی خدمات بالینی -->
-<section class="mb-5" aria-labelledby="services-heading">
+<section class="mb-5">
     <div class="text-center mb-5">
         <span class="badge-soft mb-2">زمینه‌های تخصصی</span>
-        <h2 id="services-heading" class="fw-bold mb-3 text-clinic-primary">خدمات روان‌درمانی و مشاوره</h2>
+        <h2 class="fw-bold mb-3" style="color: var(--primary-green);">خدمات روان‌درمانی و مشاوره</h2>
         <p class="text-muted prose-readable">
             فرایند درمان متناسب با شرایط و نیازهای خاص هر مراجع، با استفاده از روش‌های استاندارد و معتبر جهانی طراحی می‌شود.
         </p>
@@ -73,12 +73,12 @@
     <div class="row g-4">
         <!-- درمان فردی و اضطراب -->
         <div class="col-md-6 col-lg-3">
-            <div class="card card-clinic h-100 card-elevated p-4">
+            <div class="card h-100 card-elevated p-4">
                 <div class="card-body p-0">
                     <div class="rounded-3 p-3 d-inline-flex mb-3" style="background-color: var(--light-green);">
-                        <i class="bi bi-heart-pulse fs-3 text-clinic-primary" aria-hidden="true"></i>
+                        <i class="bi bi-heart-pulse fs-3" style="color: var(--primary-green);"></i>
                     </div>
-                    <h3 class="h5 fw-bold mb-3">روان‌درمانی فردی</h3>
+                    <h5 class="fw-bold mb-3">روان‌درمانی فردی</h5>
                     <p class="text-muted small lh-lg mb-0">
                         مداخله تخصصی در زمینه‌های اضطراب، افسردگی، پنیک، وسواس فکری‌عملی، سوگ و بحران‌های هویتی با روش CBT.
                     </p>
@@ -88,12 +88,12 @@
 
         <!-- زوج‌درمانی و خانواده -->
         <div class="col-md-6 col-lg-3">
-            <div class="card card-clinic h-100 card-elevated p-4">
+            <div class="card h-100 card-elevated p-4">
                 <div class="card-body p-0">
                     <div class="rounded-3 p-3 d-inline-flex mb-3" style="background-color: var(--light-green);">
-                        <i class="bi bi-people fs-3 text-clinic-primary" aria-hidden="true"></i>
+                        <i class="bi bi-people fs-3" style="color: var(--primary-green);"></i>
                     </div>
-                    <h3 class="h5 fw-bold mb-3">زوج و روابط</h3>
+                    <h5 class="fw-bold mb-3">زوج و روابط</h5>
                     <p class="text-muted small lh-lg mb-0">
                         واکاوی تعارضات عاطفی، مشاوره‌های پیش از ازدواج، بهبود مهارت‌های گفت‌وگو و غلبه بر فاصله‌های زناشویی.
                     </p>
@@ -103,12 +103,12 @@
 
         <!-- مشاوره آنلاین -->
         <div class="col-md-6 col-lg-3">
-            <div class="card card-clinic h-100 card-elevated p-4">
+            <div class="card h-100 card-elevated p-4">
                 <div class="card-body p-0">
                     <div class="rounded-3 p-3 d-inline-flex mb-3" style="background-color: var(--light-green);">
-                        <i class="bi bi-laptop fs-3 text-clinic-primary" aria-hidden="true"></i>
+                        <i class="bi bi-laptop fs-3" style="color: var(--primary-green);"></i>
                     </div>
-                    <h3 class="h5 fw-bold mb-3">جلسات آنلاین امن</h3>
+                    <h5 class="fw-bold mb-3">جلسات آنلاین امن</h5>
                     <p class="text-muted small lh-lg mb-0">
                         جلسات تصویری و صوتی باکیفیت و امن برای مراجعین سایر شهرها، دانشجویان و فارسی‌زبانان خارج از کشور.
                     </p>
@@ -118,12 +118,12 @@
 
         <!-- طرح‌واره و خودشناسی -->
         <div class="col-md-6 col-lg-3">
-            <div class="card card-clinic h-100 card-elevated p-4">
+            <div class="card h-100 card-elevated p-4">
                 <div class="card-body p-0">
                     <div class="rounded-3 p-3 d-inline-flex mb-3" style="background-color: var(--light-green);">
-                        <i class="bi bi-compass fs-3 text-clinic-primary" aria-hidden="true"></i>
+                        <i class="bi bi-compass fs-3" style="color: var(--primary-green);"></i>
                     </div>
-                    <h3 class="h5 fw-bold mb-3">رشد و خودشناسی</h3>
+                    <h5 class="fw-bold mb-3">رشد و خودشناسی</h5>
                     <p class="text-muted small lh-lg mb-0">
                         شناسایی تله‌های زندگی و الگوهای تکراری دوران کودکی با رویکرد طرح‌واره‌درمانی جهت ارتقای تاب‌آوری.
                     </p>
@@ -134,10 +134,10 @@
 </section>
 
 <!-- بخش مراحل دریافت نوبت و روند کار -->
-<section class="hero-box p-4 p-md-5 mb-5" aria-labelledby="steps-heading">
+<section class="p-4 p-md-5 mb-5 bg-white rounded-4" style="box-shadow: var(--card-shadow); border: 1px solid var(--subtle-border);">
     <div class="text-center mb-5">
         <span class="badge-soft mb-2">آسان و مطمئن</span>
-        <h2 id="steps-heading" class="fw-bold mb-3 text-clinic-primary">مراحل دریافت نوبت مشاوره</h2>
+        <h2 class="fw-bold mb-3" style="color: var(--primary-green);">مراحل دریافت نوبت مشاوره</h2>
         <p class="text-muted prose-readable">
             فرایند رزرو به نحوی طراحی شده است تا در کمترین زمان و بدون ابهام، زمان جلسه خود را مشخص فرمایید.
         </p>
@@ -149,7 +149,7 @@
                 <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px; background-color: var(--light-green); color: var(--primary-green); font-size: 1.5rem; font-weight: bold;">
                     ۱
                 </div>
-                <h3 class="h5 fw-bold mb-2">انتخاب روز و ساعت</h3>
+                <h5 class="fw-bold mb-2">انتخاب روز و ساعت</h5>
                 <p class="text-muted small lh-lg mb-0">
                     از تقویم هفتگی کلینیک، زمان مناسب خود را به تفکیک جلسه حضوری یا آنلاین انتخاب نمایید.
                 </p>
@@ -161,7 +161,7 @@
                 <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px; background-color: var(--light-green); color: var(--primary-green); font-size: 1.5rem; font-weight: bold;">
                     ۲
                 </div>
-                <h3 class="h5 fw-bold mb-2">ثبت مشخصات و ارسال فیش</h3>
+                <h5 class="fw-bold mb-2">ثبت مشخصات و ارسال فیش</h5>
                 <p class="text-muted small lh-lg mb-0">
                     شماره تماس و تصویر فیش بیعانه را بارگذاری کنید. اطلاعات شما تنها در اختیار پذیرش کلینیک خواهد بود.
                 </p>
@@ -173,7 +173,7 @@
                 <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 64px; height: 64px; background-color: var(--light-green); color: var(--primary-green); font-size: 1.5rem; font-weight: bold;">
                     ۳
                 </div>
-                <h3 class="h5 fw-bold mb-2">تایید و هماهنگی جلسه</h3>
+                <h5 class="fw-bold mb-2">تایید و هماهنگی جلسه</h5>
                 <p class="text-muted small lh-lg mb-0">
                     پس از بررسی رسید، پیامک یا پیام تایید و هماهنگی جلسه برای شما ارسال می‌شود.
                 </p>
@@ -182,26 +182,26 @@
     </div>
 
     <div class="text-center mt-4 pt-3">
-        <a href="/booking" class="btn btn-primary rounded-pill px-5 shadow-sm btn-touch">
-            <i class="bi bi-arrow-left-circle me-2" aria-hidden="true"></i> ورود به سامانه رزرو نوبت
+        <a href="/booking" class="btn btn-primary rounded-pill px-5 shadow-sm">
+            <i class="bi bi-arrow-left-circle me-2"></i> ورود به سامانه رزرو نوبت
         </a>
     </div>
 </section>
 
 <!-- بخش اصول اخلاقی و استانداردهای کلینیک -->
-<section class="mb-5" aria-labelledby="ethics-heading">
+<section class="mb-5">
     <div class="row g-4 align-items-center">
         <div class="col-lg-6">
             <div class="pe-lg-4">
                 <span class="badge-soft mb-2">اصول اخلاقی و بالینی</span>
-                <h2 id="ethics-heading" class="fw-bold mb-4 text-clinic-primary">تعهدات ما نسبت به مراجعین</h2>
+                <h2 class="fw-bold mb-4" style="color: var(--primary-green);">تعهدات ما نسبت به مراجعین</h2>
                 
                 <div class="d-flex mb-4">
                     <div class="me-3">
-                        <i class="bi bi-shield-lock fs-2 text-clinic-primary" aria-hidden="true"></i>
+                        <i class="bi bi-shield-lock fs-2" style="color: var(--primary-green);"></i>
                     </div>
                     <div>
-                        <h3 class="h5 fw-bold mb-1">رازداری مطلق و حفظ حریم خصوصی</h3>
+                        <h5 class="fw-bold mb-1">رازداری مطلق و حفظ حریم خصوصی</h5>
                         <p class="text-muted small lh-lg mb-0">
                             تمام داده‌ها، مکالمات جلسات و سوابق شما طبق کدهای اخلاق روانشناسی کاملاً محرمانه مانده و در اختیار هیچ شخص یا نهادی قرار نمی‌گیرد.
                         </p>
@@ -210,10 +210,10 @@
 
                 <div class="d-flex mb-4">
                     <div class="me-3">
-                        <i class="bi bi-journal-medical fs-2 text-clinic-primary" aria-hidden="true"></i>
+                        <i class="bi bi-journal-medical fs-2" style="color: var(--primary-green);"></i>
                     </div>
                     <div>
-                        <h3 class="h5 fw-bold mb-1">پروتکل‌های شواهد‌محور</h3>
+                        <h5 class="fw-bold mb-1">پروتکل‌های شواهد‌محور</h5>
                         <p class="text-muted small lh-lg mb-0">
                             درمان‌ها بر اساس متدهای علمی سنجیده شده بنا نهاده شده‌اند و از مشاوره‌های سلیقه‌ای یا بدون پشتوانه تجربی پرهیز می‌شود.
                         </p>
@@ -222,10 +222,10 @@
 
                 <div class="d-flex">
                     <div class="me-3">
-                        <i class="bi bi-sun fs-2 text-clinic-primary" aria-hidden="true"></i>
+                        <i class="bi bi-sun fs-2" style="color: var(--primary-green);"></i>
                     </div>
                     <div>
-                        <h3 class="h5 fw-bold mb-1">محیطی پذیرا و بدون سرزنش</h3>
+                        <h5 class="fw-bold mb-1">محیطی پذیرا و بدون سرزنش</h5>
                         <p class="text-muted small lh-lg mb-0">
                             اتاق درمان جایی برای واکاوی واقع‌بینانه رنج‌هاست، نه سرزنش و تحمیل باورهای بیرونی.
                         </p>
@@ -235,19 +235,19 @@
         </div>
 
         <div class="col-lg-6">
-            <div class="card-clinic p-4 p-md-5">
-                <h3 class="h5 fw-bold mb-4 text-clinic-primary">
-                    <i class="bi bi-question-circle me-2" aria-hidden="true"></i>پرسش‌های متداول مراجعین
-                </h3>
+            <div class="bg-white p-4 p-md-5 rounded-4" style="box-shadow: var(--card-shadow); border: 1px solid var(--subtle-border);">
+                <h5 class="fw-bold mb-4" style="color: var(--primary-green);">
+                    <i class="bi bi-question-circle me-2"></i>پرسش‌های متداول مراجعین
+                </h5>
 
                 <div class="accordion accordion-flush" id="faqAccordion">
                     <div class="accordion-item border-bottom">
-                        <h4 class="accordion-header" id="headingOne">
-                            <button class="accordion-button collapsed fw-semibold text-dark shadow-none bg-white py-3 btn-touch" type="button" data-bs-toggle="collapse" data-bs-target="#faq1" aria-expanded="false" aria-controls="faq1">
+                        <h2 class="accordion-header" id="headingOne">
+                            <button class="accordion-button collapsed fw-semibold text-dark shadow-none bg-white py-3" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
                                 هر جلسه مشاوره چه مدت زمان می‌برد؟
                             </button>
-                        </h4>
-                        <div id="faq1" class="accordion-collapse collapse" aria-labelledby="headingOne" data-bs-parent="#faqAccordion">
+                        </h2>
+                        <div id="faq1" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
                             <div class="accordion-body text-muted small lh-lg pt-0">
                                 جلسات روان‌درمانی فردی ۴۵ تا ۵۰ دقیقه و جلسات زوج‌درمانی بین ۶۰ تا ۷۵ دقیقه زمان دارند.
                             </div>
@@ -255,12 +255,12 @@
                     </div>
 
                     <div class="accordion-item border-bottom">
-                        <h4 class="accordion-header" id="headingTwo">
-                            <button class="accordion-button collapsed fw-semibold text-dark shadow-none bg-white py-3 btn-touch" type="button" data-bs-toggle="collapse" data-bs-target="#faq2" aria-expanded="false" aria-controls="faq2">
+                        <h2 class="accordion-header" id="headingTwo">
+                            <button class="accordion-button collapsed fw-semibold text-dark shadow-none bg-white py-3" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
                                 آیا مشاوره آنلاین اثربخشی جلسه حضوری را دارد؟
                             </button>
-                        </h4>
-                        <div id="faq2" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#faqAccordion">
+                        </h2>
+                        <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
                             <div class="accordion-body text-muted small lh-lg pt-0">
                                 پژوهش‌های بالینی نشان داده‌اند که برای اکثر مراجعین مبتلا به اضطراب، وسواس و چالش‌های ارتباطی، جلسات آنلاین در صورت پایداری ارتباط صوتی و تصویری، کیفیتی کاملاً مشابه جلسات حضوری ارائه می‌دهد.
                             </div>
@@ -268,12 +268,12 @@
                     </div>
 
                     <div class="accordion-item">
-                        <h4 class="accordion-header" id="headingThree">
-                            <button class="accordion-button collapsed fw-semibold text-dark shadow-none bg-white py-3 btn-touch" type="button" data-bs-toggle="collapse" data-bs-target="#faq3" aria-expanded="false" aria-controls="faq3">
+                        <h2 class="accordion-header" id="headingThree">
+                            <button class="accordion-button collapsed fw-semibold text-dark shadow-none bg-white py-3" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
                                 آیا امکان لغو یا جابه‌جایی نوبت وجود دارد؟
                             </button>
-                        </h4>
-                        <div id="faq3" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#faqAccordion">
+                        </h2>
+                        <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
                             <div class="accordion-body text-muted small lh-lg pt-0">
                                 بله، در صورت نیاز به تغییر زمان نوبت، لطفاً حداقل ۲۴ ساعت قبل از موعد جلسه با پذیرش کلینیک تماس حاصل فرمایید تا ساعت جایگزین برای شما تنظیم گردد.
                             </div>
@@ -287,14 +287,14 @@
 </section>
 
 <!-- کارت دعوت به آغاز مسیر -->
-<section class="p-4 p-md-5 rounded-4 text-center" style="background-color: var(--light-green); border: 1px solid var(--border-accent);">
+<section class="p-4 p-md-5 rounded-4 text-center" style="background-color: var(--light-green); border: 1px solid rgba(74, 124, 89, 0.2);">
     <div class="py-2">
-        <h2 class="h3 fw-bold mb-3 text-clinic-primary">گام اول، پذیرش نیاز به گفت‌وگو است</h2>
+        <h3 class="fw-bold mb-3" style="color: var(--primary-green);">گام اول، پذیرش نیاز به گفت‌وگو است</h3>
         <p class="text-muted prose-readable mb-4">
             شما مجبور نیستید بارهای عاطفی را به تنهایی به دوش بکشید. تیم پذیرش کلینیک در تمامی مراحل هماهنگی در کنار شماست.
         </p>
-        <a href="/booking" class="btn btn-primary btn-lg rounded-pill px-5 shadow-sm btn-touch">
-            <i class="bi bi-calendar2-plus me-2" aria-hidden="true"></i> شروع فرایند ثبت نوبت
+        <a href="/booking" class="btn btn-primary btn-lg rounded-pill px-5 shadow-sm">
+            <i class="bi bi-calendar2-plus me-2"></i> شروع فرایند ثبت نوبت
         </a>
     </div>
 </section>

@@ -5,15 +5,15 @@
 {% block content %}
 <div class="row justify-content-center mt-4 mb-5">
     <div class="col-md-6 col-lg-5 col-xl-4">
-        <div class="card card-clinic shadow-sm border-0 rounded-4 overflow-hidden">
+        <div class="card shadow-sm border-0 rounded-4 overflow-hidden" style="border: 1px solid var(--subtle-border) !important;">
             
             <div class="card-header border-0 text-center py-4 px-4" style="background-color: var(--light-green);">
                 <div class="mb-2">
                     <span class="brand-icon mx-auto" style="width: 48px; height: 48px; font-size: 1.5rem;">
-                        <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
+                        <i class="bi bi-shield-lock-fill"></i>
                     </span>
                 </div>
-                <h1 class="h4 mb-1 fw-bold text-clinic-primary">ورود به پنل مدیریت</h1>
+                <h4 class="mb-1 fw-bold" style="color: var(--primary-green);">ورود به پنل مدیریت</h4>
                 <p class="small text-muted mb-0">مدیریت مراجعین و بررسی فیش‌های واریزی</p>
             </div>
 
@@ -23,27 +23,27 @@
                   {% if messages %}
                     {% for category, message in messages %}
                       <div class="alert alert-{{ category if category != 'danger' else 'warning' }} alert-dismissible fade show rounded-3 small" role="alert">
-                        <i class="bi bi-info-circle me-1" aria-hidden="true"></i> {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="بستن"></button>
+                        <i class="bi bi-info-circle me-1"></i> {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                       </div>
                     {% endfor %}
                   {% endif %}
                 {% endwith %}
 
-                <form method="POST" action="/login" novalidate>
+                <form method="POST" action="/login">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                     <div class="mb-4">
                         <label for="password" class="form-label text-dark small fw-bold">رمز عبور امن مدیریت:</label>
                         <div class="input-group">
-                            <span class="input-group-text bg-light border-0"><i class="bi bi-key text-muted" aria-hidden="true"></i></span>
-                            <input type="password" class="form-control form-control-lg bg-light border-0" id="password" name="password" required placeholder="رمز عبور را وارد کنید" autofocus aria-required="true">
+                            <span class="input-group-text bg-light border-0"><i class="bi bi-key text-muted"></i></span>
+                            <input type="password" class="form-control form-control-lg bg-light border-0" id="password" name="password" required placeholder="رمز عبور را وارد کنید" autofocus>
                         </div>
                     </div>
 
                     <div class="d-grid mt-4">
-                        <button type="submit" class="btn btn-primary rounded-pill fw-bold py-2 shadow-sm btn-touch">
-                            <i class="bi bi-box-arrow-in-right me-1" aria-hidden="true"></i> ورود به سامانه
+                        <button type="submit" class="btn btn-primary rounded-pill fw-bold py-2 shadow-sm">
+                            <i class="bi bi-box-arrow-in-right me-1"></i> ورود به سامانه
                         </button>
                     </div>
                 </form>
@@ -51,7 +51,7 @@
 
             <div class="card-footer bg-white border-0 text-center pb-4 pt-0">
                 <a href="/" class="small text-muted text-decoration-none">
-                    <i class="bi bi-arrow-right me-1" aria-hidden="true"></i> بازگشت به صفحه اصلی کلینیک
+                    <i class="bi bi-arrow-right me-1"></i> بازگشت به صفحه اصلی کلینیک
                 </a>
             </div>
         </div>
