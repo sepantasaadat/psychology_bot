@@ -1,0 +1,395 @@
+/**
+ * Dr. Shafaei Psychology Clinic - Unified Design System & Styling
+ * Architecture: Accessible, Responsive, Semantic (WCAG 2.1 AA+)
+ */
+
+:root {
+    /* Color Palette - Strictly Preserved Brand Identity */
+    --primary-green: #4A7C59;
+    --light-green: #E9F2EA;
+    --cream-bg: #FCFBF4;
+    --text-dark: #2D3748;
+    --text-muted: #4A5568; /* Enhanced WCAG 2.1 AA contrast > 4.5:1 */
+    --hover-green: #3B6347;
+    --subtle-border: rgba(74, 124, 89, 0.14);
+    --border-accent: rgba(74, 124, 89, 0.24);
+
+    /* Elevation & Shadows */
+    --card-shadow: 0 10px 30px rgba(74, 124, 89, 0.05);
+    --card-shadow-hover: 0 16px 36px rgba(74, 124, 89, 0.10);
+    --button-shadow: 0 4px 14px rgba(74, 124, 89, 0.22);
+    --button-shadow-hover: 0 6px 18px rgba(74, 124, 89, 0.30);
+
+    /* Focus & Accessibility Tokens */
+    --focus-ring: 0 0 0 3px rgba(74, 124, 89, 0.25);
+    --focus-outline: 2px solid var(--primary-green);
+    --touch-target-min: 44px;
+
+    /* Radii Tokens */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-pill: 50rem;
+
+    /* Transitions */
+    --transition-fast: 0.15s ease;
+    --transition-base: 0.25s ease;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: var(--cream-bg);
+    color: var(--text-dark);
+    line-height: 1.85;
+    letter-spacing: -0.01em;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ==========================================================================
+   Accessibility: Skip-to-content link & Focus Management
+   ========================================================================== */
+.skip-link {
+    position: absolute;
+    top: -999px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--primary-green);
+    color: #ffffff !important;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+    text-decoration: none;
+    z-index: 9999;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+    transition: top 0.2s ease;
+}
+
+.skip-link:focus {
+    top: 16px;
+    outline: 3px solid #ffffff;
+    outline-offset: 2px;
+}
+
+/* Focus Visible Indicator conforming to WCAG 2.2 */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: var(--focus-outline) !important;
+    outline-offset: 2px !important;
+}
+
+/* ==========================================================================
+   Typography & Readable Prose
+   ========================================================================== */
+.prose-readable {
+    max-width: 70ch;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.text-clinic-muted {
+    color: var(--text-muted) !important;
+}
+
+.text-clinic-primary {
+    color: var(--primary-green) !important;
+}
+
+/* ==========================================================================
+   Navigation Bar
+   ========================================================================== */
+.navbar-clinic {
+    background-color: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 2px 20px rgba(74, 124, 89, 0.06);
+    border-bottom: 1px solid var(--subtle-border);
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+    transition: all var(--transition-base);
+}
+
+.navbar-brand {
+    color: var(--primary-green) !important;
+    font-weight: 800;
+    font-size: 1.35rem;
+    letter-spacing: -0.02em;
+    display: inline-flex;
+    align-items: center;
+}
+
+.brand-icon {
+    width: 38px;
+    height: 38px;
+    background-color: var(--light-green);
+    color: var(--primary-green);
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    margin-left: 0.6rem;
+    transition: transform var(--transition-base);
+}
+
+.navbar-brand:hover .brand-icon {
+    transform: rotate(15deg);
+}
+
+.nav-link {
+    color: var(--text-dark) !important;
+    font-weight: 500;
+    font-size: 0.96rem;
+    padding: 0.5rem 0.9rem !important;
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+}
+
+.nav-link:hover {
+    color: var(--primary-green) !important;
+    background-color: rgba(74, 124, 89, 0.06);
+}
+
+.nav-link.active {
+    color: var(--primary-green) !important;
+    background-color: var(--light-green);
+    font-weight: 700;
+}
+
+.navbar-toggler {
+    min-height: var(--touch-target-min);
+    min-width: var(--touch-target-min);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ==========================================================================
+   Buttons & Interactive Elements
+   ========================================================================== */
+.btn {
+    transition: all var(--transition-base);
+    letter-spacing: -0.01em;
+}
+
+.btn-primary {
+    background-color: var(--primary-green);
+    border-color: var(--primary-green);
+    color: #ffffff;
+    border-radius: var(--radius-md);
+    padding: 0.65rem 1.6rem;
+    font-weight: 600;
+    box-shadow: var(--button-shadow);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+    background-color: var(--hover-green);
+    border-color: var(--hover-green);
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: var(--button-shadow-hover);
+}
+
+.btn-outline-primary {
+    border-color: var(--primary-green);
+    color: var(--primary-green);
+    border-radius: var(--radius-md);
+    padding: 0.65rem 1.5rem;
+    font-weight: 600;
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--light-green);
+    border-color: var(--primary-green);
+    color: var(--primary-green);
+}
+
+/* Mobile & Touch Targets minimum 44px */
+.btn-touch {
+    min-height: var(--touch-target-min);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ==========================================================================
+   Cards & Layout Components
+   ========================================================================== */
+.card-clinic {
+    border: 1px solid var(--subtle-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--card-shadow);
+    transition: all var(--transition-base);
+    background-color: #ffffff;
+}
+
+.card-elevated:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--card-shadow-hover);
+    border-color: rgba(74, 124, 89, 0.25);
+}
+
+.hero-box {
+    background-color: #ffffff;
+    border: 1px solid var(--subtle-border);
+    box-shadow: var(--card-shadow);
+    border-radius: var(--radius-lg);
+}
+
+/* ==========================================================================
+   Forms & Controls
+   ========================================================================== */
+.form-control,
+.form-select {
+    border-radius: var(--radius-md);
+    padding: 0.75rem 1rem;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background-color: #fafbf9;
+    color: var(--text-dark);
+    transition: all var(--transition-fast);
+}
+
+.form-control:focus,
+.form-select:focus {
+    background-color: #ffffff;
+    border-color: var(--primary-green);
+    box-shadow: var(--focus-ring);
+}
+
+/* ==========================================================================
+   Semantic Progress Steps (Booking Form)
+   ========================================================================== */
+.steps-progress {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+
+.steps-progress-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    position: relative;
+    flex: 1;
+}
+
+.step-circle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: var(--light-green);
+    color: var(--primary-green);
+    font-weight: 700;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.35rem;
+}
+
+.steps-progress-item.active .step-circle {
+    background-color: var(--primary-green);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(74, 124, 89, 0.3);
+}
+
+.step-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+/* ==========================================================================
+   Badges, Bank Box & Callouts
+   ========================================================================== */
+.badge-soft {
+    background-color: var(--light-green);
+    color: var(--primary-green);
+    font-weight: 600;
+    padding: 0.45rem 0.9rem;
+    border-radius: 30px;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+}
+
+.bank-card-box {
+    background-color: #ffffff;
+    border: 1px solid var(--border-accent);
+    border-radius: var(--radius-md);
+    padding: 1rem 1.25rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.crisis-box {
+    background-color: var(--light-green);
+    border-radius: 14px;
+    padding: 1rem 1.4rem;
+    border: 1px solid rgba(74, 124, 89, 0.18);
+}
+
+/* ==========================================================================
+   Footer
+   ========================================================================== */
+footer {
+    background-color: #ffffff;
+    border-top: 1px solid var(--subtle-border);
+    margin-top: auto;
+}
+
+.footer-link {
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+    font-size: 0.92rem;
+}
+
+.footer-link:hover {
+    color: var(--primary-green);
+}
+
+/* ==========================================================================
+   Prefers Reduced Motion (WCAG 2.1 AA+)
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    .card-elevated:hover {
+        transform: none !important;
+    }
+
+    .btn-primary:hover,
+    .btn-primary:focus {
+        transform: none !important;
+    }
+
+    .navbar-brand:hover .brand-icon {
+        transform: none !important;
+    }
+}
