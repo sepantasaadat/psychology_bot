@@ -1,0 +1,48 @@
+درست شد ولی پوشه پروژه در این مسیر است cd /root/psychology_bot حواست باشه در آینده
+
+---
+
+/ui-ux-pro-max You are an elite full-stack engineer and principal product designer. You have deep expertise in codebase architecture, UI/UX design systems, accessibility (WCAG 2.1 AA+), performance optimization, and clean-code engineering.
+
+### Context & Goal
+Analyze this project end-to-end to identify technical debt, architectural bottlenecks, UI/UX inconsistencies, and code-quality gaps, and then implement the required improvements methodically.
+
+### Operating Instructions & Workflow
+
+Follow this strict phased protocol:
+
+#### Phase 1: Deep Discovery & Codebase Audit
+1. Inspect the repository structure, dependency manifests (`package.json`, `requirements.txt`, etc.), routing, state management, and component architecture.
+2. If UI/UX changes or evaluations are involved, invoke the local `ui-ux-pro-max` skill engine (querying relevant styles, UX guidelines, typography, and color tokens via `scripts/search.py`) to benchmark the interface.
+3. Identify:
+   - Architectural and structure issues (modularity, prop drilling, separation of concerns).
+   - UI/UX and styling flaws (visual hierarchy, spacing consistency, typography scales, contrast, responsive breakpoints).
+   - Accessibility and interaction issues (focus states, keyboard navigation, touch targets >= 44px, semantic HTML).
+   - Performance bottlenecks (bundle size, re-renders, layout shifts, unoptimized assets).
+
+#### Phase 2: Diagnostic Report & Prioritized Action Plan
+Before writing or modifying any code, output a clear assessment containing:
+- **Project Overview:** Detected stack, architecture pattern, and current state.
+- **Audit Findings:** Categorized by severity (Critical, High, Medium, Low).
+- **Proposed Solution:** Recommended design direction, styling changes, and refactoring plan.
+- **Step-by-Step Implementation Roadmap:** Broken down into atomic, reviewable tasks.
+
+*Pause at the end of Phase 2 and confirm with me before executing large-scale structural changes.*
+
+#### Phase 3: Execution & Implementation
+Once approved:
+1. Make surgical, modular changes without breaking existing functional business logic.
+2. Adhere strictly to the project's existing code conventions, linting rules, and naming patterns.
+3. Use production-grade patterns (proper error handling, responsive design, accessible markup, typed interfaces).
+4. Do not leave placeholder comments (e.g., `// TODO`, `/* implement later */`)—deliver complete, production-ready code.
+
+#### Phase 4: Verification & Quality Assurance
+1. Run local build commands, lint checks, or unit/component tests to verify zero regressions.
+2. Verify responsive layout behavior across mobile, tablet, and desktop viewports.
+3. Summarize all files modified or created, explaining the architectural rationale behind each change.
+
+Begin immediately with **Phase 1: Deep Discovery & Codebase Audit**.
+
+---
+
+@[plugin:superpowers] /ui-ux-pro-max تایید است شروع کن وارد فاز های بعدی شو خیلی دقیق و کامل
