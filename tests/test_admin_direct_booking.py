@@ -50,10 +50,10 @@ class TestAdminDirectBooking(unittest.IsolatedAsyncioTestCase):
         # 1. Verify user_data is cleared
         self.assertEqual(context.user_data, {})
 
-        # 2. Verify appointment is saved in DB as confirmed with admin_direct
+        # 2. Verify appointment is saved in DB as confirmed with admin_direct and reminder_sent=1
         conn = database.get_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT id, user_id, date, time, session_type, full_name, status, receipt_file_id FROM appointments")
+        cursor.execute("SELECT id, user_id, date, time, session_type, full_name, status, receipt_file_id, reminder_sent FROM appointments")
         rows = cursor.fetchall()
         conn.close()
 
@@ -66,6 +66,7 @@ class TestAdminDirectBooking(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(row[5], 'دکتر سپنتا')
         self.assertEqual(row[6], 'confirmed')
         self.assertEqual(row[7], 'admin_direct')
+        self.assertEqual(row[8], 1)
 
         # 3. Verify 3 messages were replied to admin
         self.assertEqual(update.message.reply_text.call_count, 3)

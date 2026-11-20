@@ -1311,6 +1311,16 @@ async def send_appointment_reminders_job(context: ContextTypes.DEFAULT_TYPE) -> 
 
     for appt in due_appointments:
         app_id, user_id, date, time, full_name, session_type = appt
+
+        # ممانعت قطعی از ارسال پیام یادآوری برای ادمین‌های کلینیک
+        if user_id in ADMIN_IDS:
+            try:
+                database.mark_reminder_as_sent(app_id)
+            except Exception:
+                pass
+            logger.info(f"Skipping 24h reminder for admin user_id={user_id} on appointment_id={app_id}")
+            continue
+
         reminder_text = (
             f"🌸 مراجع ارجمند، جناب/سرکار {full_name}؛\n\n"
             f"یادآوری وقت مشاوره شما:\n"

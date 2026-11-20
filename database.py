@@ -70,6 +70,27 @@ def setup_database(db_path=None):
     if "reminder_sent" not in columns:
         cursor.execute("ALTER TABLE appointments ADD COLUMN reminder_sent INTEGER DEFAULT 0")
 
+    # علامت‌گذاری خودکار نوبت‌های ثبت‌شده توسط ادمین به عنوان reminder_sent=1
+    try:
+        admin_ids = getattr(config, "ADMIN_IDS", [])
+        if admin_ids:
+            placeholders = ','.join('?' for _ in admin_ids)
+            cursor.execute(f'''
+                UPDATE appointments
+                SET reminder_sent = 1
+                WHERE (receipt_file_id = 'admin_direct' OR user_id IN ({placeholders}))
+                  AND reminder_sent = 0
+            ''', tuple(admin_ids))
+        else:
+            cursor.execute('''
+                UPDATE appointments
+                SET reminder_sent = 1
+                WHERE receipt_file_id = 'admin_direct'
+                  AND reminder_sent = 0
+            ''')
+    except Exception as e:
+        logger.warning(f"Could not auto-mark admin reminders in setup_database: {e}")
+
     # ایندکس یکتا برای جلوگیری از ثبت تکراری نوبت در وضعیت‌های فعال (pending, approved, confirmed)
     cursor.execute('''
         CREATE UNIQUE INDEX IF NOT EXISTS idx_appointments_active_slot
@@ -169,15 +190,15 @@ def add_pending_appointment(*args, **kwargs):
 create_appointment = add_pending_appointment
 
 # ثبت مستقیم و قطعی نوبت (ویژه رزرو توسط ادمین‌های کلینیک بدون نیاز به فیش)
-def add_confirmed_appointment(user_id, date, time, session_type, full_name, receipt_file_id="admin_direct", created_at=None):
+def add_confirmed_appointment(user_id, date, time, session_type, full_name, receipt_file_id="admin_direct", created_at=None, reminder_sent=1):
     conn = get_connection()
     cursor = conn.cursor()
     now_tehran_iso = created_at if created_at is not None else datetime.datetime.now(TEHRAN_TZ).isoformat()
     try:
         cursor.execute('''
-            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, 'confirmed', ?, ?, ?)
-        ''', (user_id, date, time, session_type, full_name, receipt_file_id, now_tehran_iso, now_tehran_iso))
+            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id, created_at, updated_at, reminder_sent)
+            VALUES (?, ?, ?, ?, ?, 'confirmed', ?, ?, ?, ?)
+        ''', (user_id, date, time, session_type, full_name, receipt_file_id, now_tehran_iso, now_tehran_iso, reminder_sent))
         
         appointment_id = cursor.lastrowid
         conn.commit()
@@ -459,10 +480,12 @@ def expire_stale_pending_appointments(timeout_hours=None, now=None) -> int:
     conn.close()
     return len(expired_ids)
 
-def get_appointments_due_for_reminder(now=None) -> list[tuple]:
+def get_appointments_due_for_reminder(now=None, admin_ids=None) -> list[tuple]:
     """
     Finds confirmed appointments where reminder_sent = 0 and user_id != 0
     scheduled within the next 24 hours (between now and now + 24 hours in Asia/Tehran).
+    Excludes appointments booked by admins (user_id in ADMIN_IDS or receipt_file_id == 'admin_direct')
+    and marks them with reminder_sent = 1.
     Returns list of rows: (id, user_id, date, time, full_name, session_type).
     """
     if now is None:
@@ -486,7 +509,7 @@ def get_appointments_due_for_reminder(now=None) -> list[tuple]:
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute('''
-        SELECT id, user_id, date, time, full_name, session_type
+        SELECT id, user_id, date, time, full_name, session_type, receipt_file_id
         FROM appointments
         WHERE status = 'confirmed'
           AND reminder_sent = 0
@@ -495,11 +518,23 @@ def get_appointments_due_for_reminder(now=None) -> list[tuple]:
         ORDER BY date, time
     ''')
     rows = cursor.fetchall()
-    conn.close()
+
+    if admin_ids is None:
+        admin_ids_set = set(getattr(config, "ADMIN_IDS", []))
+    else:
+        admin_ids_set = set(admin_ids)
 
     due_appointments = []
+    admin_app_ids = []
+
     for row in rows:
-        app_id, user_id, date_str, time_str, full_name, session_type = row
+        app_id, user_id, date_str, time_str, full_name, session_type, receipt_file_id = row
+
+        # استثنا کردن نوبت‌های ثبت‌شده توسط ادمین و نوبت‌هایی که شناسه کاربری آنها متعلق به ادمین است
+        if user_id in admin_ids_set or receipt_file_id == "admin_direct":
+            admin_app_ids.append(app_id)
+            continue
+
         if not date_str or not time_str:
             continue
         try:
@@ -515,11 +550,21 @@ def get_appointments_due_for_reminder(now=None) -> list[tuple]:
             appt_gdt = appt_jdt.togregorian().replace(tzinfo=TEHRAN_TZ)
 
             if current_time <= appt_gdt <= window_end:
-                due_appointments.append(row)
+                due_appointments.append((app_id, user_id, date_str, time_str, full_name, session_type))
         except Exception as e:
             logger.warning(f"Error parsing appointment {app_id} datetime ({date_str} {time_str}): {e}")
             continue
 
+    if admin_app_ids:
+        now_tehran_iso = datetime.datetime.now(TEHRAN_TZ).isoformat()
+        placeholders = ','.join('?' for _ in admin_app_ids)
+        cursor.execute(
+            f"UPDATE appointments SET reminder_sent = 1, updated_at = ? WHERE id IN ({placeholders})",
+            [now_tehran_iso] + admin_app_ids
+        )
+        conn.commit()
+
+    conn.close()
     return due_appointments
 
 def mark_reminder_as_sent(appointment_id: int) -> None:

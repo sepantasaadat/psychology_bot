@@ -39,7 +39,9 @@ class TestRemindersAndReports(unittest.TestCase):
             (104, 'مراجع چهارم'),
             (105, 'مراجع پنجم'),
             (106, 'مراجع ششم'),
-        ]:
+            (999888, 'مراجع عمومی'),
+            (999111, 'مراجع عادی'),
+        ] + [(aid, f'ادمین {aid}') for aid in config.ADMIN_IDS]:
             cursor.execute('INSERT OR IGNORE INTO users (user_id, first_name) VALUES (?, ?)', (uid, name))
         conn.commit()
         conn.close()
@@ -244,6 +246,109 @@ class TestRemindersAndReports(unittest.TestCase):
         conn = database.get_connection()
         cursor = conn.cursor()
         cursor.execute('SELECT reminder_sent FROM appointments WHERE id = ?', (app_id2,))
+        self.assertEqual(cursor.fetchone()[0], 1)
+        conn.close()
+
+    def test_get_appointments_due_for_reminder_excludes_admin_bookings(self):
+        """Verifies appointments where user_id in ADMIN_IDS or receipt_file_id='admin_direct' are excluded."""
+        ref_now = datetime.datetime(2026, 3, 21, 12, 0, 0, tzinfo=TEHRAN_TZ)
+        admin_id = config.MAIN_ADMIN_ID
+
+        conn = database.get_connection()
+        cursor = conn.cursor()
+        # 1. Admin booking with admin user_id -> EXCLUDED from due list & auto-marked reminder_sent=1
+        cursor.execute('''
+            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id, reminder_sent)
+            VALUES (?, '1405/01/01', '16:00', 'حضوری', 'دکتر مدیر', 'confirmed', 'admin_direct', 0)
+        ''', (admin_id,))
+        admin_app_id = cursor.lastrowid
+
+        # 2. Regular client booking -> DUE
+        cursor.execute('''
+            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id, reminder_sent)
+            VALUES (999888, '1405/01/01', '17:00', 'حضوری', 'مراجع عمومی', 'confirmed', 'rec_photo', 0)
+        ''')
+        client_app_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
+        due = database.get_appointments_due_for_reminder(now=ref_now)
+        due_ids = [row[0] for row in due]
+
+        self.assertNotIn(admin_app_id, due_ids, "Admin booking must never be returned in due reminders")
+        self.assertIn(client_app_id, due_ids, "Regular client booking must be returned in due reminders")
+
+        # Verify admin appointment was automatically marked as reminder_sent=1
+        conn = database.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT reminder_sent FROM appointments WHERE id = ?', (admin_app_id,))
+        self.assertEqual(cursor.fetchone()[0], 1)
+        conn.close()
+
+    def test_send_appointment_reminders_job_skips_admin_recipients(self):
+        """Defense-in-depth: Even if an admin appointment is in due list, reminder job does not send message to admin."""
+        import asyncio
+        import main
+
+        admin_id = config.MAIN_ADMIN_ID
+        client_id = 999111
+
+        conn = database.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, reminder_sent)
+            VALUES (?, '1405/01/01', '16:00', 'حضوری', 'ادمین محترم', 'confirmed', 0)
+        ''', (admin_id,))
+        app_id_admin = cursor.lastrowid
+
+        cursor.execute('''
+            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, reminder_sent)
+            VALUES (?, '1405/01/01', '17:00', 'حضوری', 'مراجع عادی', 'confirmed', 0)
+        ''', (client_id,))
+        app_id_client = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
+        mock_context = MagicMock()
+        mock_context.bot.send_message = AsyncMock()
+
+        with patch('database.get_appointments_due_for_reminder', return_value=[
+            (app_id_admin, admin_id, '1405/01/01', '16:00', 'ادمین محترم', 'حضوری'),
+            (app_id_client, client_id, '1405/01/01', '17:00', 'مراجع عادی', 'حضوری')
+        ]):
+            asyncio.run(main.send_appointment_reminders_job(mock_context))
+
+        # send_message must be called exactly once: for client_id, NEVER for admin_id
+        self.assertEqual(mock_context.bot.send_message.call_count, 1)
+        self.assertEqual(mock_context.bot.send_message.call_args[1]['chat_id'], client_id)
+
+        # Both must be marked reminder_sent=1 in DB
+        conn = database.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT reminder_sent FROM appointments WHERE id = ?', (app_id_admin,))
+        self.assertEqual(cursor.fetchone()[0], 1)
+        cursor.execute('SELECT reminder_sent FROM appointments WHERE id = ?', (app_id_client,))
+        self.assertEqual(cursor.fetchone()[0], 1)
+        conn.close()
+
+    def test_setup_database_auto_migrates_existing_admin_appointments_reminder_sent(self):
+        """Verifies setup_database migrates preexisting admin appointments with reminder_sent=0 to 1."""
+        conn = database.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id, reminder_sent)
+            VALUES (?, '1405/01/01', '18:00', 'حضوری', 'رزرو پیشین ادمین', 'confirmed', 'admin_direct', 0)
+        ''', (config.MAIN_ADMIN_ID,))
+        preexisting_admin_app_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
+        # Re-run setup_database
+        database.setup_database()
+
+        conn = database.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT reminder_sent FROM appointments WHERE id = ?', (preexisting_admin_app_id,))
         self.assertEqual(cursor.fetchone()[0], 1)
         conn.close()
 
