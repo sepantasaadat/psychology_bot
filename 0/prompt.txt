@@ -1,0 +1,29 @@
+@[plugin:superpowers] Use your systematic debugging and root-cause analysis workflow to perform a **STRICTLY READ-ONLY** diagnostic audit of this codebase (a psychology appointment booking website and its companion Telegram bot).
+
+### Critical Constraint (Read-Only Mode)
+- **DO NOT modify, create, delete, or format any files** during this phase.
+- **DO NOT run destructive commands, database migrations, or service restarts.**
+- Your sole objective right now is investigation, root-cause verification, and reporting. Wait for my explicit written approval before applying any fix.
+
+### Investigation Scope & Steps
+1. **Regression & Change History Analysis:**
+   - Inspect recent `git log`, `git diff`, and file modification timestamps to identify what changed in the latest updates.
+   - Trace how recent edits could have introduced regressions or broken existing behavior.
+
+2. **Cross-System Integration & Logic Audit (Website ↔ Telegram Bot ↔ Database):**
+   - **Shared State & Database:** Check database schemas, queries, ORM models, transactions, locks, or recent field/status changes shared between the web app and the bot.
+   - **Booking & Slot Logic:** Verify appointment slot generation, availability checks, booking state transitions (pending, paid/receipt uploaded, approved, canceled), and timezone/date handling.
+   - **Bot & Web Communication:** Inspect webhook/polling handlers, internal API endpoints, background jobs/schedulers, and automated notification triggers between the site and the bot.
+   - **Configuration & Runtime:** Check environment variable references, config imports, route/handler registrations, and unhandled exceptions.
+
+
+### Required Output Format
+Provide a clear, structured diagnostic report containing:
+1. **Executive Summary:** Whether a confirmed code regression/bug was found and its severity.
+2. **Root Cause & Exact Location:** Exact file paths, function names, line numbers, and the specific commit or code change that triggered the issue.
+3. **Failure Mechanism:** Step-by-step explanation of how this defect breaks the website, the Telegram bot, or their synchronization.
+4. **Proposed Fix Plan (For Approval):** A concise, safe patch plan showing what needs to be changed and any potential side effects—then **stop and ask for my permission** to proceed.
+
+---
+
+@[plugin:superpowers] خیلی دقیق و کامل بی اشتباه کار را با برنامه درست و کامل و منطقی به بهترین نحو جلو ببر و در نهایت تست بگیر هیچ مشکلی نباشد ، بعد ببر روی گیت هاب
