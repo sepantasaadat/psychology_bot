@@ -108,13 +108,12 @@ def get_1405_working_days():
     return config.get_upcoming_working_days(15, is_admin=False)
 
 def get_available_hours(selected_date):
-    selected_date = config.normalize_digits(selected_date)
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT time FROM appointments WHERE date = ? AND status IN ('pending', 'confirmed')", (selected_date,))
-    booked_times = [row['time'] for row in cursor.fetchall()]
-    conn.close()
-    return [h for h in config.WORKING_HOURS if h not in booked_times]
+    """
+    Returns available booking hours for a given Jalali date.
+    Delegates directly to database.get_available_times to ensure single source of truth,
+    automatic cleanup of expired stale pending slots, and consistent status checks.
+    """
+    return database.get_available_times(config.normalize_digits(selected_date))
 
 # Send appointment notification and inline buttons to admins via Telegram
 def send_receipt_to_telegram(app_id, name_with_phone, date, time, session_type, filepath):

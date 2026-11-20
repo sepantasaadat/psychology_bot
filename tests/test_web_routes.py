@@ -1,10 +1,12 @@
 import unittest
 import os
+import datetime
 import tempfile
 import sqlite3
 from unittest.mock import patch, MagicMock
 from contextlib import contextmanager
 from flask import template_rendered
+import config
 import app as flask_app
 import database
 
@@ -318,6 +320,63 @@ class TestWebRoutes(unittest.TestCase):
         self.assertEqual(res_cancel_future.status_code, 200)
         future_app_db = database.get_appointment(future_id)
         self.assertIsNone(future_app_db)
+
+    def test_get_available_hours_delegates_to_database_and_expires_stale(self):
+        """get_available_hours delegates to database.get_available_times and expires stale pending slots."""
+        from app import get_available_hours
+
+        date = "1405/01/25"
+        time = "16:00"
+
+        # Insert a stale pending appointment created 3 hours ago
+        three_hours_ago = (datetime.datetime.now(config.TEHRAN_TZ) - datetime.timedelta(hours=3)).isoformat()
+        conn = database.get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id, created_at, updated_at)
+            VALUES (101, ?, ?, 'حضوری', 'کاربر معلق', 'pending', 'stale.jpg', ?, ?)
+        ''', (date, time, three_hours_ago, three_hours_ago))
+        conn.commit()
+        conn.close()
+
+        # get_available_hours should auto-expire the stale appointment and include the slot
+        avail = get_available_hours(date)
+        self.assertIn(time, avail)
+
+    def test_admin_dashboard_receipt_badge_for_telegram_and_web(self):
+        """Admin dashboard shows 'مشاهده فیش' link for web and 'فیش در تلگرام' badge for Telegram bookings."""
+        conn = database.get_connection()
+        cursor = conn.cursor()
+        # 1. Web booking (user_id=0)
+        cursor.execute('''
+            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id)
+            VALUES (0, '1405/01/26', '17:00', 'حضوری', 'کاربر وب | 09121112233', 'pending', 'private_uploads/receipt_web.jpg')
+        ''')
+        web_app_id = cursor.lastrowid
+
+        # 2. Telegram booking (user_id=987654)
+        cursor.execute('''
+            INSERT INTO appointments (user_id, date, time, session_type, full_name, status, receipt_file_id)
+            VALUES (987654, '1405/01/26', '18:00', 'آنلاین', 'کاربر تلگرام', 'pending', 'AgACAgIAAxkBAA...')
+        ''')
+        tg_app_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+
+        with self.client.session_transaction() as sess:
+            sess['admin_logged_in'] = True
+
+        res = self.client.get('/admin')
+        self.assertEqual(res.status_code, 200)
+        html = res.data.decode('utf-8')
+
+        # Web booking has view receipt link
+        self.assertIn(f'/admin/receipt/{web_app_id}', html)
+        self.assertIn('مشاهده فیش', html)
+
+        # Telegram booking has 'فیش در تلگرام' badge and NOT the /admin/receipt link
+        self.assertIn('فیش در تلگرام', html)
+        self.assertNotIn(f'/admin/receipt/{tg_app_id}', html)
 
 
 if __name__ == '__main__':

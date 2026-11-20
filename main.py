@@ -43,12 +43,25 @@ WORKING_WEEKDAYS = config.WORKING_WEEKDAYS
 MIN_ADVANCE_DAYS = config.MIN_ADVANCE_DAYS
 CANCELLATION_HOURS_LIMIT = config.CANCELLATION_HOURS_LIMIT
 
+def now_tehran_jalali() -> jdatetime.datetime:
+    """Returns current datetime in Asia/Tehran timezone as an offset-naive Jalali datetime."""
+    now_gdt = datetime.datetime.now(config.TEHRAN_TZ)
+    jdt = jdatetime.datetime.fromgregorian(datetime=now_gdt)
+    if getattr(jdt, "tzinfo", None) is not None:
+        jdt = jdt.replace(tzinfo=None)
+    return jdt
+
+def today_tehran_jalali() -> jdatetime.date:
+    """Returns current date in Asia/Tehran timezone as a Jalali date."""
+    now_gdt = datetime.datetime.now(config.TEHRAN_TZ)
+    return jdatetime.date.fromgregorian(date=now_gdt.date())
+
 def get_upcoming_days(days_count=5, is_admin=False, reference_date=None):
     days = []
     if reference_date is not None:
         start_date = reference_date
     else:
-        start_date = jdatetime.date.today()
+        start_date = today_tehran_jalali()
         if start_date.year < 1405:
             start_date = jdatetime.date(1405, 1, 1)
 
@@ -73,7 +86,7 @@ def format_upcoming_week_appointments(reference_date=None):
     if reference_date is not None:
         start_date = reference_date
     else:
-        start_date = jdatetime.date.today()
+        start_date = today_tehran_jalali()
         if start_date.year < 1405:
             start_date = jdatetime.date(1405, 1, 1)
 
@@ -103,8 +116,21 @@ def parse_appointment_datetime(date_str, time_str):
 
 def get_current_jalali_datetime(now=None):
     if now is not None:
+        if isinstance(now, jdatetime.datetime):
+            if getattr(now, "tzinfo", None) is not None:
+                return now.replace(tzinfo=None)
+            return now
+        if isinstance(now, datetime.datetime):
+            if now.tzinfo is None:
+                now = now.replace(tzinfo=config.TEHRAN_TZ)
+            else:
+                now = now.astimezone(config.TEHRAN_TZ)
+            jdt = jdatetime.datetime.fromgregorian(datetime=now)
+            if getattr(jdt, "tzinfo", None) is not None:
+                jdt = jdt.replace(tzinfo=None)
+            return jdt
         return now
-    current = jdatetime.datetime.now()
+    current = now_tehran_jalali()
     if current.year < 1405:
         current = current.replace(year=1405)
     return current
@@ -128,7 +154,7 @@ def get_main_menu_keyboard(user_id):
 
     # تولید داینامیک دکمه‌های لغو نوبت‌های تایید شده همین هفته (منحصراً برای مراجعین عادی و نه ادمین‌ها)
     if user_id not in ADMIN_IDS:
-        start_date = jdatetime.date.today()
+        start_date = today_tehran_jalali()
         if start_date.year < 1405:
             start_date = jdatetime.date(1405, 1, 1)
         end_date = start_date + jdatetime.timedelta(days=6)
@@ -670,7 +696,7 @@ async def date_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # بررسی دسترسی نقش: مراجعین عادی مجاز به انتخاب تاریخ‌های گذشته، امروز یا فردا نیستند
     if user_id not in ADMIN_IDS:
-        today_date = jdatetime.date.today()
+        today_date = today_tehran_jalali()
         if today_date.year < 1405:
             today_date = jdatetime.date(1405, 1, 1)
         min_allowed_date = today_date + jdatetime.timedelta(days=MIN_ADVANCE_DAYS)
@@ -720,7 +746,7 @@ async def time_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # بررسی دسترسی نقش: مراجعین عادی مجاز به ثبت زمان برای تاریخ‌های گذشته، امروز یا فردا نیستند
     if user_id not in ADMIN_IDS:
-        today_date = jdatetime.date.today()
+        today_date = today_tehran_jalali()
         if today_date.year < 1405:
             today_date = jdatetime.date(1405, 1, 1)
         min_allowed_date = today_date + jdatetime.timedelta(days=MIN_ADVANCE_DAYS)

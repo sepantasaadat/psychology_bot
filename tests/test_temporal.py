@@ -238,6 +238,27 @@ class TestStaleAppointmentExpiration(unittest.TestCase):
         self.assertFalse(config.is_appointment_past("1405/05/10", "bad-time", now=ref_now))
         self.assertFalse(config.is_appointment_past(None, None, now=ref_now))
 
+    def test_main_tehran_timezone_anchoring(self):
+        """Verifies now_tehran_jalali and today_tehran_jalali in main.py are strictly bound to Asia/Tehran."""
+        import main
+        from unittest.mock import patch
+
+        # Simulate UTC time 2026-11-20 21:00:00 (which is 2026-11-21 00:30:00 in Asia/Tehran -> 1405-09-01 in Jalali)
+        utc_dt = datetime.datetime(2026, 11, 20, 21, 0, 0, tzinfo=datetime.timezone.utc)
+        tehran_dt = utc_dt.astimezone(config.TEHRAN_TZ)
+
+        with patch("datetime.datetime") as mock_dt:
+            mock_dt.now.side_effect = lambda tz=None: tehran_dt if tz == config.TEHRAN_TZ else utc_dt
+
+            j_now = main.now_tehran_jalali()
+            j_today = main.today_tehran_jalali()
+
+            self.assertEqual(j_today.year, 1405)
+            self.assertEqual(j_today.month, 8)
+            self.assertEqual(j_today.day, 30)  # In Tehran it is Aban 30; in UTC it is still Aban 29
+            self.assertEqual(j_now.hour, 0)
+            self.assertEqual(j_now.minute, 30)
+
 
 if __name__ == "__main__":
     unittest.main()
