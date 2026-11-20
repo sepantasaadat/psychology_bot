@@ -15,7 +15,7 @@ class TestTemporalJalaliCalendar(unittest.TestCase):
 
     def test_working_constants_defined(self):
         self.assertEqual(config.WORKING_WEEKDAYS, [0, 1, 2, 3, 4])
-        self.assertEqual(config.WORKING_HOURS, ["16:00", "17:00", "18:00", "19:00", "20:00"])
+        self.assertEqual(config.WORKING_HOURS, ["16:00", "17:00", "18:00", "19:00", "20:00", "21:00"])
 
     def test_rolling_window_nowruz_boundary_admin(self):
         # 1405/12/28 is Friday (weekday 6)

@@ -21,7 +21,7 @@ PRIVATE_UPLOADS_DIR = Path(os.environ.get("PRIVATE_UPLOADS_DIR", str(BASE_DIR / 
 TEHRAN_TZ = ZoneInfo("Asia/Tehran")
 
 WORKING_WEEKDAYS = [0, 1, 2, 3, 4]  # 0: Saturday (شنبه) to 4: Wednesday (چهارشنبه)
-WORKING_HOURS = ["16:00", "17:00", "18:00", "19:00", "20:00"]
+WORKING_HOURS = ["16:00", "17:00", "18:00", "19:00", "20:00", "21:00"]
 MIN_ADVANCE_DAYS = 2
 CANCELLATION_HOURS_LIMIT = 48
 BOOKING_STEP_TIMEOUT_MINUTES = int(os.environ.get("BOOKING_STEP_TIMEOUT_MINUTES", "60"))

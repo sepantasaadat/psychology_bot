@@ -354,6 +354,40 @@ class TestBotModularHandlers(unittest.IsolatedAsyncioTestCase):
         call_args = query.edit_message_text.call_args[0]
         self.assertIn("گام چهارم: مشخصات مراجع ارجمند", call_args[0])
 
+    async def test_date_callback_and_time_callback_includes_21_to_22_slot(self):
+        """date_callback provides the 21:00-22:00 slot button and time_callback accepts it."""
+        valid_date = "1405/01/25"
+        update = MagicMock()
+        query = MagicMock()
+        query.data = f"date_{valid_date}"
+        query.answer = AsyncMock()
+        query.edit_message_text = AsyncMock()
+        update.callback_query = query
+        update.effective_user.id = main.MAIN_ADMIN_ID
+
+        context = MagicMock()
+        context.user_data = {}
+
+        await main.date_callback(update, context)
+
+        query.edit_message_text.assert_awaited_once()
+        reply_markup = query.edit_message_text.call_args[1].get('reply_markup')
+        self.assertIsNotNone(reply_markup)
+
+        # Check button for 21:00 to 22:00 exists in keyboard
+        all_buttons = [btn for row in reply_markup.inline_keyboard for btn in row]
+        slot_21_btn = next((b for b in all_buttons if b.callback_data == f"time_{valid_date}_21:00"), None)
+        self.assertIsNotNone(slot_21_btn, "Slot 21:00 button must be present in keyboard")
+        self.assertIn("21:00 الی 22:00", slot_21_btn.text)
+
+        # Now test time_callback selection of 21:00
+        query.edit_message_text.reset_mock()
+        query.data = f"time_{valid_date}_21:00"
+        await main.time_callback(update, context)
+
+        self.assertEqual(context.user_data.get('selected_time'), "21:00")
+        self.assertEqual(context.user_data.get('selected_date'), valid_date)
+
 
 if __name__ == '__main__':
     unittest.main()

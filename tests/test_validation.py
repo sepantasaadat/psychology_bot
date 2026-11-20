@@ -192,14 +192,14 @@ class TestValidation(unittest.TestCase):
 
     def test_validate_booking_request_working_hours_and_days(self):
         """
-        Validates hours must be in WORKING_HOURS (16:00-20:00).
+        Validates hours must be in WORKING_HOURS (16:00-21:00).
         Validates days must be in WORKING_WEEKDAYS (Saturday-Wednesday).
         """
         ref_now = jdatetime.date(1405, 8, 23)
         valid_date = "1405/08/25"  # Monday (weekday 2)
 
         # Valid working hours
-        for hr in ["16:00", "17:00", "18:00", "19:00", "20:00"]:
+        for hr in ["16:00", "17:00", "18:00", "19:00", "20:00", "21:00"]:
             valid, reason = config.validate_booking_request(
                 valid_date, hr, "مریم حسینی", "09123456789", is_admin=False, now=ref_now
             )
@@ -214,7 +214,7 @@ class TestValidation(unittest.TestCase):
         self.assertEqual(reason, "ok")
 
         # Invalid working hours
-        for bad_hr in ["12:00", "21:00", "15:00", "10:30", "invalid"]:
+        for bad_hr in ["12:00", "22:00", "15:00", "10:30", "invalid"]:
             valid, reason = config.validate_booking_request(
                 valid_date, bad_hr, "مریم حسینی", "09123456789", is_admin=False, now=ref_now
             )

@@ -104,6 +104,7 @@ class TestWebRoutes(unittest.TestCase):
         data1 = res1.get_json()
         self.assertIn("available_times", data1)
         self.assertIsInstance(data1["available_times"], list)
+        self.assertIn("21:00", data1["available_times"])
 
         res2 = self.client.get(f'/api/available-times/{valid_date}')
         self.assertEqual(res2.status_code, 200)
