@@ -80,9 +80,11 @@ class TestWebRoutes(unittest.TestCase):
             rendered_template, context = templates[0]
             self.assertEqual(rendered_template.name, 'booking.html')
             self.assertIn('days', context)
+            self.assertEqual(context.get('card_number'), '5894-6318-0470-9814')
 
             html = response.data.decode('utf-8')
             self.assertIn("فرم رزرو آنلاین نوبت", html)
+            self.assertIn("5894-6318-0470-9814", html)
 
     def test_reserve_alias_route_renders_booking_html(self):
         """GET /reserve must act as an alias to booking and return HTTP 200 rendering booking.html."""

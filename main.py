@@ -1137,10 +1137,14 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             [InlineKeyboardButton("🔙 بازگشت به انتخاب ساعت", callback_data=f"date_{context.user_data.get('selected_date', '')}")],
             [InlineKeyboardButton("❌ انصراف و بازگشت", callback_data="main_menu")]
         ]
+        card_formatted = config.CARD_NUMBER_FORMATTED
         receipt_request_text = (
             f"سپاسگزاریم، مراجع گرامی جناب/سرکار {context.user_data['full_name']} 🌸\n\n"
             "💳 گام نهایی: بارگذاری رسید پرداخت حق‌المشاوره\n\n"
-            "جهت نهایی‌سازی درخواست رزرو، لطفاً تصویر یا فایل واضح فیش واریزی خود را در همین گفتگو ارسال فرمایید.\n\n"
+            "لطفاً مبلغ بیعانه را به شماره کارت کلینیک واریز فرمایید:\n"
+            f"شماره کارت: {card_formatted}\n"
+            "به نام کلینیک روانشناسی دکتر شفائی\n\n"
+            "سپس تصویر یا فایل واضح فیش واریزی خود را در همین گفتگو ارسال فرمایید.\n\n"
             "⏳ توجه: شما ۱ ساعت فرصت دارید تا اطلاعات خود را وارد کرده و فیش واریزی را ارسال نمایید؛ در غیر این صورت زمان رزرو آزاد خواهد شد."
         )
         await update.message.reply_text(
@@ -1168,11 +1172,15 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['state'] = 'awaiting_receipt'
 
         keyboard = [[InlineKeyboardButton("❌ انصراف و بازگشت", callback_data="main_menu")]]
+        card_formatted = config.CARD_NUMBER_FORMATTED
         receipt_request_text = (
             f"سپاسگزاریم، مراجع گرامی جناب/سرکار {name_only} 🌸\n"
             f"📱 شماره تماس: {phone_norm}\n\n"
             "💳 گام نهایی: بارگذاری رسید پرداخت حق‌المشاوره\n\n"
-            "جهت نهایی‌سازی درخواست رزرو، لطفاً تصویر یا فایل فیش واریزی خود را در همین گفتگو ارسال فرمایید.\n\n"
+            "لطفاً مبلغ بیعانه را به شماره کارت کلینیک واریز فرمایید:\n"
+            f"شماره کارت: {card_formatted}\n"
+            "به نام کلینیک روانشناسی دکتر شفائی\n\n"
+            "سپس تصویر یا فایل فیش واریزی خود را در همین گفتگو ارسال فرمایید.\n\n"
             "⏳ توجه: شما ۱ ساعت فرصت دارید تا فیش واریزی را ارسال نمایید؛ در غیر این صورت زمان رزرو آزاد خواهد شد."
         )
         await update.message.reply_text(
@@ -1184,9 +1192,12 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif state == 'awaiting_receipt':
         logger.info(f"Text message received while in awaiting_receipt from user_id={user_id}, message_id={message_id}")
         keyboard = [[InlineKeyboardButton("❌ انصراف و بازگشت", callback_data="main_menu")]]
+        card_formatted = config.CARD_NUMBER_FORMATTED
         receipt_reminder_text = (
             "⚠️ مراجع گرامی؛\n"
             "درخواست نوبت شما ثبت اولیه شده و سامانه منتظر دریافت تصویر یا فایل فیش واریزی شما می‌باشد.\n\n"
+            f"شماره کارت کلینیک جهت واریز بیعانه: {card_formatted}\n"
+            "به نام کلینیک روانشناسی دکتر شفائی\n\n"
             "لطفاً تصویر یا فایل رسید پرداخت را ارسال فرمایید.\n"
             "در صورتی که مایل به انصراف و بازگشت به منوی اصلی هستید، روی دکمه زیر کلیک فرمایید: 🌱"
         )

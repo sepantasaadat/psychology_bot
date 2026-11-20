@@ -207,7 +207,7 @@ def get_available_times_api(date):
 def booking():
     if request.method == 'GET':
         days = get_1405_working_days()
-        return render_template('booking.html', days=days, card_number=config.CARD_NUMBER)
+        return render_template('booking.html', days=days, card_number=config.CARD_NUMBER_FORMATTED)
     
     if request.method == 'POST':
         is_ajax = (
@@ -222,7 +222,7 @@ def booking():
             if is_ajax:
                 return {"success": False, "error": error_msg}, 429
             flash(error_msg, "danger")
-            return render_template('booking.html', days=get_1405_working_days(), card_number=config.CARD_NUMBER), 429
+            return render_template('booking.html', days=get_1405_working_days(), card_number=config.CARD_NUMBER_FORMATTED), 429
 
         selected_date = request.form.get('date')
         selected_time = request.form.get('time')
@@ -252,7 +252,7 @@ def booking():
             if is_ajax:
                 return {"success": False, "error": msg}, 400
             flash(msg, "danger")
-            return render_template('booking.html', days=get_1405_working_days(), card_number=config.CARD_NUMBER), 400
+            return render_template('booking.html', days=get_1405_working_days(), card_number=config.CARD_NUMBER_FORMATTED), 400
 
         # Digits normalization
         selected_date = config.normalize_digits(selected_date).strip()
@@ -266,7 +266,7 @@ def booking():
             if is_ajax:
                 return {"success": False, "error": msg}, 400
             flash(msg, "danger")
-            return render_template('booking.html', days=get_1405_working_days(), card_number=config.CARD_NUMBER), 400
+            return render_template('booking.html', days=get_1405_working_days(), card_number=config.CARD_NUMBER_FORMATTED), 400
             
         receipt_file = request.files.get('receipt')
         if not receipt_file or receipt_file.filename == '':
@@ -274,7 +274,7 @@ def booking():
             if is_ajax:
                 return {"success": False, "error": msg}, 400
             flash(msg, "danger")
-            return render_template('booking.html', days=get_1405_working_days(), card_number=config.CARD_NUMBER), 400
+            return render_template('booking.html', days=get_1405_working_days(), card_number=config.CARD_NUMBER_FORMATTED), 400
             
         try:
             filepath = process_and_save_receipt(receipt_file, dest_dir=PRIVATE_UPLOADS_FOLDER)
@@ -284,7 +284,7 @@ def booking():
             if is_ajax:
                 return {"success": False, "error": msg}, 400
             flash(msg, "danger")
-            return render_template('booking.html', days=get_1405_working_days(), card_number=config.CARD_NUMBER), 400
+            return render_template('booking.html', days=get_1405_working_days(), card_number=config.CARD_NUMBER_FORMATTED), 400
         
         name_with_phone = f"{full_name} | {phone}"
         
@@ -303,7 +303,7 @@ def booking():
             if is_ajax:
                 return {"success": False, "error": msg}, 409
             flash(msg, "danger")
-            return render_template('booking.html', days=get_1405_working_days(), card_number=config.CARD_NUMBER), 409
+            return render_template('booking.html', days=get_1405_working_days(), card_number=config.CARD_NUMBER_FORMATTED), 409
         
         logger.info(f"Web booking submitted successfully: appointment_id={app_id}")
         if app.config.get('TESTING'):

@@ -71,7 +71,7 @@ cp .env.example .env
 | `ADMIN_PHONE` | Clinic reception phone number | `09213689461` |
 | `ADMIN_USERNAME` | Clinic reception Telegram handle | `drshafaei_psychological_clinic` |
 | `CLINIC_WEBSITE` | Official clinic website URL | `https://drshafaeiclinic.ir/` |
-| `CARD_NUMBER` | Bank card number for consultation fees | `6037997512345678` |
+| `CARD_NUMBER` | Bank card number for consultation fees | `5894631804709814` |
 | `SMTP_SERVER` | SMTP host for daily report emails | `smtp.gmail.com` |
 | `SMTP_PORT` | SMTP port | `587` |
 | `SMTP_EMAIL` / `SENDER_EMAIL` | Sender email address | *Required for email reports* |

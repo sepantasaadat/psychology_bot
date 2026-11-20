@@ -55,7 +55,17 @@ ADMIN_PHONE = os.environ.get("ADMIN_PHONE", "09213689461")
 CLINIC_PHONE = os.environ.get("CLINIC_PHONE", ADMIN_PHONE)
 CLINIC_WEBSITE = os.environ.get("CLINIC_WEBSITE", "https://drshafaeiclinic.ir/")
 CLINIC_CHANNEL = os.environ.get("CLINIC_CHANNEL", "https://t.me/DrShafaei_Psychological_Cliniic")
-CARD_NUMBER = os.environ.get("CARD_NUMBER", "6037997512345678")
+CARD_NUMBER = os.environ.get("CARD_NUMBER", "5894631804709814")
+
+def format_card_number(card: str = None) -> str:
+    """Formats a 16-digit card number into 4-digit groups (e.g. 5894-6318-0470-9814)."""
+    val = card if card is not None else CARD_NUMBER
+    cleaned = re.sub(r"\D", "", str(val or ""))
+    if len(cleaned) == 16:
+        return f"{cleaned[:4]}-{cleaned[4:8]}-{cleaned[8:12]}-{cleaned[12:]}"
+    return str(val or "")
+
+CARD_NUMBER_FORMATTED = format_card_number(CARD_NUMBER)
 
 # Bot & Web Application Credentials
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
